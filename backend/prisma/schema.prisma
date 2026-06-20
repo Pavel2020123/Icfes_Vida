@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Clase {
+  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre          String            @db.VarChar(255)
+  codigoIngreso   String            @unique @db.VarChar(50)
+  institucionId   String            @db.Uuid
+  Institucion     Institucion       @relation(fields: [institucionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_clase_institucion")
+  ClaseEstudiante ClaseEstudiante[]
+}
+
+model ClaseEstudiante {
+  usuarioId String  @db.Uuid
+  claseId   String  @db.Uuid
+  Clase     Clase   @relation(fields: [claseId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ce_clase")
+  Usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ce_usuario")
+
+  @@id([usuarioId, claseId])
+}
+
+model Institucion {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre      String    @db.VarChar(255)
+  codigoUnico String    @unique @db.VarChar(50)
+  planActual  String?   @default("GRATIS") @db.VarChar(50)
+  Clase       Clase[]
+  Usuario     Usuario[]
+}
+
+model Usuario {
+  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre          String            @db.VarChar(255)
+  correo          String            @unique @db.VarChar(255)
+  contrasenaHash  String
+  rol             RolUsuario?       @default(ESTUDIANTE)
+  xpTotal         Int?              @default(0)
+  fechaCreacion   DateTime?         @default(now()) @db.Timestamp(6)
+  institucionId   String?           @db.Uuid
+  ClaseEstudiante ClaseEstudiante[]
+  Institucion     Institucion?      @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
+}
+
+enum RolUsuario {
+  ESTUDIANTE
+  PROFESOR
+}
+
+
+// --- MÓDULO: BANCO INTELIGENTE DE PREGUNTAS ---
+
+// 1. Enums de Clasificación (Listas fijas de opciones)
+enum AreaIcfes {
+  LECTURA_CRITICA
+  MATEMATICAS
+  SOCIALES_CIUDADANAS
+  CIENCIAS_NATURALES
+  INGLES
+}
+
+enum Dificultad {
+  BASICO
+  MEDIO
+  AVANZADO
+}
+
+// 2. Tabla de Temas (Ej: Matemáticas -> Álgebra)
+model Tema {
+  id          String      @id @default(uuid())
+  nombre      String
+  area        AreaIcfes
+  
+  // Relaciones
+  subtemas    Subtema[]
+}
+
+// 3. Tabla de Subtemas (Ej: Álgebra -> Regla de tres)
+model Subtema {
+  id          String      @id @default(uuid())
+  nombre      String
+  temaId      String
+  tema        Tema        @relation(fields: [temaId], references: [id], onDelete: Cascade)
+  
+  // Relaciones
+  preguntas   Pregunta[]
+}
+
+// 4. Tabla Principal: Preguntas
+model Pregunta {
+  id                     String     @id @default(uuid())
+  enunciado              String     @db.Text
+  imagenUrl              String?    // Opcional: Para interpretar gráficos, tablas o imágenes
+  dificultad             Dificultad @default(MEDIO)
+  
+  // Estadísticas dinámicas del sistema
+  porcentajeAciertos     Float      @default(0.0)
+  tiempoPromedioSegundos Int        @default(0)
+  
+  // Relaciones
+  subtemaId              String
+  subtema                Subtema    @relation(fields: [subtemaId], references: [id])
+  respuestas             Respuesta[]
+}
+
+// 5. Tabla de Opciones de Respuesta (A, B, C, D)
+model Respuesta {
+  id          String   @id @default(uuid())
+  texto       String   @db.Text
+  esCorrecta  Boolean  @default(false)
+  
+  // Relaciones
+  preguntaId  String
+  pregunta    Pregunta @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+}
