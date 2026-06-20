@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #146C94;
+  --color-secondary: #19A7CE;
+  --color-fondo: #F6F1F1;
+  --color-fondo-alt: #D2E0FB;
+  --color-acento: #8DD8FF;
+  --color-texto: #1a2a3a;
+  --color-borde: #AFD3E2;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Scrollbar suave para estudiar de noche */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-fondo);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-borde);
+  border-radius: 3px;
+}
