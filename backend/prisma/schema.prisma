@@ -35,16 +35,17 @@ model Institucion {
 }
 
 model Usuario {
-  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre          String            @db.VarChar(255)
-  correo          String            @unique @db.VarChar(255)
+  id              String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre          String              @db.VarChar(255)
+  correo          String              @unique @db.VarChar(255)
   contrasenaHash  String
-  rol             RolUsuario?       @default(ESTUDIANTE)
-  xpTotal         Int?              @default(0)
-  fechaCreacion   DateTime?         @default(now()) @db.Timestamp(6)
-  institucionId   String?           @db.Uuid
+  rol             RolUsuario?         @default(ESTUDIANTE)
+  xpTotal         Int?                @default(0)
+  fechaCreacion   DateTime?           @default(now()) @db.Timestamp(6)
+  institucionId   String?             @db.Uuid
   ClaseEstudiante ClaseEstudiante[]
-  Institucion     Institucion?      @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
+  Institucion     Institucion?        @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
+  resultados      ResultadoSimulacro[]
 }
 
 enum RolUsuario {
@@ -52,10 +53,8 @@ enum RolUsuario {
   PROFESOR
 }
 
-
 // --- MÓDULO: BANCO INTELIGENTE DE PREGUNTAS ---
 
-// 1. Enums de Clasificación (Listas fijas de opciones)
 enum AreaIcfes {
   LECTURA_CRITICA
   MATEMATICAS
@@ -70,51 +69,51 @@ enum Dificultad {
   AVANZADO
 }
 
-// 2. Tabla de Temas (Ej: Matemáticas -> Álgebra)
 model Tema {
-  id          String      @id @default(uuid())
-  nombre      String
-  area        AreaIcfes
-  
-  // Relaciones
-  subtemas    Subtema[]
+  id       String    @id @default(uuid())
+  nombre   String
+  area     AreaIcfes
+  subtemas Subtema[]
 }
 
-// 3. Tabla de Subtemas (Ej: Álgebra -> Regla de tres)
 model Subtema {
-  id          String      @id @default(uuid())
-  nombre      String
-  temaId      String
-  tema        Tema        @relation(fields: [temaId], references: [id], onDelete: Cascade)
-  
-  // Relaciones
-  preguntas   Pregunta[]
+  id        String     @id @default(uuid())
+  nombre    String
+  temaId    String
+  tema      Tema       @relation(fields: [temaId], references: [id], onDelete: Cascade)
+  preguntas Pregunta[]
 }
 
-// 4. Tabla Principal: Preguntas
 model Pregunta {
   id                     String     @id @default(uuid())
   enunciado              String     @db.Text
-  imagenUrl              String?    // Opcional: Para interpretar gráficos, tablas o imágenes
+  imagenUrl              String?
   dificultad             Dificultad @default(MEDIO)
-  
-  // Estadísticas dinámicas del sistema
   porcentajeAciertos     Float      @default(0.0)
   tiempoPromedioSegundos Int        @default(0)
-  
-  // Relaciones
   subtemaId              String
   subtema                Subtema    @relation(fields: [subtemaId], references: [id])
   respuestas             Respuesta[]
 }
 
-// 5. Tabla de Opciones de Respuesta (A, B, C, D)
 model Respuesta {
-  id          String   @id @default(uuid())
-  texto       String   @db.Text
-  esCorrecta  Boolean  @default(false)
-  
-  // Relaciones
-  preguntaId  String
-  pregunta    Pregunta @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  texto      String   @db.Text
+  esCorrecta Boolean  @default(false)
+  preguntaId String
+  pregunta   Pregunta @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+}
+
+// --- MÓDULO: RESULTADOS DE SIMULACROS ---
+
+model ResultadoSimulacro {
+  id              String    @id @default(uuid())
+  usuarioId       String    @db.Uuid
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  area            AreaIcfes
+  totalPreguntas  Int
+  respuestasCorrectas Int
+  puntaje         Float     // Porcentaje 0-100
+  xpGanado        Int       @default(0)
+  fechaRealizado  DateTime  @default(now())
 }

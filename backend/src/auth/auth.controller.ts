@@ -1,9 +1,13 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
-// Le explicamos a TypeScript exactamente qué datos esperamos
 interface RegistroDto {
   nombre: string;
+  correo: string;
+  contrasena: string;
+}
+
+interface LoginDto {
   correo: string;
   contrasena: string;
 }
@@ -19,5 +23,10 @@ export class AuthController {
       body.correo,
       body.contrasena,
     );
+  }
+
+  @Post('login')
+  login(@Body() body: LoginDto) {
+    return this.authService.login(body.correo, body.contrasena);
   }
 }
