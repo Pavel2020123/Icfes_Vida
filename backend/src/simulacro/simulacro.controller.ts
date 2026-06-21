@@ -59,4 +59,36 @@ export class SimulacroController {
   poblarBd() {
     return this.simulacroService.poblarBaseDeDatos();
   }
+
+  // GET /simulacros/temas?area=MATEMATICAS
+  @Get('temas')
+  obtenerTemas(@Query('area') area: AreaIcfes) {
+    return this.simulacroService.obtenerTemasPorArea(area);
+  }
+  // POST /simulacros/progreso  ← Marcar tema como visto
+  @UseGuards(JwtGuard)
+  @Post('progreso')
+  actualizarProgreso(
+    @Body() body: { subtemaId: string; porcentaje: number },
+    @Request() req: any,
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const usuarioId = req.usuario.sub;
+    return this.simulacroService.actualizarProgresoTema(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      usuarioId,
+      body.subtemaId,
+      body.porcentaje,
+    );
+  }
+
+  // GET /simulacros/progreso  ← Ver progreso general
+  @UseGuards(JwtGuard)
+  @Get('progreso')
+  obtenerProgreso(@Request() req: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const usuarioId = req.usuario.sub;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    return this.simulacroService.obtenerProgresoGeneral(usuarioId);
+  }
 }

@@ -1,0 +1,216 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { obtenerToken } from '../../lib/api';
+import MenuLateral from '../../components/MenuLateral';
+
+const AREAS = [
+  { key: 'LECTURA_CRITICA', nombre: 'Lectura Crítica' },
+  { key: 'MATEMATICAS', nombre: 'Matemáticas' },
+  { key: 'CIENCIAS_NATURALES', nombre: 'Ciencias Naturales' },
+  { key: 'SOCIALES_CIUDADANAS', nombre: 'Sociales y Ciudadanas' },
+  { key: 'INGLES', nombre: 'Inglés' },
+];
+
+interface Resultado {
+  id: string;
+  area: string;
+  puntaje: number;
+  respuestasCorrectas: number;
+  totalPreguntas: number;
+  xpGanado: number;
+  fechaRealizado: string;
+}
+
+interface Progreso {
+  porcentajeGeneral: number;
+  temasCompletados: number;
+  totalSubtemas: number;
+  porArea: Record<string, { vistos: number; completados: number }>;
+}
+
+function areaLegible(area: string) {
+  return AREAS.find(a => a.key === area)?.nombre ?? area;
+}
+
+function fechaLegible(fecha: string) {
+  return new Date(fecha).toLocaleDateString('es-CO', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [nombre, setNombre] = useState('');
+  const [xp, setXp] = useState(0);
+  const [historial, setHistorial] = useState<Resultado[]>([]);
+  const [progreso, setProgreso] = useState<Progreso>({
+    porcentajeGeneral: 0,
+    temasCompletados: 0,
+    totalSubtemas: 0,
+    porArea: {},
+  });
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const token = obtenerToken();
+    if (!token) { router.push('/login'); return; }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNombre(payload.nombre ?? 'Estudiante');
+    } catch {
+      router.push('/login');
+      return;
+    }
+
+    Promise.all([
+      fetch('http://localhost:3000/simulacros/historial', {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+      fetch('http://localhost:3000/simulacros/progreso', {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+    ])
+      .then(([historialData, progresoData]) => {
+        setHistorial(historialData.resultados ?? []);
+        const totalXp = (historialData.resultados ?? []).reduce(
+          (acc: number, r: Resultado) => acc + (r.xpGanado ?? 0), 0
+        );
+        setXp(totalXp);
+        setProgreso(progresoData);
+      })
+      .catch(() => {})
+      .finally(() => setCargando(false));
+  }, [router]);
+
+  if (cargando) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#146C94', fontSize: 18, fontWeight: 600 }}>Cargando...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', fontFamily: 'system-ui, sans-serif' }}>
+
+      {/* MENÚ LATERAL */}
+      <MenuLateral
+        nombre={nombre}
+        progresoGeneral={progreso.porcentajeGeneral}
+        temasCompletados={progreso.temasCompletados}
+        totalSubtemas={progreso.totalSubtemas}
+      />
+
+      {/* NAVBAR */}
+      <nav style={{ backgroundColor: '#146C94', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px 0 72px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <span style={{ fontSize: 22, fontWeight: 800, color: '#ffffff' }}>
+              Saber<span style={{ color: '#8DD8FF' }}>Plus</span>
+            </span>
+          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.15)', padding: '6px 16px', borderRadius: 20 }}>
+              <span style={{ color: '#8DD8FF', fontWeight: 800, fontSize: 15 }}>{xp} XP</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px' }}>
+
+        {/* BARRA DE PROGRESO GRANDE */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: 20,
+          padding: '32px 36px',
+          border: '1.5px solid #AFD3E2',
+          boxShadow: '0 4px 20px rgba(20,108,148,0.08)',
+          marginBottom: 48,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1a2a3a', marginBottom: 4 }}>
+                Hola, {nombre.split(' ')[0]}
+              </h1>
+              <p style={{ color: '#4a5a6a', fontSize: 15 }}>
+                Este es tu progreso general del curso
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: 40, fontWeight: 900, color: '#146C94' }}>
+                {progreso.porcentajeGeneral}%
+              </span>
+              <p style={{ color: '#8a9aaa', fontSize: 13 }}>completado</p>
+            </div>
+          </div>
+
+          {/* Barra principal */}
+          <div style={{ height: 14, backgroundColor: '#D2E0FB', borderRadius: 7, marginBottom: 12, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              backgroundColor: '#146C94',
+              borderRadius: 7,
+              width: `${progreso.porcentajeGeneral}%`,
+              transition: 'width 1s ease',
+              backgroundImage: 'linear-gradient(90deg, #146C94, #19A7CE)',
+            }} />
+          </div>
+
+          <p style={{ color: '#4a5a6a', fontSize: 14 }}>
+            <strong style={{ color: '#146C94' }}>{progreso.temasCompletados}</strong> de{' '}
+            <strong>{progreso.totalSubtemas}</strong> temas completados
+          </p>
+        </div>
+
+        {/* MÓDULOS DE ESTUDIO */}
+        <div style={{ marginBottom: 56 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1a2a3a', marginBottom: 8 }}>
+            Módulos de estudio
+          </h2>
+          <p style={{ color: '#4a5a6a', fontSize: 14, marginBottom: 20 }}>
+            Estudia cada área tema por tema antes de hacer el simulacro.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+            {AREAS.map(area => {
+              const p = progreso.porArea[area.key];
+              const pct = p && progreso.totalSubtemas > 0
+                ? Math.round((p.completados / (progreso.totalSubtemas / 5)) * 100)
+                : 0;
+
+              return (
+                <Link key={area.key} href={`/estudiar/${area.key}`} style={{ textDecoration: 'none' }}>
+                  <div style={{ backgroundColor: '#ffffff', borderRadius: 14, padding: '24px 20px', border: '1.5px solid #AFD3E2', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-3px)';
+                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(20,108,148,0.12)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: '#146C94', marginBottom: 12 }}>
+                      {area.nombre}
+                    </h3>
+                    <div style={{ height: 5, backgroundColor: '#D2E0FB', borderRadius: 3, marginBottom: 8, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', backgroundColor: '#19A7CE', borderRadius: 3, width: `${pct}%`, transition: 'width 0.5s ease' }} />
+                    </div>
+                    <p style={{ fontSize: 12, color: '#8a9aaa' }}>{pct}% completado</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

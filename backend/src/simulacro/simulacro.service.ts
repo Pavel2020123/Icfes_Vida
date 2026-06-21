@@ -120,7 +120,6 @@ export class SimulacroService {
 
     // Guardar resultado en la BD para estadísticas futuras
     if (usuarioId) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       await this.prisma.resultadoSimulacro.create({
         data: {
           usuarioId,
@@ -154,7 +153,6 @@ export class SimulacroService {
 
   // ─── HISTORIAL DE UN ESTUDIANTE ─────────────────────────────
   async obtenerHistorial(usuarioId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const resultados = await this.prisma.resultadoSimulacro.findMany({
       where: { usuarioId },
       orderBy: { fechaRealizado: 'desc' },
@@ -162,9 +160,7 @@ export class SimulacroService {
     });
 
     return {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       totalSimulacros: resultados.length,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       resultados,
     };
   }
@@ -211,6 +207,118 @@ export class SimulacroService {
     return {
       mensaje: '¡Pregunta de Matemáticas inyectada con éxito!',
       datos: temaNuevo,
+    };
+  }
+  async obtenerTemasPorArea(area: AreaIcfes) {
+    const temas = await this.prisma.tema.findMany({
+      where: { area },
+      include: {
+        subtemas: {
+          include: {
+            preguntas: {
+              select: { id: true },
+            },
+          },
+        },
+      },
+      orderBy: { nombre: 'asc' },
+    });
+
+    return {
+      area,
+      temas: temas.map((t) => ({
+        id: t.id,
+        nombre: t.nombre,
+        subtemas: t.subtemas.map((s) => ({
+          id: s.id,
+          nombre: s.nombre,
+          totalPreguntas: s.preguntas.length,
+        })),
+      })),
+    };
+  }
+
+  // ─── MARCAR TEMA COMO VISTO/COMPLETADO ─────────────────────
+  async actualizarProgresoTema(
+    usuarioId: string,
+    subtemaId: string,
+    porcentaje: number,
+  ) {
+    const completado = porcentaje >= 100;
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    await this.prisma.progresoTema.upsert({
+      where: {
+        usuarioId_subtemaId: { usuarioId, subtemaId },
+      },
+      update: { porcentaje, completado },
+      create: { usuarioId, subtemaId, porcentaje, completado },
+    });
+
+    return { mensaje: 'Progreso actualizado', porcentaje, completado };
+  }
+
+  // ─── OBTENER PROGRESO GENERAL DEL ESTUDIANTE ───────────────
+  async obtenerProgresoGeneral(usuarioId: string) {
+    const todoLosSubtemas = await this.prisma.subtema.count();
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const progresos = await this.prisma.progresoTema.findMany({
+      where: { usuarioId },
+      include: {
+        subtema: {
+          include: {
+            tema: { select: { area: true, nombre: true } },
+          },
+        },
+      },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const temasVistos = progresos.length;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+    const temasCompletados = progresos.filter((p) => p.completado).length;
+    const porcentajeGeneral =
+      todoLosSubtemas > 0
+        ? Math.round((temasCompletados / todoLosSubtemas) * 100)
+        : 0;
+
+    // Progreso por área
+    const porArea: Record<
+      string,
+      { vistos: number; completados: number; total: number }
+    > = {};
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    progresos.forEach((p) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const area = p.subtema.tema.area;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (!porArea[area])
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        porArea[area] = { vistos: 0, completados: 0, total: 0 };
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      porArea[area].vistos++;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (p.completado) porArea[area].completados++;
+    });
+
+    // Progreso por subtema (para el menú lateral)
+    const porSubtema: Record<string, number> = {};
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    progresos.forEach((p) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      porSubtema[p.subtemaId] = p.porcentaje;
+    });
+
+    return {
+      totalSubtemas: todoLosSubtemas,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      temasVistos,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      temasCompletados,
+      porcentajeGeneral,
+      porArea,
+      porSubtema,
     };
   }
 }

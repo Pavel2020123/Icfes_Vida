@@ -87,4 +87,44 @@ export class AuthService {
       },
     };
   }
+  // ─── OBTENER PERFIL ─────────────────────────────────────────
+  async obtenerPerfil(usuarioId: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        id: true,
+        nombre: true,
+        correo: true,
+        rol: true,
+        xpTotal: true,
+        fechaCreacion: true,
+        fotoPerfil: true,
+        descripcion: true,
+      },
+    });
+    return usuario;
+  }
+
+  // ─── ACTUALIZAR PERFIL ───────────────────────────────────────
+  async actualizarPerfil(
+    usuarioId: string,
+    descripcion?: string,
+    fotoPerfil?: string,
+  ) {
+    const usuario = await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: {
+        ...(descripcion !== undefined && { descripcion }),
+        ...(fotoPerfil !== undefined && { fotoPerfil }),
+      },
+      select: {
+        id: true,
+        nombre: true,
+        correo: true,
+        fotoPerfil: true,
+        descripcion: true,
+      },
+    });
+    return { mensaje: 'Perfil actualizado', usuario };
+  }
 }

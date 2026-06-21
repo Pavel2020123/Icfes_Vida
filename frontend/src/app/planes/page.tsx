@@ -154,9 +154,12 @@ export default function PlanesPage() {
   const [categoria, setCategoria] = useState<Categoria>('grado11');
   const planes = PLANES[categoria];
 
+  // Calculamos el índice activo para saber a dónde debe deslizarse la "píldora" azul
+  const activeIndex = Object.keys(LABELS).indexOf(categoria);
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', color: '#1a2a3a', fontFamily: 'system-ui, sans-serif' }}>
-
+      
       {/* NAVBAR */}
       <nav style={{ backgroundColor: '#146C94', position: 'sticky', top: 0, zIndex: 50, boxShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
         <div style={{ maxWidth: 1250, margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 72 }}>
@@ -176,7 +179,7 @@ export default function PlanesPage() {
         </div>
       </nav>
 
-      {/* HEADER */}
+      {/* HEADER CON TOGGLE ANIMADO */}
       <section style={{ padding: '64px 24px 48px', textAlign: 'center' }}>
         <p style={{ color: '#19A7CE', fontWeight: 600, fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
           Sin sorpresas
@@ -188,21 +191,50 @@ export default function PlanesPage() {
           Paga una vez por el calendario académico y practica sin límites hasta el día del examen.
         </p>
 
-        <div style={{ display: 'inline-flex', backgroundColor: '#D2E0FB', borderRadius: 50, padding: 4, gap: 4 }}>
+        {/* AQUÍ ESTÁ LA MAGIA DEL DESLIZAMIENTO:
+          Usamos un contenedor grid para que los botones midan exactamente lo mismo 
+          y un fondo absoluto que se desplaza multiplicando su posición por el índice activo.
+        */}
+        <div style={{ 
+          position: 'relative',
+          display: 'inline-grid', 
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          backgroundColor: '#D2E0FB', 
+          borderRadius: 50, 
+          padding: 4, 
+          margin: '0 auto' 
+        }}>
+          {/* Este es el fondo azul que se desliza por detrás */}
+          <div style={{
+            position: 'absolute',
+            top: 4,
+            bottom: 4,
+            left: 4,
+            width: 'calc((100% - 8px) / 3)', // Un tercio exacto del ancho disponible
+            backgroundColor: '#146C94',
+            borderRadius: 50,
+            transform: `translateX(${activeIndex * 100}%)`, // Mueve el fondo al índice correcto
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)', // Efecto de aceleración y frenado suave
+            zIndex: 1,
+          }} />
+
+          {/* Estos son los textos encima del fondo */}
           {(Object.keys(LABELS) as Categoria[]).map(cat => (
             <button
               key={cat}
               onClick={() => setCategoria(cat)}
               style={{
+                position: 'relative',
+                zIndex: 2, // Asegura que el texto esté por encima de la píldora azul
                 padding: '10px 28px',
                 borderRadius: 50,
                 border: 'none',
                 fontSize: 15,
                 fontWeight: 700,
                 cursor: 'pointer',
-                backgroundColor: categoria === cat ? '#146C94' : 'transparent',
+                backgroundColor: 'transparent', // Ya no cambia el fondo aquí
                 color: categoria === cat ? '#ffffff' : '#4a5a6a',
-                transition: 'all 0.2s ease',
+                transition: 'color 0.3s ease', // El texto hace fade mientras la píldora se desliza
               }}
             >
               {LABELS[cat]}
@@ -213,14 +245,7 @@ export default function PlanesPage() {
 
       {/* PLANES */}
       <section style={{ padding: '0 24px 80px' }}>
-        <div style={{
-          maxWidth: 1000,
-          margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: `repeat(${planes.length}, minmax(240px, 1fr))`,
-          gap: 24,
-          alignItems: 'start',
-        }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${planes.length}, minmax(240px, 1fr))`, gap: 24, alignItems: 'start' }}>
           {planes.map(plan => (
             <div
               key={plan.nombre}
@@ -234,19 +259,7 @@ export default function PlanesPage() {
               }}
             >
               {plan.destacado && (
-                <div style={{
-                  position: 'absolute' as const,
-                  top: -14,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: '#8DD8FF',
-                  color: '#1a2a3a',
-                  fontSize: 12,
-                  fontWeight: 800,
-                  padding: '5px 18px',
-                  borderRadius: 20,
-                  whiteSpace: 'nowrap' as const,
-                }}>
+                <div style={{ position: 'absolute' as const, top: -14, left: '50%', transform: 'translateX(-50%)', backgroundColor: '#8DD8FF', color: '#1a2a3a', fontSize: 12, fontWeight: 800, padding: '5px 18px', borderRadius: 20, whiteSpace: 'nowrap' as const }}>
                   Más popular
                 </div>
               )}
@@ -306,10 +319,9 @@ export default function PlanesPage() {
           Saber<span style={{ color: '#ffffff' }}>Plus</span>
         </p>
         <p style={{ color: '#AFD3E2', fontSize: 13 }}>
-          © 2025 SaberPlus. Todos los derechos reservados.
+          © 2026 SaberPlus. Todos los derechos reservados.
         </p>
       </footer>
-
     </div>
   );
 }

@@ -43,9 +43,12 @@ model Usuario {
   xpTotal         Int?                @default(0)
   fechaCreacion   DateTime?           @default(now()) @db.Timestamp(6)
   institucionId   String?             @db.Uuid
+  fotoPerfil      String?
+  descripcion     String?
   ClaseEstudiante ClaseEstudiante[]
   Institucion     Institucion?        @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
   resultados      ResultadoSimulacro[]
+  progresotemas   ProgresoTema[]
 }
 
 enum RolUsuario {
@@ -82,6 +85,7 @@ model Subtema {
   temaId    String
   tema      Tema       @relation(fields: [temaId], references: [id], onDelete: Cascade)
   preguntas Pregunta[]
+progresotemas  ProgresoTema[]
 }
 
 model Pregunta {
@@ -116,4 +120,18 @@ model ResultadoSimulacro {
   puntaje         Float     // Porcentaje 0-100
   xpGanado        Int       @default(0)
   fechaRealizado  DateTime  @default(now())
+}
+
+model ProgresoTema {
+  id          String   @id @default(uuid())
+  usuarioId   String   @db.Uuid
+  subtemaId   String
+  completado  Boolean  @default(false)
+  porcentaje  Int      @default(0)
+  fechaVisto  DateTime @default(now())
+  
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  subtema     Subtema  @relation(fields: [subtemaId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, subtemaId])
 }
