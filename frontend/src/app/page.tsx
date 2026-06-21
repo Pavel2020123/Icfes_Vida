@@ -166,37 +166,49 @@ export default function LandingPage() {
             Saber<span style={{ color: '#8DD8FF' }}>Plus</span>
           </span>
 
-          {/* BOTONES */}
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Link
-              href="/login"
-              style={{
-                color: '#ffffff',
-                textDecoration: 'none',
-                fontSize: 16,
-                fontWeight: 500,
-                padding: '8px 12px',
-              }}
-            >
-              Iniciar sesión
-            </Link>
-            <Link
-              href="/registro"
-              style={{
-                backgroundColor: '#8DD8FF',
-                color: '#1a2a3a',
-                padding: '10px 24px',
-                borderRadius: 8,
-                textDecoration: 'none',
-                fontSize: 16,
-                fontWeight: 700,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)', // Sombra normal sin brillo fosforescente
-                transition: 'transform 0.2s',
-              }}
-            >
-              Empezar gratis
-            </Link>
-          </div>
+              {/* BOTONES */}
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <Link
+                href="/planes"
+                style={{
+                  color: '#ffffff',
+                  textDecoration: 'none',
+                  fontSize: 16,
+                  fontWeight: 500,
+                  padding: '8px 12px',
+                }}
+              >
+                Planes
+              </Link>
+              <Link
+                href="/login"
+                style={{
+                  color: '#ffffff',
+                  textDecoration: 'none',
+                  fontSize: 16,
+                  fontWeight: 500,
+                  padding: '8px 12px',
+                }}
+              >
+                Iniciar sesión
+              </Link>
+              <Link
+                href="/registro"
+                style={{
+                  backgroundColor: '#8DD8FF',
+                  color: '#1a2a3a',
+                  padding: '10px 24px',
+                  borderRadius: 8,
+                  textDecoration: 'none',
+                  fontSize: 16,
+                  fontWeight: 700,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  transition: 'transform 0.2s',
+                }}
+              >
+                Empezar gratis
+              </Link>
+            </div>
         </div>
       </nav>
 
