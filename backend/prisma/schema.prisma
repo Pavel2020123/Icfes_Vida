@@ -54,6 +54,7 @@ model Usuario {
 enum RolUsuario {
   ESTUDIANTE
   PROFESOR
+  ADMIN
 }
 
 // --- MÓDULO: BANCO INTELIGENTE DE PREGUNTAS ---
