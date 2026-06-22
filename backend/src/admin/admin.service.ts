@@ -56,11 +56,62 @@ export class AdminService {
   }
 
   async eliminarTema(temaId: string) {
+    const subtemas = await this.prisma.subtema.findMany({
+      where: { temaId },
+      select: { id: true },
+    });
+
+    const subtemaIds = subtemas.map((s) => s.id);
+
+    await this.prisma.respuesta.deleteMany({
+      where: { pregunta: { subtemaId: { in: subtemaIds } } },
+    });
+
+    await this.prisma.pregunta.deleteMany({
+      where: { subtemaId: { in: subtemaIds } },
+    });
+
+    await this.prisma.progresoTema.deleteMany({
+      where: { subtemaId: { in: subtemaIds } },
+    });
+
+    await this.prisma.subtema.deleteMany({
+      where: { temaId },
+    });
+
     return this.prisma.tema.delete({ where: { id: temaId } });
   }
 
   async eliminarSubtema(subtemaId: string) {
+    await this.prisma.respuesta.deleteMany({
+      where: { pregunta: { subtemaId } },
+    });
+
+    await this.prisma.pregunta.deleteMany({
+      where: { subtemaId },
+    });
+
+    await this.prisma.progresoTema.deleteMany({
+      where: { subtemaId },
+    });
+
     return this.prisma.subtema.delete({ where: { id: subtemaId } });
+  }
+
+  async actualizarContenidoSubtema(
+    subtemaId: string,
+    contenido?: string,
+    videoUrl?: string,
+    imagenUrl?: string,
+  ) {
+    return this.prisma.subtema.update({
+      where: { id: subtemaId },
+      data: {
+        ...(contenido !== undefined && { contenido }),
+        ...(videoUrl !== undefined && { videoUrl }),
+        ...(imagenUrl !== undefined && { imagenUrl }),
+      },
+    });
   }
 
   // ─── PREGUNTAS ──────────────────────────────────────────────
@@ -92,6 +143,9 @@ export class AdminService {
   }
 
   async eliminarPregunta(preguntaId: string) {
+    await this.prisma.respuesta.deleteMany({
+      where: { preguntaId },
+    });
     return this.prisma.pregunta.delete({ where: { id: preguntaId } });
   }
 

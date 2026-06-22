@@ -14,6 +14,7 @@ interface RegistroDto {
   nombre: string;
   correo: string;
   contrasena: string;
+  rol?: string;
 }
 
 interface LoginDto {
@@ -36,6 +37,7 @@ export class AuthController {
       body.nombre,
       body.correo,
       body.contrasena,
+      body.rol,
     );
   }
 

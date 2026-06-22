@@ -32,7 +32,6 @@ export default function ResultadosPage() {
     if (!data) { router.push('/dashboard'); return; }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResultado(JSON.parse(data));
-    sessionStorage.removeItem('resultado_simulacro');
   }, [router]);
 
   if (!resultado) return null;

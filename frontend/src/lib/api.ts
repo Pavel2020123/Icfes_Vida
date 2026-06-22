@@ -11,11 +11,11 @@ export async function loginUsuario(correo: string, contrasena: string) {
   return data;
 }
 
-export async function registrarUsuario(nombre: string, correo: string, contrasena: string) {
+export async function registrarUsuario(nombre: string, correo: string, contrasena: string, rol: string = 'ESTUDIANTE') {
   const res = await fetch(`${API_URL}/auth/registro`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nombre, correo, contrasena }),
+    body: JSON.stringify({ nombre, correo, contrasena, rol }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Error al registrarse');

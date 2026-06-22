@@ -81,12 +81,15 @@ model Tema {
 }
 
 model Subtema {
-  id        String     @id @default(uuid())
-  nombre    String
-  temaId    String
-  tema      Tema       @relation(fields: [temaId], references: [id], onDelete: Cascade)
-  preguntas Pregunta[]
-progresotemas  ProgresoTema[]
+  id            String        @id @default(uuid())
+  nombre        String
+  temaId        String
+  contenido     String?       @db.Text
+  videoUrl      String?
+  imagenUrl     String?
+  tema          Tema          @relation(fields: [temaId], references: [id], onDelete: Cascade)
+  preguntas     Pregunta[]
+  progresotemas ProgresoTema[]
 }
 
 model Pregunta {

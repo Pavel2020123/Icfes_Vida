@@ -19,13 +19,13 @@ export class AuthService {
     nombre: string,
     correo: string,
     contrasena: string,
+    rol: string = 'ESTUDIANTE',
   ) {
     const usuarioExiste = await this.prisma.usuario.findUnique({
       where: { correo },
     });
-    if (usuarioExiste) {
+    if (usuarioExiste)
       throw new BadRequestException('El correo ya está registrado');
-    }
 
     const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
 
@@ -34,14 +34,12 @@ export class AuthService {
         nombre,
         correo,
         contrasenaHash: contrasenaEncriptada,
-        rol: 'ESTUDIANTE',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        rol: rol as any,
       },
     });
 
-    return {
-      mensaje: '¡Estudiante registrado con éxito!',
-      usuarioId: nuevoUsuario.id,
-    };
+    return { mensaje: '¡Cuenta creada con éxito!', usuarioId: nuevoUsuario.id };
   }
 
   // ─── LOGIN ──────────────────────────────────────────────────

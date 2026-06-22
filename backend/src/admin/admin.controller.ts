@@ -92,4 +92,16 @@ export class AdminController {
   eliminarPregunta(@Param('id') id: string) {
     return this.adminService.eliminarPregunta(id);
   }
+  @Patch('subtemas/:id/contenido')
+  actualizarContenido(
+    @Param('id') id: string,
+    @Body() body: { contenido?: string; videoUrl?: string; imagenUrl?: string },
+  ) {
+    return this.adminService.actualizarContenidoSubtema(
+      id,
+      body.contenido,
+      body.videoUrl,
+      body.imagenUrl,
+    );
+  }
 }
