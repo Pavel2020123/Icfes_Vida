@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [uuid_ossp(map: "uuid-ossp")]
 }
 
 model Clase {
@@ -73,6 +75,10 @@ enum Dificultad {
   AVANZADO
 }
 
+enum TipoInteractivo {
+  CLOZE
+}
+
 model Tema {
   id       String    @id @default(uuid())
   nombre   String
@@ -81,15 +87,17 @@ model Tema {
 }
 
 model Subtema {
-  id            String        @id @default(uuid())
-  nombre        String
-  temaId        String
-  contenido     String?       @db.Text
-  videoUrl      String?
-  imagenUrl     String?
-  tema          Tema          @relation(fields: [temaId], references: [id], onDelete: Cascade)
-  preguntas     Pregunta[]
-  progresotemas ProgresoTema[]
+  id               String           @id @default(uuid())
+  nombre           String
+  temaId           String
+  contenido        String?          @db.Text
+  videoUrl         String?
+  imagenUrl        String?
+  tipoInteractivo  TipoInteractivo?
+  datosInteractivo Json?
+  tema             Tema             @relation(fields: [temaId], references: [id], onDelete: Cascade)
+  preguntas        Pregunta[]
+  progresotemas    ProgresoTema[]
 }
 
 model Pregunta {

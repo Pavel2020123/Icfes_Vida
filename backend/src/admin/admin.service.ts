@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AreaIcfes, Dificultad, RolUsuario } from '@prisma/client';
+import {
+  AreaIcfes,
+  Dificultad,
+  RolUsuario,
+  TipoInteractivo,
+} from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -110,6 +115,24 @@ export class AdminService {
         ...(contenido !== undefined && { contenido }),
         ...(videoUrl !== undefined && { videoUrl }),
         ...(imagenUrl !== undefined && { imagenUrl }),
+      },
+    });
+  }
+
+  async actualizarInteractivoSubtema(
+    subtemaId: string,
+    tipoInteractivo: TipoInteractivo,
+    datosInteractivo: {
+      textoConEspacios: string;
+      espacios: { opciones: string[]; correctaIndex: number }[];
+    },
+  ) {
+    return this.prisma.subtema.update({
+      where: { id: subtemaId },
+      data: {
+        tipoInteractivo,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        datosInteractivo: datosInteractivo as any,
       },
     });
   }

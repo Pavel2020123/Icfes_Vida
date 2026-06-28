@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AdminGuard } from '../auth/jwt.guard';
-import { AreaIcfes, Dificultad } from '@prisma/client';
+import { AreaIcfes, Dificultad, TipoInteractivo } from '@prisma/client';
 
 @Controller('admin')
 @UseGuards(AdminGuard)
@@ -102,6 +102,26 @@ export class AdminController {
       body.contenido,
       body.videoUrl,
       body.imagenUrl,
+    );
+  }
+
+  // Ejercicio interactivo (cloze)
+  @Patch('subtemas/:id/interactivo')
+  actualizarInteractivo(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      tipoInteractivo: TipoInteractivo;
+      datosInteractivo: {
+        textoConEspacios: string;
+        espacios: { opciones: string[]; correctaIndex: number }[];
+      };
+    },
+  ) {
+    return this.adminService.actualizarInteractivoSubtema(
+      id,
+      body.tipoInteractivo,
+      body.datosInteractivo,
     );
   }
 }

@@ -19,7 +19,7 @@ export default function LoginPage() {
     try {
       const data = await loginUsuario(correo, contrasena);
       guardarToken(data.accessToken);
-      router.push('/dashboard');
+      router.push(data.usuario?.rol === 'ADMIN' ? '/admin' : '/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión');
     } finally {
