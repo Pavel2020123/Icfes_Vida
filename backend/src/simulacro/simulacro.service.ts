@@ -233,6 +233,11 @@ export class SimulacroService {
           id: s.id,
           nombre: s.nombre,
           totalPreguntas: s.preguntas.length,
+          contenido: s.contenido,
+          videoUrl: s.videoUrl,
+          imagenUrl: s.imagenUrl,
+          tipoInteractivo: s.tipoInteractivo,
+          datosInteractivo: s.datosInteractivo,
         })),
       })),
     };
