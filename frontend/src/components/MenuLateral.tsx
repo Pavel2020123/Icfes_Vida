@@ -244,30 +244,17 @@ export default function MenuLateral({
           {/* Divisor */}
           <div style={{ height: 1, backgroundColor: '#F0F0F0', margin: '8px 0' }} />
 
-          {/* Simulacros — próximamente */}
-          <div style={{
-            padding: '12px 16px',
-            borderRadius: 10,
-            color: '#AFD3E2',
-            fontWeight: 600,
-            fontSize: 15,
-            marginBottom: 4,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}>
-            <span>Simulacros</span>
-            <span style={{
-              fontSize: 11,
-              backgroundColor: '#D2E0FB',
-              color: '#146C94',
-              padding: '2px 8px',
-              borderRadius: 10,
-              fontWeight: 700,
-            }}>
-              Pronto
-            </span>
-          </div>
+          {/* Preguntas aleatorias */}
+          <Link href="/preguntas-aleatorias" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+            <div
+              style={{ ...linkStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <span>Preguntas aleatorias</span>
+              <span style={{ fontSize: 16 }}>🎲</span>
+            </div>
+          </Link>
 
         </div>
 

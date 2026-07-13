@@ -143,12 +143,14 @@ export class AdminService {
     subtemaId: string,
     dificultad: Dificultad,
     respuestas: { texto: string; esCorrecta: boolean }[],
+    imagenUrl?: string,
   ) {
     return this.prisma.pregunta.create({
       data: {
         enunciado,
         subtemaId,
         dificultad,
+        imagenUrl: imagenUrl || null,
         respuestas: {
           create: respuestas,
         },

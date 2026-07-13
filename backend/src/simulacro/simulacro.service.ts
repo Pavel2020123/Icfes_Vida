@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AreaIcfes } from '@prisma/client';
+import { AreaIcfes, Dificultad } from '@prisma/client';
 
 interface RespuestaEstudiante {
   preguntaId: string;
@@ -147,6 +147,182 @@ export class SimulacroService {
         puntaje: `${puntaje}%`,
         xpGanado,
       },
+      detalle,
+    };
+  }
+
+  // ─── GENERAR SIMULACRO PERSONALIZADO (PREGUNTAS ALEATORIAS) ─
+  // El estudiante elige una o varias áreas (y opcionalmente una dificultad)
+  // y recibe preguntas aleatorias mezcladas de esas áreas.
+  async generarSimulacroPersonalizado(
+    areas: AreaIcfes[],
+    cantidad: number = 20,
+    dificultad?: Dificultad,
+  ) {
+    if (!areas || areas.length === 0) {
+      throw new NotFoundException(
+        'Selecciona al menos un área para generar preguntas aleatorias.',
+      );
+    }
+
+    const todasLasPreguntas = await this.prisma.pregunta.findMany({
+      where: {
+        subtema: {
+          tema: {
+            area: { in: areas },
+          },
+        },
+        ...(dificultad ? { dificultad } : {}),
+      },
+      include: {
+        respuestas: {
+          select: {
+            id: true,
+            texto: true,
+            // ⚠️ SEGURIDAD: esCorrecta NUNCA viaja al cliente
+          },
+        },
+        subtema: {
+          include: {
+            tema: {
+              select: { nombre: true, area: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (todasLasPreguntas.length === 0) {
+      throw new NotFoundException(
+        'No hay preguntas disponibles para las áreas seleccionadas todavía.',
+      );
+    }
+
+    // Mezcla aleatoria (Fisher-Yates shuffle)
+    const mezcladas = [...todasLasPreguntas].sort(() => Math.random() - 0.5);
+    const seleccionadas = mezcladas.slice(0, cantidad);
+
+    return {
+      mensaje: 'Simulacro personalizado generado con éxito',
+      areasSeleccionadas: areas,
+      totalPreguntas: seleccionadas.length,
+      preguntas: seleccionadas,
+    };
+  }
+
+  // ─── CALIFICAR SIMULACRO PERSONALIZADO ──────────────────────
+  // No recibe un área única: la calcula por pregunta y guarda un
+  // ResultadoSimulacro por cada área presente en el intento, para
+  // que las estadísticas por área del dashboard sigan funcionando.
+  async calificarSimulacroPersonalizado(
+    usuarioId: string,
+    respuestasEstudiante: RespuestaEstudiante[],
+  ) {
+    if (!respuestasEstudiante || respuestasEstudiante.length === 0) {
+      throw new NotFoundException(
+        'No se recibieron respuestas para calificar.',
+      );
+    }
+
+    const preguntaIds = respuestasEstudiante.map((r) => r.preguntaId);
+
+    const preguntasConRespuestas = await this.prisma.pregunta.findMany({
+      where: { id: { in: preguntaIds } },
+      include: {
+        respuestas: { select: { id: true, esCorrecta: true } },
+        subtema: { include: { tema: { select: { area: true } } } },
+      },
+    });
+
+    let correctas = 0;
+    const detalle: Array<{
+      preguntaId: string;
+      esCorrecto: boolean;
+      respuestaCorrectaId: string;
+    }> = [];
+    const porArea: Record<string, { total: number; correctas: number }> = {};
+
+    for (const respuestaAlumno of respuestasEstudiante) {
+      const preguntaEnBD = preguntasConRespuestas.find(
+        (p) => p.id === respuestaAlumno.preguntaId,
+      );
+
+      if (!preguntaEnBD) continue;
+
+      const area = preguntaEnBD.subtema.tema.area;
+      const respuestaCorrecta = preguntaEnBD.respuestas.find(
+        (r) => r.esCorrecta === true,
+      );
+      const esCorrecto = respuestaCorrecta?.id === respuestaAlumno.respuestaId;
+
+      if (esCorrecto) correctas++;
+
+      if (!porArea[area]) porArea[area] = { total: 0, correctas: 0 };
+      porArea[area].total++;
+      if (esCorrecto) porArea[area].correctas++;
+
+      detalle.push({
+        preguntaId: respuestaAlumno.preguntaId,
+        esCorrecto,
+        respuestaCorrectaId: respuestaCorrecta?.id ?? '',
+      });
+    }
+
+    const totalPreguntas = respuestasEstudiante.length;
+    const puntaje = Math.round((correctas / totalPreguntas) * 100 * 10) / 10;
+
+    const xpGanado =
+      correctas * 10 + (puntaje >= 80 ? 50 : puntaje >= 60 ? 25 : 0);
+
+    const desglose: Array<{
+      area: string;
+      total: number;
+      correctas: number;
+      puntaje: number;
+    }> = [];
+
+    if (usuarioId) {
+      for (const [area, stats] of Object.entries(porArea)) {
+        const puntajeArea =
+          Math.round((stats.correctas / stats.total) * 100 * 10) / 10;
+        const xpArea = Math.round(xpGanado * (stats.total / totalPreguntas));
+
+        await this.prisma.resultadoSimulacro.create({
+          data: {
+            usuarioId,
+            area: area as AreaIcfes,
+            totalPreguntas: stats.total,
+            respuestasCorrectas: stats.correctas,
+            puntaje: puntajeArea,
+            xpGanado: xpArea,
+          },
+        });
+
+        desglose.push({
+          area,
+          total: stats.total,
+          correctas: stats.correctas,
+          puntaje: puntajeArea,
+        });
+      }
+
+      // Sumar XP al usuario
+      await this.prisma.usuario.update({
+        where: { id: usuarioId },
+        data: { xpTotal: { increment: xpGanado } },
+      });
+    }
+
+    return {
+      mensaje: '¡Simulacro personalizado calificado!',
+      resumen: {
+        totalPreguntas,
+        respuestasCorrectas: correctas,
+        respuestasIncorrectas: totalPreguntas - correctas,
+        puntaje: `${puntaje}%`,
+        xpGanado,
+      },
+      desglose,
       detalle,
     };
   }

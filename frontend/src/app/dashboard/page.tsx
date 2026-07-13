@@ -169,7 +169,40 @@ export default function DashboardPage() {
             <strong>{progreso.totalSubtemas}</strong> temas completados
           </p>
         </div>
-
+        
+        {/* PREGUNTAS ALEATORIAS */}
+        <Link href="/preguntas-aleatorias" style={{ textDecoration: 'none' }}>
+          <div style={{
+            backgroundColor: '#146C94',
+            backgroundImage: 'linear-gradient(120deg, #146C94, #19A7CE)',
+            borderRadius: 18,
+            padding: '28px 32px',
+            marginBottom: 40,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 16,
+            cursor: 'pointer',
+            boxShadow: '0 6px 20px rgba(20,108,148,0.25)',
+          }}>
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: '#ffffff', marginBottom: 6 }}>
+                🎲 Preguntas aleatorias
+              </h2>
+              <p style={{ color: '#D2E0FB', fontSize: 14, maxWidth: 460 }}>
+                Elige una o varias áreas y responde preguntas mezcladas al azar, a tu ritmo.
+              </p>
+            </div>
+            <span style={{
+              backgroundColor: '#ffffff', color: '#146C94', padding: '12px 24px',
+              borderRadius: 10, fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap',
+            }}>
+              Empezar →
+            </span>
+          </div>
+        </Link>
+        
         {/* MÓDULOS DE ESTUDIO */}
         <div style={{ marginBottom: 56 }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1a2a3a', marginBottom: 8 }}>

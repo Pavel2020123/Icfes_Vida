@@ -78,6 +78,7 @@ export class AdminController {
       subtemaId: string;
       dificultad: Dificultad;
       respuestas: { texto: string; esCorrecta: boolean }[];
+      imagenUrl?: string;
     },
   ) {
     return this.adminService.crearPregunta(
@@ -85,6 +86,7 @@ export class AdminController {
       body.subtemaId,
       body.dificultad,
       body.respuestas,
+      body.imagenUrl,
     );
   }
 

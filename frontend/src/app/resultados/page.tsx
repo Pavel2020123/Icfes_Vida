@@ -12,8 +12,18 @@ const AREA_NOMBRES: Record<string, string> = {
   INGLES: 'Inglés',
 };
 
-interface Resultado {
+interface DesgloseArea {
   area: string;
+  total: number;
+  correctas: number;
+  puntaje: number;
+}
+
+interface Resultado {
+  area?: string;
+  tipo?: 'personalizado';
+  areasSeleccionadas?: string[];
+  desglose?: DesgloseArea[];
   resumen: {
     totalPreguntas: number;
     respuestasCorrectas: number;
@@ -57,7 +67,9 @@ export default function ResultadosPage() {
         {/* Puntaje principal */}
         <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '48px 40px', border: '1.5px solid #AFD3E2', boxShadow: '0 4px 20px rgba(20,108,148,0.08)', textAlign: 'center', marginBottom: 24 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: '#8a9aaa', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>
-            {AREA_NOMBRES[resultado.area] ?? resultado.area}
+            {resultado.tipo === 'personalizado'
+              ? 'Preguntas aleatorias'
+              : AREA_NOMBRES[resultado.area ?? ''] ?? resultado.area}
           </p>
           <div style={{ fontSize: 88, fontWeight: 900, color: colorPuntaje, lineHeight: 1, marginBottom: 8 }}>
             {resultado.resumen.puntaje}
@@ -79,6 +91,27 @@ export default function ResultadosPage() {
               </div>
             ))}
           </div>
+           
+           {/* Desglose por área (solo simulacros con varias áreas) */}
+          {resultado.tipo === 'personalizado' && resultado.desglose && resultado.desglose.length > 1 && (
+            <div style={{ textAlign: 'left', marginBottom: 32 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#8a9aaa', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
+                Desglose por área
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {resultado.desglose.map(d => (
+                  <div key={d.area} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F6F1F1', borderRadius: 10, padding: '10px 16px' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a' }}>
+                      {AREA_NOMBRES[d.area] ?? d.area}
+                    </span>
+                    <span style={{ fontSize: 13, color: '#4a5a6a' }}>
+                      {d.correctas}/{d.total} · <strong style={{ color: '#146C94' }}>{d.puntaje}%</strong>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* XP Banner */}
           <div style={{ backgroundColor: '#D2E0FB', borderRadius: 12, padding: '16px 24px', marginBottom: 32 }}>
@@ -90,7 +123,11 @@ export default function ResultadosPage() {
           {/* Botones */}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link
-              href={`/simulacro?area=${resultado.area}`}
+              href={
+                resultado.tipo === 'personalizado'
+                  ? '/preguntas-aleatorias'
+                  : `/simulacro?area=${resultado.area}`
+              }
               style={{ backgroundColor: '#146C94', color: '#ffffff', padding: '13px 28px', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}
             >
               Repetir simulacro

@@ -8,7 +8,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { SimulacroService } from './simulacro.service';
-import { AreaIcfes } from '@prisma/client';
+import { AreaIcfes, Dificultad } from '@prisma/client';
 import { JwtGuard } from '../auth/jwt.guard';
 
 interface CalificarDto {
@@ -40,6 +40,48 @@ export class SimulacroController {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       usuarioId,
       body.area,
+      body.respuestas,
+    );
+  }
+  // GET /simulacros/generar-personalizado?areas=MATEMATICAS,LECTURA_CRITICA&cantidad=20&dificultad=MEDIO
+  // "Preguntas aleatorias": el estudiante elige 1 o varias áreas.
+  @Get('generar-personalizado')
+  generarPersonalizado(
+    @Query('areas') areas: string,
+    @Query('cantidad') cantidad?: string,
+    @Query('dificultad') dificultad?: Dificultad,
+  ) {
+    const listaAreas = (areas ?? '')
+      .split(',')
+      .map((a) => a.trim())
+      .filter((a): a is AreaIcfes => a.length > 0);
+
+    const cantidadNumero = cantidad ? parseInt(cantidad, 10) : 20;
+
+    return this.simulacroService.generarSimulacroPersonalizado(
+      listaAreas,
+      Number.isFinite(cantidadNumero) && cantidadNumero > 0
+        ? cantidadNumero
+        : 20,
+      dificultad,
+    );
+  }
+
+  // POST /simulacros/calificar-personalizado ← Ruta protegida con JWT
+  // Body: { respuestas: [{ preguntaId: "...", respuestaId: "..." }] }
+  // No requiere "area": se calcula por pregunta y se guarda el desglose.
+  @UseGuards(JwtGuard)
+  @Post('calificar-personalizado')
+  calificarPersonalizado(
+    @Body()
+    body: { respuestas: Array<{ preguntaId: string; respuestaId: string }> },
+    @Request() req: any,
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const usuarioId = req.usuario.sub;
+    return this.simulacroService.calificarSimulacroPersonalizado(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      usuarioId,
       body.respuestas,
     );
   }
