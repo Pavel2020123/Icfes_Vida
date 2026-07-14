@@ -43,7 +43,21 @@ interface Stats {
   totalSimulacros: number;
 }
 
-type Pestana = 'stats' | 'temas' | 'preguntas' | 'usuarios' | 'contenido' | 'interactivo';
+interface RespuestaAdmin {
+  id: string;
+  texto: string;
+  esCorrecta: boolean;
+}
+
+interface PreguntaAdmin {
+  id: string;
+  enunciado: string;
+  imagenUrl: string | null;
+  dificultad: string;
+  respuestas: RespuestaAdmin[];
+}
+
+type Pestana = 'stats' | 'temas' | 'preguntas' | 'aleatorias' | 'usuarios' | 'contenido' | 'interactivo';
 
 function ContenidoEditor({ temas, getHeaders, mostrarMensaje, inputStyle, btnStyle }: {
   temas: Tema[];
@@ -289,8 +303,22 @@ export default function AdminPage() {
       { texto: '', esCorrecta: false },
     ],
   });
+  
+  const [nuevaPreguntaAleatoria, setNuevaPreguntaAleatoria] = useState({
+    area: 'MATEMATICAS',
+    enunciado: '',
+    imagenes: '',
+    respuestas: [
+      { texto: '', esCorrecta: true },
+      { texto: '', esCorrecta: false },
+      { texto: '', esCorrecta: false },
+      { texto: '', esCorrecta: false },
+    ],
+  });
 
   const [mensaje, setMensaje] = useState('');
+  const [preguntasSubtema, setPreguntasSubtema] = useState<PreguntaAdmin[]>([]);
+  const [preguntasBanco, setPreguntasBanco] = useState<PreguntaAdmin[]>([]);
 
   const inputStyle = {
     width: '100%',
@@ -383,6 +411,49 @@ export default function AdminPage() {
     setTimeout(() => setMensaje(''), 3000);
   };
 
+  // ─── LISTAR / ELIMINAR PREGUNTAS ────────────────────────────
+  const cargarPreguntasDeSubtema = async (subtemaId: string) => {
+    if (!subtemaId) { setPreguntasSubtema([]); return; }
+    const res = await fetch(`http://localhost:3000/admin/preguntas/${subtemaId}`, { headers: getHeaders() });
+    setPreguntasSubtema(await res.json());
+  };
+
+  const cargarPreguntasDelBanco = async (area: string) => {
+    const temaBanco = temas.find(t => t.nombre === 'Banco General' && t.area === area);
+    const subtemaBanco = temaBanco?.subtemas[0];
+    if (!subtemaBanco) { setPreguntasBanco([]); return; }
+    const res = await fetch(`http://localhost:3000/admin/preguntas/${subtemaBanco.id}`, { headers: getHeaders() });
+    setPreguntasBanco(await res.json());
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarPreguntasDeSubtema(subtemaSeleccionado);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtemaSeleccionado]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarPreguntasDelBanco(nuevaPreguntaAleatoria.area);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nuevaPreguntaAleatoria.area, temas]);
+
+  const eliminarPreguntaSubtema = async (id: string) => {
+    if (!confirm('¿Eliminar esta pregunta?')) return;
+    await fetch(`http://localhost:3000/admin/preguntas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    mostrarMensaje('Pregunta eliminada');
+    cargarPreguntasDeSubtema(subtemaSeleccionado);
+    cargarDatos();
+  };
+
+  const eliminarPreguntaBanco = async (id: string) => {
+    if (!confirm('¿Eliminar esta pregunta?')) return;
+    await fetch(`http://localhost:3000/admin/preguntas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    mostrarMensaje('Pregunta eliminada');
+    cargarPreguntasDelBanco(nuevaPreguntaAleatoria.area);
+    cargarDatos();
+  };
+
   const crearTema = async () => {
     if (!nuevoTema.nombre) return;
     await fetch('http://localhost:3000/admin/temas', {
@@ -460,6 +531,48 @@ export default function AdminPage() {
       ],
     });
     mostrarMensaje('Pregunta creada');
+    cargarPreguntasDeSubtema(subtemaSeleccionado);
+  };
+
+  const crearPreguntaAleatoria = async () => {
+    if (!nuevaPreguntaAleatoria.enunciado) {
+      mostrarMensaje('Escribe el enunciado de la pregunta');
+      return;
+    }
+    const correctas = nuevaPreguntaAleatoria.respuestas.filter(r => r.esCorrecta).length;
+    if (correctas !== 1) {
+      mostrarMensaje('Debe haber exactamente 1 respuesta correcta');
+      return;
+    }
+    if (nuevaPreguntaAleatoria.respuestas.some(r => !r.texto)) {
+      mostrarMensaje('Todas las opciones deben tener texto');
+      return;
+    }
+
+    await fetch('http://localhost:3000/admin/preguntas-aleatorias', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        area: nuevaPreguntaAleatoria.area,
+        enunciado: nuevaPreguntaAleatoria.enunciado,
+        imagenUrl: nuevaPreguntaAleatoria.imagenes || null,
+        respuestas: nuevaPreguntaAleatoria.respuestas,
+      }),
+    });
+
+    setNuevaPreguntaAleatoria({
+      area: nuevaPreguntaAleatoria.area,
+      enunciado: '',
+      imagenes: '',
+      respuestas: [
+        { texto: '', esCorrecta: true },
+        { texto: '', esCorrecta: false },
+        { texto: '', esCorrecta: false },
+        { texto: '', esCorrecta: false },
+      ],
+    });
+    mostrarMensaje('Pregunta agregada al banco general de ' + (AREAS.find(a => a.key === nuevaPreguntaAleatoria.area)?.nombre ?? nuevaPreguntaAleatoria.area));
+    cargarDatos();
   };
 
   const cambiarRol = async (usuarioId: string, rol: string) => {
@@ -517,6 +630,7 @@ export default function AdminPage() {
             { key: 'stats', label: 'Estadísticas' },
             { key: 'temas', label: 'Temas y Subtemas' },
             { key: 'preguntas', label: 'Preguntas' },
+            { key: 'aleatorias', label: '🎲 Preguntas aleatorias' },
             { key: 'usuarios', label: 'Usuarios' },
             { key: 'contenido', label: 'Contenido de temas' },
             { key: 'interactivo', label: 'Ejercicio interactivo' },
@@ -744,6 +858,159 @@ export default function AdminPage() {
                 Guardar pregunta
               </button>
             </div>
+          </div>
+        )}
+
+        {/* LISTA DE PREGUNTAS DEL SUBTEMA SELECCIONADO */}
+        {pestana === 'preguntas' && subtemaSeleccionado && (
+          <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '24px', border: '1.5px solid #AFD3E2', maxWidth: 700, marginTop: 20 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 800, color: '#1a2a3a', marginBottom: 16 }}>
+              Preguntas en este subtema ({preguntasSubtema.length})
+            </h3>
+            {preguntasSubtema.length === 0 ? (
+              <p style={{ color: '#8a9aaa', fontSize: 14 }}>Todavía no hay preguntas aquí.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {preguntasSubtema.map(p => (
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, border: '1px solid #D2E0FB', borderRadius: 10, padding: '12px 16px' }}>
+                    <p style={{ fontSize: 14, color: '#1a2a3a', margin: 0 }}>{p.enunciado}</p>
+                    <button
+                      onClick={() => eliminarPreguntaSubtema(p.id)}
+                      style={{ backgroundColor: '#FCD8CD', color: '#BC7C7C', border: 'none', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+
+        {/* PREGUNTAS ALEATORIAS */}
+        {pestana === 'aleatorias' && (
+          <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1.5px solid #AFD3E2', maxWidth: 700 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1a2a3a', marginBottom: 8 }}>
+              🎲 Agregar pregunta al banco de aleatorias
+            </h2>
+            <p style={{ fontSize: 13, color: '#8a9aaa', marginBottom: 24 }}>
+              Solo elige el área, escribe la pregunta y las respuestas. No hace falta crear temas ni subtemas: se guarda automáticamente en el &quot;Banco General&quot; de esa área.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5a6a', display: 'block', marginBottom: 6 }}>Área</label>
+                <select
+                  value={nuevaPreguntaAleatoria.area}
+                  onChange={e => setNuevaPreguntaAleatoria({ ...nuevaPreguntaAleatoria, area: e.target.value })}
+                  style={inputStyle}
+                >
+                  {AREAS.map(a => <option key={a.key} value={a.key}>{a.nombre}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5a6a', display: 'block', marginBottom: 6 }}>Enunciado de la pregunta</label>
+                <textarea
+                  value={nuevaPreguntaAleatoria.enunciado}
+                  onChange={e => setNuevaPreguntaAleatoria({ ...nuevaPreguntaAleatoria, enunciado: e.target.value })}
+                  placeholder="Escribe la pregunta aquí..."
+                  rows={4}
+                  style={{ ...inputStyle, resize: 'vertical', fontFamily: 'system-ui, sans-serif' }}
+                />
+              </div>
+
+              {/* IMÁGENES */}
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5a6a', display: 'block', marginBottom: 6 }}>
+                  Imagen (opcional)
+                </label>
+                <input
+                  placeholder="ej: grafica-001.png"
+                  value={nuevaPreguntaAleatoria.imagenes}
+                  onChange={e => setNuevaPreguntaAleatoria({ ...nuevaPreguntaAleatoria, imagenes: e.target.value })}
+                  style={inputStyle}
+                />
+                <p style={{ fontSize: 12, color: '#8a9aaa', marginTop: 4 }}>
+                  Coloca el archivo en frontend/public/imagenes/
+                </p>
+                {nuevaPreguntaAleatoria.imagenes && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/imagenes/${nuevaPreguntaAleatoria.imagenes.trim()}`}
+                      alt="vista previa"
+                      style={{ height: 80, borderRadius: 8, border: '1px solid #AFD3E2', objectFit: 'contain', backgroundColor: '#F6F1F1' }}
+                      onError={e => (e.currentTarget.style.display = 'none')}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5a6a', display: 'block', marginBottom: 10 }}>
+                  Opciones de respuesta — marca la correcta
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {nuevaPreguntaAleatoria.respuestas.map((r, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <input
+                        type="radio"
+                        name="correcta-aleatoria"
+                        checked={r.esCorrecta}
+                        onChange={() => setNuevaPreguntaAleatoria({
+                          ...nuevaPreguntaAleatoria,
+                          respuestas: nuevaPreguntaAleatoria.respuestas.map((resp, idx) => ({ ...resp, esCorrecta: idx === i })),
+                        })}
+                        style={{ width: 18, height: 18, cursor: 'pointer', accentColor: '#146C94' }}
+                      />
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#146C94', width: 20 }}>
+                        {['A', 'B', 'C', 'D'][i]}
+                      </span>
+                      <input
+                        placeholder={`Opción ${['A', 'B', 'C', 'D'][i]}`}
+                        value={r.texto}
+                        onChange={e => setNuevaPreguntaAleatoria({
+                          ...nuevaPreguntaAleatoria,
+                          respuestas: nuevaPreguntaAleatoria.respuestas.map((resp, idx) => idx === i ? { ...resp, texto: e.target.value } : resp),
+                        })}
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={crearPreguntaAleatoria} style={{ ...btnStyle, padding: '13px' }}>
+                Guardar y agregar otra
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* LISTA DE PREGUNTAS DEL BANCO GENERAL (ALEATORIAS) */}
+        {pestana === 'aleatorias' && (
+          <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '24px', border: '1.5px solid #AFD3E2', maxWidth: 700, marginTop: 20 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 800, color: '#1a2a3a', marginBottom: 16 }}>
+              Preguntas cargadas en {AREAS.find(a => a.key === nuevaPreguntaAleatoria.area)?.nombre} ({preguntasBanco.length})
+            </h3>
+            {preguntasBanco.length === 0 ? (
+              <p style={{ color: '#8a9aaa', fontSize: 14 }}>Todavía no hay preguntas en esta área.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {preguntasBanco.map(p => (
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, border: '1px solid #D2E0FB', borderRadius: 10, padding: '12px 16px' }}>
+                    <p style={{ fontSize: 14, color: '#1a2a3a', margin: 0 }}>{p.enunciado}</p>
+                    <button
+                      onClick={() => eliminarPreguntaBanco(p.id)}
+                      style={{ backgroundColor: '#FCD8CD', color: '#BC7C7C', border: 'none', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

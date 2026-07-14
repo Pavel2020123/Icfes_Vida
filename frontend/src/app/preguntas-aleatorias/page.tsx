@@ -15,18 +15,12 @@ const AREAS = [
 
 const CANTIDADES = [10, 15, 20, 25, 30];
 
-const DIFICULTADES: { key: string; nombre: string }[] = [
-  { key: '', nombre: 'Todas' },
-  { key: 'BASICO', nombre: 'Básico' },
-  { key: 'MEDIO', nombre: 'Medio' },
-  { key: 'AVANZADO', nombre: 'Avanzado' },
-];
+
 
 export default function PreguntasAleatoriasPage() {
   const router = useRouter();
   const [areasSeleccionadas, setAreasSeleccionadas] = useState<string[]>([]);
   const [cantidad, setCantidad] = useState(15);
-  const [dificultad, setDificultad] = useState('');
   const [verificando, setVerificando] = useState(true);
 
   useEffect(() => {
@@ -51,13 +45,12 @@ export default function PreguntasAleatoriasPage() {
     );
   };
 
-  const empezar = () => {
+ const empezar = () => {
     if (areasSeleccionadas.length === 0) return;
     const params = new URLSearchParams({
       areas: areasSeleccionadas.join(','),
       cantidad: String(cantidad),
     });
-    if (dificultad) params.set('dificultad', dificultad);
     router.push(`/simulacro-personalizado?${params.toString()}`);
   };
 
@@ -175,31 +168,7 @@ export default function PreguntasAleatoriasPage() {
         </div>
 
         {/* DIFICULTAD */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px', border: '1.5px solid #AFD3E2', marginBottom: 32 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#8a9aaa', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>
-            Dificultad
-          </p>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {DIFICULTADES.map(d => (
-              <button
-                key={d.key}
-                onClick={() => setDificultad(d.key)}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: 10,
-                  border: `1.5px solid ${dificultad === d.key ? '#146C94' : '#D2E0FB'}`,
-                  backgroundColor: dificultad === d.key ? '#146C94' : '#F6F1F1',
-                  color: dificultad === d.key ? '#ffffff' : '#1a2a3a',
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
-              >
-                {d.nombre}
-              </button>
-            ))}
-          </div>
-        </div>
+        
 
         {/* BOTÓN EMPEZAR */}
         <button

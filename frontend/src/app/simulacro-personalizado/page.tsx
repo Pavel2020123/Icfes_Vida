@@ -33,7 +33,6 @@ export default function SimulacroPersonalizadoPage() {
   const searchParams = useSearchParams();
   const areasParam = searchParams.get('areas') ?? '';
   const cantidad = searchParams.get('cantidad') ?? '15';
-  const dificultad = searchParams.get('dificultad') ?? '';
 
   const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
   const [actual, setActual] = useState(0);
@@ -52,7 +51,6 @@ export default function SimulacroPersonalizadoPage() {
     }
 
     const params = new URLSearchParams({ areas: areasParam, cantidad });
-    if (dificultad) params.set('dificultad', dificultad);
 
     fetch(`http://localhost:3000/simulacros/generar-personalizado?${params.toString()}`)
       .then(r => r.json())
@@ -65,8 +63,7 @@ export default function SimulacroPersonalizadoPage() {
       })
       .catch(() => setError('Error conectando con el servidor.'))
       .finally(() => setCargando(false));
-  }, [areasParam, cantidad, dificultad, router]);
-
+  }, [areasParam, cantidad, router]);
   const seleccionarRespuesta = (preguntaId: string, respuestaId: string) => {
     setRespuestas(prev => ({ ...prev, [preguntaId]: respuestaId }));
   };

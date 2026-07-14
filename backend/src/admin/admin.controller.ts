@@ -90,6 +90,25 @@ export class AdminController {
     );
   }
 
+  // Preguntas aleatorias: carga rápida, solo pide el área (no subtema)
+  @Post('preguntas-aleatorias')
+  crearPreguntaAleatoria(
+    @Body()
+    body: {
+      area: AreaIcfes;
+      enunciado: string;
+      respuestas: { texto: string; esCorrecta: boolean }[];
+      imagenUrl?: string;
+    },
+  ) {
+    return this.adminService.crearPreguntaAleatoria(
+      body.area,
+      body.enunciado,
+      body.respuestas,
+      body.imagenUrl,
+    );
+  }
+
   @Delete('preguntas/:id')
   eliminarPregunta(@Param('id') id: string) {
     return this.adminService.eliminarPregunta(id);

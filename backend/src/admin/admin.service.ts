@@ -158,6 +158,42 @@ export class AdminService {
       include: { respuestas: true },
     });
   }
+  // ─── PREGUNTAS ALEATORIAS (carga rápida por área) ────────────
+  // No pide subtema: busca (o crea) un tema/subtema "Banco General"
+  // para esa área y mete la pregunta ahí. Así el admin solo elige
+  // el área, escribe la pregunta y las respuestas, y ya.
+  async crearPreguntaAleatoria(
+    area: AreaIcfes,
+    enunciado: string,
+    respuestas: { texto: string; esCorrecta: boolean }[],
+    imagenUrl?: string,
+  ) {
+    let tema = await this.prisma.tema.findFirst({
+      where: { nombre: 'Banco General', area },
+    });
+    if (!tema) {
+      tema = await this.prisma.tema.create({
+        data: { nombre: 'Banco General', area },
+      });
+    }
+
+    let subtema = await this.prisma.subtema.findFirst({
+      where: { nombre: 'Banco General', temaId: tema.id },
+    });
+    if (!subtema) {
+      subtema = await this.prisma.subtema.create({
+        data: { nombre: 'Banco General', temaId: tema.id },
+      });
+    }
+
+    return this.crearPregunta(
+      enunciado,
+      subtema.id,
+      'MEDIO',
+      respuestas,
+      imagenUrl,
+    );
+  }
 
   async obtenerPreguntasPorSubtema(subtemaId: string) {
     return this.prisma.pregunta.findMany({
