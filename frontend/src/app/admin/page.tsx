@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { obtenerToken } from '../../lib/api';
+import EditorBloquesContenido from '../../components/EditorBloquesContenido';
 
 const AREAS = [
   { key: 'LECTURA_CRITICA', nombre: 'Lectura Crítica' },
@@ -26,6 +27,9 @@ interface Usuario {
 interface Subtema {
   id: string;
   nombre: string;
+  contenido?: string | null;
+  videoUrl?: string | null;
+  imagenUrl?: string | null;
   _count: { preguntas: number };
 }
 
@@ -76,6 +80,14 @@ function ContenidoEditor({ temas, getHeaders, mostrarMensaje, inputStyle, btnSty
     t.subtemas.map(s => ({ ...s, temaNombre: t.nombre }))
   );
 
+  const seleccionarSubtema = (id: string) => {
+    const subtema = todosSubtemas.find(item => item.id === id);
+    setSubtemaId(id);
+    setContenido(subtema?.contenido ?? '');
+    setVideoUrl(subtema?.videoUrl ?? '');
+    setImagenUrl(subtema?.imagenUrl ?? '');
+  };
+
   const guardar = async () => {
     if (!subtemaId) { mostrarMensaje('Selecciona un subtema'); return; }
     setGuardando(true);
@@ -96,25 +108,21 @@ function ContenidoEditor({ temas, getHeaders, mostrarMensaje, inputStyle, btnSty
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5a6a', display: 'block', marginBottom: 6 }}>Subtema</label>
-          <select value={subtemaId} onChange={e => setSubtemaId(e.target.value)} style={inputStyle}>
+          <select value={subtemaId} onChange={e => seleccionarSubtema(e.target.value)} style={inputStyle}>
             <option value="">Selecciona un subtema</option>
             {todosSubtemas.map(s => (
               <option key={s.id} value={s.id}>{s.temaNombre} → {s.nombre}</option>
             ))}
           </select>
         </div>
-        <div>
-          <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5a6a', display: 'block', marginBottom: 6 }}>
-            Explicación del tema
-          </label>
-          <textarea
-            value={contenido}
-            onChange={e => setContenido(e.target.value)}
-            placeholder="Escribe aquí la explicación del tema. Puedes usar saltos de línea para organizar el contenido."
-            rows={10}
-            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'system-ui, sans-serif', lineHeight: 1.6 }}
+        {subtemaId && (
+          <EditorBloquesContenido
+            key={subtemaId}
+            contenidoInicial={contenido}
+            alCambiarContenido={setContenido}
           />
-        </div>
+        )}
+        <textarea value={contenido} readOnly aria-hidden="true" tabIndex={-1} style={{ display: 'none' }} />
         <div>
           <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5a6a', display: 'block', marginBottom: 6 }}>
             Link del video de YouTube
