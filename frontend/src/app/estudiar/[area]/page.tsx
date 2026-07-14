@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { obtenerToken } from '../../../lib/api';
+import LectorContenido from '../../../components/LectorContenido';
 
 const AREA_NOMBRES: Record<string, string> = {
   LECTURA_CRITICA: 'Lectura Crítica',
@@ -493,9 +494,7 @@ export default function AreaPage() {
                     </div>
 
                     {modoVista === 'texto' && (
-                      <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px 32px', border: '1.5px solid #AFD3E2', marginBottom: 28, lineHeight: 1.8, fontSize: 16, color: '#1a2a3a', whiteSpace: 'pre-wrap' }}>
-                        {subtemaActivo.contenido}
-                      </div>
+                      <LectorContenido contenido={subtemaActivo.contenido} />
                     )}
                     {modoVista === 'video' && (
                       <div style={{ marginBottom: 28 }}>
@@ -507,9 +506,7 @@ export default function AreaPage() {
                   </>
                 )
               ) : subtemaActivo.contenido ? (
-                <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px 32px', border: '1.5px solid #AFD3E2', marginBottom: 28, lineHeight: 1.8, fontSize: 16, color: '#1a2a3a', whiteSpace: 'pre-wrap' }}>
-                  {subtemaActivo.contenido}
-                </div>
+                <LectorContenido contenido={subtemaActivo.contenido} />
               ) : embedUrl ? (
                 <div style={{ marginBottom: 28 }}>
                   <div style={{ borderRadius: 16, overflow: 'hidden', border: '1.5px solid #AFD3E2', aspectRatio: '16/9' }}>
