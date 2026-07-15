@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { cerrarSesion } from '../lib/api';
+import { cerrarSesion, obtenerToken } from '../lib/api';
+import { decodificarToken, RolUsuario } from '../lib/auth';
 
 const AREAS = [
   { key: 'LECTURA_CRITICA', nombre: 'Lectura Crítica' },
@@ -29,6 +30,15 @@ export default function MenuLateral({
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [areasAbierto, setAreasAbierto] = useState(false);
+  const [rol, setRol] = useState<RolUsuario | null>(null);
+
+  useEffect(() => {
+    const token = obtenerToken();
+    if (token) {
+      const payload = decodificarToken(token);
+      setRol(payload?.rol ?? null);
+    }
+  }, []);
 
   const handleLogout = () => {
     cerrarSesion();
@@ -169,7 +179,66 @@ export default function MenuLateral({
               Mi perfil
             </div>
           </Link>
+  
+          {/* Sección PROFESOR: Institución */}
+          {rol === 'PROFESOR' && (
+            <>
+              <div style={{ height: 1, backgroundColor: '#F0F0F0', margin: '8px 0' }} />
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#8a9aaa', padding: '8px 16px 4px', margin: 0 }}>
+                GESTIÓN DE INSTITUCIÓN
+              </p>
+              
+              <Link href="/institucion" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+                <div
+                  style={linkStyle}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  Mi institución
+                </div>
+              </Link>
+      
+              <Link href="/institucion/estudiantes" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+                <div
+                  style={linkStyle}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  Estudiantes
+                </div>
+              </Link>
+      
+              <Link href="/institucion/grupos" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+                <div
+                  style={linkStyle}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  Grupos
+                </div>
+              </Link>
+            </>
+          )}
 
+          {/* Sección ADMIN */}
+          {rol === 'ADMIN' && (
+            <>
+              <div style={{ height: 1, backgroundColor: '#F0F0F0', margin: '8px 0' }} />
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#8a9aaa', padding: '8px 16px 4px', margin: 0 }}>
+                ADMINISTRACIÓN
+              </p>
+              <Link href="/admin" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+                <div
+                  style={{ ...linkStyle, color: '#BC7C7C' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FCD8CD'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  Panel Admin
+                </div>
+              </Link>
+            </>
+          )}
+  
           {/* Divisor */}
           <div style={{ height: 1, backgroundColor: '#F0F0F0', margin: '8px 0' }} />
 

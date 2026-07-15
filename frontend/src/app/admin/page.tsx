@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { obtenerToken } from '../../lib/api';
 import EditorBloquesContenido from '../../components/EditorBloquesContenido';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 const AREAS = [
   { key: 'LECTURA_CRITICA', nombre: 'Lectura Crítica' },
@@ -606,7 +607,8 @@ export default function AdminPage() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', fontFamily: 'system-ui, sans-serif' }}>
+    <ProtectedRoute rolesPermitidos={['ADMIN']}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', fontFamily: 'system-ui, sans-serif' }}>
       {/* NAVBAR */}
       <nav style={{ backgroundColor: '#1a2a3a', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
@@ -1075,6 +1077,7 @@ export default function AdminPage() {
             />
           )}
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

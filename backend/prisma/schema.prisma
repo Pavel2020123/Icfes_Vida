@@ -28,12 +28,17 @@ model ClaseEstudiante {
 }
 
 model Institucion {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre      String    @db.VarChar(255)
-  codigoUnico String    @unique @db.VarChar(50)
-  planActual  String?   @default("GRATIS") @db.VarChar(50)
-  Clase       Clase[]
-  Usuario     Usuario[]
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre           String    @db.VarChar(255)
+  codigoUnico      String    @unique @db.VarChar(50)
+  planActual       String?   @default("GRATIS") @db.VarChar(50)
+  logoUrl          String?   @db.VarChar(255)
+  colorPrimario    String?   @db.VarChar(20)
+  colorSecundario  String?   @db.VarChar(20)
+  mensajeBienvenida String?  @db.Text
+  imagenPortada    String?   @db.VarChar(255)
+  Clase            Clase[]
+  Usuario          Usuario[]
 }
 
 model Usuario {

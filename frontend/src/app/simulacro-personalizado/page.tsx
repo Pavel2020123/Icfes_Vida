@@ -1,7 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { obtenerToken } from '../../lib/api';
 
 const AREA_NOMBRES: Record<string, string> = {
@@ -30,10 +32,8 @@ interface Pregunta {
 
 export default function SimulacroPersonalizadoPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const areasParam = searchParams.get('areas') ?? '';
-  const cantidad = searchParams.get('cantidad') ?? '15';
-
+  const [areasParam, setAreasParam] = useState('');
+  const [cantidad, setCantidad] = useState('15');
   const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
   const [actual, setActual] = useState(0);
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
@@ -45,12 +45,19 @@ export default function SimulacroPersonalizadoPage() {
     const token = obtenerToken();
     if (!token) { router.push('/login'); return; }
 
-    if (!areasParam) {
+    const query = new URLSearchParams(window.location.search);
+    const areas = query.get('areas') ?? '';
+    const quantity = query.get('cantidad') ?? '15';
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAreasParam(areas);
+    setCantidad(quantity);
+
+    if (!areas) {
       router.replace('/preguntas-aleatorias');
       return;
     }
 
-    const params = new URLSearchParams({ areas: areasParam, cantidad });
+    const params = new URLSearchParams({ areas, cantidad: quantity });
 
     fetch(`http://localhost:3000/simulacros/generar-personalizado?${params.toString()}`)
       .then(r => r.json())
@@ -63,7 +70,7 @@ export default function SimulacroPersonalizadoPage() {
       })
       .catch(() => setError('Error conectando con el servidor.'))
       .finally(() => setCargando(false));
-  }, [areasParam, cantidad, router]);
+  }, [router]);
   const seleccionarRespuesta = (preguntaId: string, respuestaId: string) => {
     setRespuestas(prev => ({ ...prev, [preguntaId]: respuestaId }));
   };

@@ -69,10 +69,11 @@ export class AuthService {
       correo: usuario.correo,
       rol: usuario.rol,
       nombre: usuario.nombre,
+      institucionId: usuario.institucionId,
     };
-
+ 
     const token = await this.jwtService.signAsync(payload);
-
+ 
     return {
       mensaje: '¡Bienvenido de vuelta!',
       accessToken: token,
@@ -82,6 +83,7 @@ export class AuthService {
         correo: usuario.correo,
         rol: usuario.rol,
         xpTotal: usuario.xpTotal,
+        institucionId: usuario.institucionId,
       },
     };
   }
@@ -98,6 +100,7 @@ export class AuthService {
         fechaCreacion: true,
         fotoPerfil: true,
         descripcion: true,
+        institucionId: true,
       },
     });
     return usuario;
