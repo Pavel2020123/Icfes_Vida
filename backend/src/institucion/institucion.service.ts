@@ -1,0 +1,285 @@
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
+
+@Injectable()
+export class InstitucionService {
+  constructor(private prisma: PrismaService) {}
+
+  private async obtenerInstitucionIdDelUsuario(usuarioId: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { institucionId: true, rol: true },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado.');
+    }
+
+    if (!usuario.institucionId) {
+      return null;
+    }
+
+    return usuario.institucionId;
+  }
+
+  async obtenerMiInstitucion(usuarioId: string) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      return null;
+    }
+
+    return this.prisma.institucion.findUnique({
+      where: { id: institucionId },
+      include: {
+        Usuario: {
+          select: { id: true, nombre: true, rol: true },
+        },
+        Clase: {
+          select: { id: true, nombre: true, codigoIngreso: true },
+        },
+      },
+    });
+  }
+
+  async crearInstitucion(
+    usuarioId: string,
+    nombre: string,
+    mensajeBienvenida?: string,
+    logoUrl?: string,
+    colorPrimario?: string,
+    colorSecundario?: string,
+  ) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { institucionId: true, rol: true },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado.');
+    }
+
+    if (usuario.institucionId) {
+      throw new BadRequestException('Ya perteneces a una institución.');
+    }
+
+    if (usuario.rol !== 'PROFESOR' && usuario.rol !== 'ADMIN') {
+      throw new UnauthorizedException(
+        'Solo profesores o administradores pueden crear una institución.',
+      );
+    }
+
+    const codigoUnico = await this.generarCodigoUnico();
+
+    return this.prisma.institucion.create({
+      data: {
+        nombre,
+        codigoUnico,
+        mensajeBienvenida: mensajeBienvenida || null,
+        logoUrl: logoUrl || null,
+        colorPrimario: colorPrimario || null,
+        colorSecundario: colorSecundario || null,
+        Usuario: {
+          connect: { id: usuarioId },
+        },
+      },
+    });
+  }
+
+  async actualizarMiInstitucion(
+    usuarioId: string,
+    nombre?: string,
+    mensajeBienvenida?: string,
+    logoUrl?: string,
+    colorPrimario?: string,
+    colorSecundario?: string,
+  ) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    return this.prisma.institucion.update({
+      where: { id: institucionId },
+      data: {
+        ...(nombre !== undefined && { nombre }),
+        ...(mensajeBienvenida !== undefined && { mensajeBienvenida }),
+        ...(logoUrl !== undefined && { logoUrl }),
+        ...(colorPrimario !== undefined && { colorPrimario }),
+        ...(colorSecundario !== undefined && { colorSecundario }),
+      },
+    });
+  }
+
+  async obtenerEstudiantesDeMiInstitucion(usuarioId: string) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    return this.prisma.usuario.findMany({
+      where: {
+        institucionId,
+        rol: 'ESTUDIANTE',
+      },
+      select: {
+        id: true,
+        nombre: true,
+        correo: true,
+        fechaCreacion: true,
+        ClaseEstudiante: {
+          select: {
+            Clase: {
+              select: { id: true, nombre: true },
+            },
+          },
+        },
+      },
+      orderBy: { nombre: 'asc' },
+    });
+  }
+
+  async crearEstudianteEnMiInstitucion(
+    usuarioId: string,
+    nombre: string,
+    correo: string,
+    contrasena: string,
+  ) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    const existe = await this.prisma.usuario.findUnique({
+      where: { correo },
+    });
+    if (existe) {
+      throw new BadRequestException('Ya existe un usuario con ese correo.');
+    }
+
+    const contrasenaHash = await bcrypt.hash(contrasena, 10);
+
+    return this.prisma.usuario.create({
+      data: {
+        nombre,
+        correo,
+        contrasenaHash,
+        rol: 'ESTUDIANTE',
+        institucionId,
+      },
+    });
+  }
+
+  async obtenerGruposDeMiInstitucion(usuarioId: string) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    return this.prisma.clase.findMany({
+      where: { institucionId },
+      select: {
+        id: true,
+        nombre: true,
+        codigoIngreso: true,
+        ClaseEstudiante: {
+          select: {
+            usuarioId: true,
+          },
+        },
+      },
+      orderBy: { nombre: 'asc' },
+    });
+  }
+
+  async crearGrupoEnMiInstitucion(usuarioId: string, nombre: string) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    const codigoIngreso = await this.generarCodigoIngreso();
+
+    return this.prisma.clase.create({
+      data: {
+        nombre,
+        codigoIngreso,
+        institucionId,
+      },
+    });
+  }
+
+  async actualizarGrupo(usuarioId: string, claseId: string, nombre?: string) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    const grupo = await this.prisma.clase.findUnique({
+      where: { id: claseId },
+      select: { institucionId: true },
+    });
+    if (!grupo || grupo.institucionId !== institucionId) {
+      throw new NotFoundException('Grupo no encontrado.');
+    }
+
+    return this.prisma.clase.update({
+      where: { id: claseId },
+      data: {
+        ...(nombre !== undefined && { nombre }),
+      },
+    });
+  }
+
+  async eliminarGrupo(usuarioId: string, claseId: string) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    const grupo = await this.prisma.clase.findUnique({
+      where: { id: claseId },
+      select: { institucionId: true },
+    });
+    if (!grupo || grupo.institucionId !== institucionId) {
+      throw new NotFoundException('Grupo no encontrado.');
+    }
+
+    return this.prisma.clase.delete({ where: { id: claseId } });
+  }
+
+  private async generarCodigoUnico() {
+    let codigo = '';
+    let existe = true;
+
+    while (existe) {
+      codigo = `INST-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      existe =
+        (await this.prisma.institucion.findUnique({
+          where: { codigoUnico: codigo },
+        })) !== null;
+    }
+
+    return codigo;
+  }
+
+  private async generarCodigoIngreso() {
+    let codigo = '';
+    let existe = true;
+
+    while (existe) {
+      codigo = `GRUPO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      existe =
+        (await this.prisma.clase.findUnique({
+          where: { codigoIngreso: codigo },
+        })) !== null;
+    }
+
+    return codigo;
+  }
+}

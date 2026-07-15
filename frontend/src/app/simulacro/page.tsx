@@ -1,7 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { obtenerToken } from '../../lib/api';
 
 interface Respuesta {
@@ -21,9 +23,7 @@ interface Pregunta {
 
 export default function SimulacroPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const area = searchParams.get('area') ?? 'MATEMATICAS';
-
+  const [area, setArea] = useState('MATEMATICAS');
   const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
   const [actual, setActual] = useState(0);
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
@@ -43,7 +43,11 @@ export default function SimulacroPage() {
     const token = obtenerToken();
     if (!token) { router.push('/login'); return; }
 
-    fetch(`http://localhost:3000/simulacros/generar?area=${area}`)
+    const query = new URLSearchParams(window.location.search);
+    const selectedArea = query.get('area') ?? 'MATEMATICAS';
+    setArea(selectedArea);
+
+    fetch(`http://localhost:3000/simulacros/generar?area=${selectedArea}`)
       .then(r => r.json())
       .then(data => {
         if (data.preguntas && data.preguntas.length > 0) {
@@ -54,7 +58,7 @@ export default function SimulacroPage() {
       })
       .catch(() => setError('Error conectando con el servidor.'))
       .finally(() => setCargando(false));
-  }, [area, router]);
+  }, [router]);
 
   const seleccionarRespuesta = (preguntaId: string, respuestaId: string) => {
     setRespuestas(prev => ({ ...prev, [preguntaId]: respuestaId }));
@@ -290,3 +294,6 @@ export default function SimulacroPage() {
     </div>
   );
 }
+
+
+

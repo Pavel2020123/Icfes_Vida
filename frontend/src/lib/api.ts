@@ -22,6 +22,80 @@ export async function registrarUsuario(nombre: string, correo: string, contrasen
   return data;
 }
 
+function crearEncabezados(): HeadersInit {
+  const token = obtenerToken();
+  return {
+    'Content-Type': 'application/json',
+    Authorization: token ? `Bearer ${token}` : '',
+  };
+}
+
+export async function obtenerMiInstitucion() {
+  const res = await fetch(`${API_URL}/instituciones/me`, {
+    headers: crearEncabezados(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error obteniendo la institución');
+  return data;
+}
+
+export async function crearInstitucion(
+  nombre: string,
+  mensajeBienvenida?: string,
+  logoUrl?: string,
+  colorPrimario?: string,
+  colorSecundario?: string,
+) {
+  const res = await fetch(`${API_URL}/instituciones`, {
+    method: 'POST',
+    headers: crearEncabezados(),
+    body: JSON.stringify({ nombre, mensajeBienvenida, logoUrl, colorPrimario, colorSecundario }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error creando la institución');
+  return data;
+}
+
+export async function obtenerEstudiantesInstitucion() {
+  const res = await fetch(`${API_URL}/instituciones/me/estudiantes`, {
+    headers: crearEncabezados(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error obteniendo los estudiantes');
+  return data;
+}
+
+export async function crearEstudianteInstitucion(nombre: string, correo: string, contrasena: string) {
+  const res = await fetch(`${API_URL}/instituciones/me/estudiantes`, {
+    method: 'POST',
+    headers: crearEncabezados(),
+    body: JSON.stringify({ nombre, correo, contrasena }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error creando el estudiante');
+  return data;
+}
+
+export async function obtenerGruposInstitucion() {
+  const res = await fetch(`${API_URL}/instituciones/me/grupos`, {
+    headers: crearEncabezados(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error obteniendo los grupos');
+  return data;
+}
+
+export async function crearGrupoInstitucion(nombre: string) {
+  const res = await fetch(`${API_URL}/instituciones/me/grupos`, {
+    method: 'POST',
+    headers: crearEncabezados(),
+    body: JSON.stringify({ nombre }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error creando el grupo');
+  return data;
+}
+
 export function guardarToken(token: string) {
   localStorage.setItem('saberplus_token', token);
 }
