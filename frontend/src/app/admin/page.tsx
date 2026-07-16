@@ -46,6 +46,11 @@ interface Stats {
   totalPreguntas: number;
   totalTemas: number;
   totalSimulacros: number;
+  totalEstudiantes: number;
+  totalProfesores: number;
+  totalInstituciones: number;
+  estudiantesRegistradosHoy: number;
+  simulacrosResueltosHoy: number;
 }
 
 interface RespuestaAdmin {
@@ -293,7 +298,7 @@ export default function AdminPage() {
   const [pestana, setPestana] = useState<Pestana>('stats');
 
   const [stats, setStats] = useState<Stats | null>(null);
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [miId, setMiId] = useState<string | null>(null);  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [temas, setTemas] = useState<Tema[]>([]);
   const [cargando, setCargando] = useState(true);
 
@@ -365,6 +370,7 @@ export default function AdminPage() {
         router.push('/dashboard');
         return;
       }
+      setMiId(payload.sub);
     } catch {
       router.push('/login');
       return;
@@ -594,6 +600,23 @@ export default function AdminPage() {
     cargarDatos();
   };
 
+  const eliminarUsuario = async (usuarioId: string, nombreUsuario: string) => {
+    if (!confirm(`¿Eliminar la cuenta de ${nombreUsuario}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    const res = await fetch(`http://localhost:3000/admin/usuarios/${usuarioId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      mostrarMensaje(data.message || 'No se pudo eliminar el usuario');
+      return;
+    }
+    mostrarMensaje('Usuario eliminado');
+    cargarDatos();
+  };
+
   if (cargando) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -667,18 +690,40 @@ export default function AdminPage() {
 
         {/* ESTADÍSTICAS */}
         {pestana === 'stats' && stats && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
-            {[
-              { label: 'Usuarios registrados', valor: stats.totalUsuarios, color: '#146C94' },
-              { label: 'Preguntas en banco', valor: stats.totalPreguntas, color: '#19A7CE' },
-              { label: 'Temas creados', valor: stats.totalTemas, color: '#8DD8FF' },
-              { label: 'Simulacros realizados', valor: stats.totalSimulacros, color: '#AFD3E2' },
-            ].map(s => (
-              <div key={s.label} style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1.5px solid #AFD3E2', textAlign: 'center' }}>
-                <p style={{ fontSize: 44, fontWeight: 900, color: s.color, marginBottom: 8 }}>{s.valor}</p>
-                <p style={{ fontSize: 14, color: '#4a5a6a' }}>{s.label}</p>
+          <div style={{ display: 'grid', gap: 24 }}>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#8a9aaa', marginBottom: 10, textTransform: 'uppercase' }}>Hoy</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
+                {[
+                  { label: 'Estudiantes registrados hoy', valor: stats.estudiantesRegistradosHoy, color: '#1C5741' },
+                  { label: 'Simulacros resueltos hoy', valor: stats.simulacrosResueltosHoy, color: '#146C94' },
+                ].map(s => (
+                  <div key={s.label} style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1.5px solid #AFD3E2', textAlign: 'center' }}>
+                    <p style={{ fontSize: 44, fontWeight: 900, color: s.color, marginBottom: 8 }}>{s.valor}</p>
+                    <p style={{ fontSize: 14, color: '#4a5a6a' }}>{s.label}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#8a9aaa', marginBottom: 10, textTransform: 'uppercase' }}>Totales</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
+                {[
+                  { label: 'Estudiantes', valor: stats.totalEstudiantes, color: '#146C94' },
+                  { label: 'Profesores', valor: stats.totalProfesores, color: '#19A7CE' },
+                  { label: 'Instituciones', valor: stats.totalInstituciones, color: '#8DD8FF' },
+                  { label: 'Preguntas en banco', valor: stats.totalPreguntas, color: '#AFD3E2' },
+                  { label: 'Temas creados', valor: stats.totalTemas, color: '#146C94' },
+                  { label: 'Simulacros realizados', valor: stats.totalSimulacros, color: '#19A7CE' },
+                ].map(s => (
+                  <div key={s.label} style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1.5px solid #AFD3E2', textAlign: 'center' }}>
+                    <p style={{ fontSize: 44, fontWeight: 900, color: s.color, marginBottom: 8 }}>{s.valor}</p>
+                    <p style={{ fontSize: 14, color: '#4a5a6a' }}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1048,6 +1093,15 @@ export default function AdminPage() {
                       <option value="PROFESOR">Profesor</option>
                       <option value="ADMIN">Admin</option>
                     </select>
+                    {u.id !== miId && (
+                      <button
+                        onClick={() => eliminarUsuario(u.id, u.nombre)}
+                        title="Eliminar usuario"
+                        style={{ background: 'none', border: '1.5px solid #FCD8CD', color: '#BC7C7C', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Eliminar
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

@@ -42,28 +42,32 @@ export default function InstitucionPage() {
 
   if (cargando) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#146C94', fontSize: 18, fontWeight: 600 }}>Cargando institución...</p>
-      </div>
+      <ProtectedRoute rolesPermitidos={['PROFESOR']}>
+        <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ color: '#146C94', fontSize: 18, fontWeight: 600 }}>Cargando institución...</p>
+        </div>
+      </ProtectedRoute>
     );
   }
 
   if (!institucion) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', padding: 24 }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', backgroundColor: '#ffffff', borderRadius: 24, padding: 32, boxShadow: '0 12px 40px rgba(20,108,148,0.08)' }}>
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: '#1a2a3a', marginBottom: 12 }}>Aún no tienes una institución</h1>
-          <p style={{ color: '#4a5a6a', fontSize: 16, marginBottom: 24 }}>
-            Crea el espacio de tu colegio y comienza a matricular estudiantes y crear grupos.
-          </p>
-          <Link href="/institucion/crear" style={{ textDecoration: 'none' }}>
-            <button style={{ backgroundColor: '#146C94', color: '#ffffff', padding: '14px 22px', borderRadius: 14, border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
-              Crear mi institución
-            </button>
-          </Link>
-          {error && <p style={{ marginTop: 24, color: '#BC7C7C' }}>{error}</p>}
+      <ProtectedRoute rolesPermitidos={['PROFESOR']}>
+        <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', padding: 24 }}>
+          <div style={{ maxWidth: 720, margin: '0 auto', backgroundColor: '#ffffff', borderRadius: 24, padding: 32, boxShadow: '0 12px 40px rgba(20,108,148,0.08)' }}>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#1a2a3a', marginBottom: 12 }}>Aún no tienes una institución</h1>
+            <p style={{ color: '#4a5a6a', fontSize: 16, marginBottom: 24 }}>
+              Crea el espacio de tu colegio y comienza a matricular estudiantes y crear grupos.
+            </p>
+            <Link href="/institucion/crear" style={{ textDecoration: 'none' }}>
+              <button style={{ backgroundColor: '#146C94', color: '#ffffff', padding: '14px 22px', borderRadius: 14, border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
+                Crear mi institución
+              </button>
+            </Link>
+            {error && <p style={{ marginTop: 24, color: '#BC7C7C' }}>{error}</p>}
+          </div>
         </div>
-      </div>
+      </ProtectedRoute>
     );
   }
 

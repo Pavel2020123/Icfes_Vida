@@ -76,6 +76,38 @@ export async function crearEstudianteInstitucion(nombre: string, correo: string,
   return data;
 }
 
+export async function agregarEstudianteExistenteInstitucion(correo: string) {
+  const res = await fetch(`${API_URL}/instituciones/me/estudiantes/agregar`, {
+    method: 'POST',
+    headers: crearEncabezados(),
+    body: JSON.stringify({ correo }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error agregando el estudiante');
+  return data;
+}
+
+export async function agregarEstudianteAGrupo(claseId: string, estudianteId: string) {
+  const res = await fetch(`${API_URL}/instituciones/me/grupos/${claseId}/estudiantes`, {
+    method: 'POST',
+    headers: crearEncabezados(),
+    body: JSON.stringify({ estudianteId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error agregando el estudiante al grupo');
+  return data;
+}
+
+export async function quitarEstudianteDeGrupo(claseId: string, estudianteId: string) {
+  const res = await fetch(`${API_URL}/instituciones/me/grupos/${claseId}/estudiantes/${estudianteId}`, {
+    method: 'DELETE',
+    headers: crearEncabezados(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error quitando el estudiante del grupo');
+  return data;
+}
+
 export async function obtenerGruposInstitucion() {
   const res = await fetch(`${API_URL}/instituciones/me/grupos`, {
     headers: crearEncabezados(),

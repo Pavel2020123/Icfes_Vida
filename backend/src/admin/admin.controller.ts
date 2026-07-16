@@ -6,6 +6,7 @@ import {
   Patch,
   Body,
   Param,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
@@ -35,6 +36,12 @@ export class AdminController {
     @Body() body: { rol: 'ESTUDIANTE' | 'PROFESOR' | 'ADMIN' },
   ) {
     return this.adminService.cambiarRol(id, body.rol);
+  }
+
+  @Delete('usuarios/:id')
+  eliminarUsuario(@Param('id') id: string, @Request() req: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    return this.adminService.eliminarUsuario(id, req.usuario.sub as string);
   }
 
   // Temas
@@ -113,6 +120,7 @@ export class AdminController {
   eliminarPregunta(@Param('id') id: string) {
     return this.adminService.eliminarPregunta(id);
   }
+
   @Patch('subtemas/:id/contenido')
   actualizarContenido(
     @Param('id') id: string,

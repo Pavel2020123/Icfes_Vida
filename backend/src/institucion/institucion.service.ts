@@ -175,6 +175,44 @@ export class InstitucionService {
     });
   }
 
+  async agregarEstudianteExistenteAMiInstitucion(
+    usuarioId: string,
+    correo: string,
+  ) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+    const estudiante = await this.prisma.usuario.findUnique({
+      where: { correo },
+      select: { id: true, rol: true, institucionId: true },
+    });
+    if (!estudiante) {
+      throw new NotFoundException(
+        'No existe ningún usuario registrado con ese correo.',
+      );
+    }
+    if (estudiante.rol !== 'ESTUDIANTE') {
+      throw new BadRequestException(
+        'Esa cuenta no corresponde a un estudiante.',
+      );
+    }
+    if (estudiante.institucionId === institucionId) {
+      throw new BadRequestException(
+        'Ese estudiante ya pertenece a tu institución.',
+      );
+    }
+    if (estudiante.institucionId) {
+      throw new BadRequestException(
+        'Ese estudiante ya pertenece a otra institución.',
+      );
+    }
+    return this.prisma.usuario.update({
+      where: { id: estudiante.id },
+      data: { institucionId },
+    });
+  }
+
   async obtenerGruposDeMiInstitucion(usuarioId: string) {
     const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
     if (!institucionId) {
@@ -251,6 +289,67 @@ export class InstitucionService {
     }
 
     return this.prisma.clase.delete({ where: { id: claseId } });
+  }
+
+  async agregarEstudianteAGrupo(
+    usuarioId: string,
+    claseId: string,
+    estudianteId: string,
+  ) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+    const grupo = await this.prisma.clase.findUnique({
+      where: { id: claseId },
+      select: { institucionId: true },
+    });
+    if (!grupo || grupo.institucionId !== institucionId) {
+      throw new NotFoundException('Grupo no encontrado.');
+    }
+    const estudiante = await this.prisma.usuario.findUnique({
+      where: { id: estudianteId },
+      select: { rol: true, institucionId: true },
+    });
+    if (
+      !estudiante ||
+      estudiante.rol !== 'ESTUDIANTE' ||
+      estudiante.institucionId !== institucionId
+    ) {
+      throw new BadRequestException(
+        'Ese estudiante no pertenece a tu institución.',
+      );
+    }
+    const yaAsignado = await this.prisma.claseEstudiante.findUnique({
+      where: { usuarioId_claseId: { usuarioId: estudianteId, claseId } },
+    });
+    if (yaAsignado) {
+      throw new BadRequestException('El estudiante ya está en ese grupo.');
+    }
+    return this.prisma.claseEstudiante.create({
+      data: { usuarioId: estudianteId, claseId },
+    });
+  }
+
+  async quitarEstudianteDeGrupo(
+    usuarioId: string,
+    claseId: string,
+    estudianteId: string,
+  ) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+    const grupo = await this.prisma.clase.findUnique({
+      where: { id: claseId },
+      select: { institucionId: true },
+    });
+    if (!grupo || grupo.institucionId !== institucionId) {
+      throw new NotFoundException('Grupo no encontrado.');
+    }
+    return this.prisma.claseEstudiante.delete({
+      where: { usuarioId_claseId: { usuarioId: estudianteId, claseId } },
+    });
   }
 
   private async generarCodigoUnico() {

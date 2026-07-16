@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AreaIcfes,
@@ -31,6 +31,18 @@ export class AdminService {
       where: { id: usuarioId },
       data: { rol },
       select: { id: true, nombre: true, rol: true },
+    });
+  }
+
+  async eliminarUsuario(usuarioId: string, solicitanteId: string) {
+    if (usuarioId === solicitanteId) {
+      throw new BadRequestException(
+        'No puedes eliminar tu propia cuenta de administrador.',
+      );
+    }
+    return this.prisma.usuario.delete({
+      where: { id: usuarioId },
+      select: { id: true, nombre: true, correo: true },
     });
   }
 
@@ -212,14 +224,45 @@ export class AdminService {
 
   // ─── ESTADÍSTICAS GENERALES ─────────────────────────────────
   async obtenerEstadisticas() {
-    const [totalUsuarios, totalPreguntas, totalTemas, totalSimulacros] =
-      await Promise.all([
-        this.prisma.usuario.count(),
-        this.prisma.pregunta.count(),
-        this.prisma.tema.count(),
-        this.prisma.resultadoSimulacro.count(),
-      ]);
+    const inicioDeHoy = new Date();
+    inicioDeHoy.setHours(0, 0, 0, 0);
 
-    return { totalUsuarios, totalPreguntas, totalTemas, totalSimulacros };
+    const [
+      totalUsuarios,
+      totalPreguntas,
+      totalTemas,
+      totalSimulacros,
+      totalEstudiantes,
+      totalProfesores,
+      totalInstituciones,
+      estudiantesRegistradosHoy,
+      simulacrosResueltosHoy,
+    ] = await Promise.all([
+      this.prisma.usuario.count(),
+      this.prisma.pregunta.count(),
+      this.prisma.tema.count(),
+      this.prisma.resultadoSimulacro.count(),
+      this.prisma.usuario.count({ where: { rol: 'ESTUDIANTE' } }),
+      this.prisma.usuario.count({ where: { rol: 'PROFESOR' } }),
+      this.prisma.institucion.count(),
+      this.prisma.usuario.count({
+        where: { rol: 'ESTUDIANTE', fechaCreacion: { gte: inicioDeHoy } },
+      }),
+      this.prisma.resultadoSimulacro.count({
+        where: { fechaRealizado: { gte: inicioDeHoy } },
+      }),
+    ]);
+
+    return {
+      totalUsuarios,
+      totalPreguntas,
+      totalTemas,
+      totalSimulacros,
+      totalEstudiantes,
+      totalProfesores,
+      totalInstituciones,
+      estudiantesRegistradosHoy,
+      simulacrosResueltosHoy,
+    };
   }
 }

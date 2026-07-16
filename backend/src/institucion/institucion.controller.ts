@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Controller,
   Get,
@@ -38,6 +39,14 @@ interface CrearGrupoDto {
   nombre: string;
 }
 
+interface AgregarEstudianteExistenteDto {
+  correo: string;
+}
+
+interface AgregarEstudianteAGrupoDto {
+  estudianteId: string;
+}
+
 @Controller('instituciones')
 @UseGuards(JwtGuard)
 export class InstitucionController {
@@ -45,7 +54,9 @@ export class InstitucionController {
 
   @Get('me')
   obtenerMiInstitucion(@Request() req: any) {
-    return this.institucionService.obtenerMiInstitucion(req.usuario.sub as string);
+    return this.institucionService.obtenerMiInstitucion(
+      req.usuario.sub as string,
+    );
   }
 
   @Post()
@@ -92,6 +103,17 @@ export class InstitucionController {
     );
   }
 
+  @Post('me/estudiantes/agregar')
+  agregarEstudianteExistente(
+    @Body() body: AgregarEstudianteExistenteDto,
+    @Request() req: any,
+  ) {
+    return this.institucionService.agregarEstudianteExistenteAMiInstitucion(
+      req.usuario.sub as string,
+      body.correo,
+    );
+  }
+
   @Get('me/grupos')
   obtenerGrupos(@Request() req: any) {
     return this.institucionService.obtenerGruposDeMiInstitucion(
@@ -122,9 +144,32 @@ export class InstitucionController {
 
   @Delete('me/grupos/:id')
   eliminarGrupo(@Param('id') id: string, @Request() req: any) {
-    return this.institucionService.eliminarGrupo(
+    return this.institucionService.eliminarGrupo(req.usuario.sub as string, id);
+  }
+
+  @Post('me/grupos/:id/estudiantes')
+  agregarEstudianteAGrupo(
+    @Param('id') id: string,
+    @Body() body: AgregarEstudianteAGrupoDto,
+    @Request() req: any,
+  ) {
+    return this.institucionService.agregarEstudianteAGrupo(
       req.usuario.sub as string,
       id,
+      body.estudianteId,
+    );
+  }
+
+  @Delete('me/grupos/:id/estudiantes/:estudianteId')
+  quitarEstudianteDeGrupo(
+    @Param('id') id: string,
+    @Param('estudianteId') estudianteId: string,
+    @Request() req: any,
+  ) {
+    return this.institucionService.quitarEstudianteDeGrupo(
+      req.usuario.sub as string,
+      id,
+      estudianteId,
     );
   }
 }

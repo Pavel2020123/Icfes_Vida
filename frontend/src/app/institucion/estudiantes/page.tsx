@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { obtenerEstudiantesInstitucion, crearEstudianteInstitucion } from '../../../lib/api';
+import { obtenerEstudiantesInstitucion, crearEstudianteInstitucion, agregarEstudianteExistenteInstitucion } from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 
 interface Estudiante {
@@ -23,6 +23,12 @@ export default function EstudiantesPage() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
+  
+  // Nuevos estados para agregar estudiante existente
+  const [correoExistente, setCorreoExistente] = useState('');
+  const [guardandoExistente, setGuardandoExistente] = useState(false);
+  const [errorExistente, setErrorExistente] = useState('');
+  const [mensajeExistente, setMensajeExistente] = useState('');
 
   useEffect(() => {
     const token = window.localStorage.getItem('saberplus_token');
@@ -54,6 +60,24 @@ export default function EstudiantesPage() {
       setError(err instanceof Error ? err.message : 'Error creando estudiante');
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const handleAgregarExistente = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorExistente('');
+    setMensajeExistente('');
+    setGuardandoExistente(true);
+    try {
+      await agregarEstudianteExistenteInstitucion(correoExistente.trim());
+      setMensajeExistente('Estudiante agregado con éxito.');
+      setCorreoExistente('');
+      const lista = await obtenerEstudiantesInstitucion();
+      setEstudiantes(lista);
+    } catch (err: unknown) {
+      setErrorExistente(err instanceof Error ? err.message : 'Error agregando el estudiante');
+    } finally {
+      setGuardandoExistente(false);
     }
   };
 
@@ -102,6 +126,28 @@ export default function EstudiantesPage() {
             </form>
             {mensaje && <p style={{ marginTop: 16, color: '#1C5741' }}>{mensaje}</p>}
             {error && <p style={{ marginTop: 16, color: '#BC7C7C' }}>{error}</p>}
+
+            <div style={{ height: 1, backgroundColor: '#E2E8F0', margin: '28px 0' }} />
+
+            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Agregar estudiante existente</h2>
+            <p style={{ color: '#4a5a6a', fontSize: 14, marginBottom: 18 }}>
+              Si el estudiante ya tiene su propia cuenta creada, vincúlalo a tu institución con su correo.
+            </p>
+            <form onSubmit={handleAgregarExistente} style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <input
+                value={correoExistente}
+                onChange={(e) => setCorreoExistente(e.target.value)}
+                type="email"
+                placeholder="correo@estudiante.com"
+                required
+                style={{ flex: 1, minWidth: 220, padding: '14px 16px', borderRadius: 14, border: '1.5px solid #AFD3E2', fontSize: 15 }}
+              />
+              <button type="submit" disabled={guardandoExistente} style={{ backgroundColor: '#19A7CE', color: '#ffffff', border: 'none', borderRadius: 14, padding: '14px 22px', fontWeight: 700, cursor: guardandoExistente ? 'not-allowed' : 'pointer' }}>
+                {guardandoExistente ? 'Agregando...' : 'Agregar'}
+              </button>
+            </form>
+            {mensajeExistente && <p style={{ marginTop: 16, color: '#1C5741' }}>{mensajeExistente}</p>}
+            {errorExistente && <p style={{ marginTop: 16, color: '#BC7C7C' }}>{errorExistente}</p>}
           </div>
 
           <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 28, boxShadow: '0 10px 28px rgba(20,108,148,0.06)' }}>
