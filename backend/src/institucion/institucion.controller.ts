@@ -47,6 +47,10 @@ interface AgregarEstudianteAGrupoDto {
   estudianteId: string;
 }
 
+interface UnirseClaseDto {
+  codigoIngreso: string;
+}
+
 @Controller('instituciones')
 @UseGuards(JwtGuard)
 export class InstitucionController {
@@ -56,6 +60,14 @@ export class InstitucionController {
   obtenerMiInstitucion(@Request() req: any) {
     return this.institucionService.obtenerMiInstitucion(
       req.usuario.sub as string,
+    );
+  }
+
+  @Post('unirse')
+  unirseAClase(@Body() body: UnirseClaseDto, @Request() req: any) {
+    return this.institucionService.unirseAClase(
+      req.usuario.sub as string,
+      body.codigoIngreso,
     );
   }
 

@@ -5,11 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class InstitucionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   private async obtenerInstitucionIdDelUsuario(usuarioId: string) {
     const usuario = await this.prisma.usuario.findUnique({
@@ -350,6 +354,77 @@ export class InstitucionService {
     return this.prisma.claseEstudiante.delete({
       where: { usuarioId_claseId: { usuarioId: estudianteId, claseId } },
     });
+  }
+
+  async unirseAClase(usuarioId: string, codigoIngreso: string) {
+    const codigo = (codigoIngreso || '').trim().toUpperCase();
+    if (!codigo) {
+      throw new BadRequestException('Debes ingresar un código de clase.');
+    }
+
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { id: true, rol: true, institucionId: true },
+    });
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado.');
+    }
+    if (usuario.rol !== 'ESTUDIANTE') {
+      throw new BadRequestException(
+        'Solo los estudiantes pueden unirse a una clase con un código.',
+      );
+    }
+
+    const clase = await this.prisma.clase.findUnique({
+      where: { codigoIngreso: codigo },
+      include: { Institucion: { select: { id: true, nombre: true } } },
+    });
+    if (!clase) {
+      throw new NotFoundException('Ese código de clase no existe.');
+    }
+
+    if (
+      usuario.institucionId &&
+      usuario.institucionId !== clase.institucionId
+    ) {
+      throw new BadRequestException(
+        'Ya perteneces a otra institución. Contacta a tu profesor si necesitas cambiarte.',
+      );
+    }
+
+    const yaInscrito = await this.prisma.claseEstudiante.findUnique({
+      where: { usuarioId_claseId: { usuarioId, claseId: clase.id } },
+    });
+    if (yaInscrito) {
+      throw new BadRequestException('Ya estás inscrito en esa clase.');
+    }
+
+    const [usuarioActualizado] = await this.prisma.$transaction([
+      this.prisma.usuario.update({
+        where: { id: usuarioId },
+        data: { institucionId: clase.institucionId },
+      }),
+      this.prisma.claseEstudiante.create({
+        data: { usuarioId, claseId: clase.id },
+      }),
+    ]);
+
+    // Emitimos un token nuevo porque institucionId cambió y viaja en el JWT.
+    const payload = {
+      sub: usuarioActualizado.id,
+      correo: usuarioActualizado.correo,
+      rol: usuarioActualizado.rol,
+      nombre: usuarioActualizado.nombre,
+      institucionId: usuarioActualizado.institucionId,
+    };
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    return {
+      mensaje: `¡Te uniste a "${clase.nombre}" con éxito!`,
+      accessToken,
+      clase: { id: clase.id, nombre: clase.nombre },
+      institucion: clase.Institucion,
+    };
   }
 
   private async generarCodigoUnico() {

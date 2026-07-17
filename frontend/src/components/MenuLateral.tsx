@@ -36,6 +36,7 @@ export default function MenuLateral({
     const token = obtenerToken();
     if (token) {
       const payload = decodificarToken(token);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRol(payload?.rol ?? null);
     }
   }, []);
@@ -238,7 +239,9 @@ export default function MenuLateral({
               </Link>
             </>
           )}
-  
+
+          {rol === 'ESTUDIANTE' && (
+          <>
           {/* Divisor */}
           <div style={{ height: 1, backgroundColor: '#F0F0F0', margin: '8px 0' }} />
 
@@ -324,6 +327,19 @@ export default function MenuLateral({
               <span style={{ fontSize: 16 }}>🎲</span>
             </div>
           </Link>
+
+          {/* Unirse a una clase */}
+          <Link href="/unirse-clase" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+            <div
+              style={linkStyle}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              Unirse a una clase
+            </div>
+          </Link>
+          </>
+          )}
 
         </div>
 

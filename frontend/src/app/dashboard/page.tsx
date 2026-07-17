@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { obtenerToken } from '../../lib/api';
+import { RolUsuario } from '../../lib/auth';
 import MenuLateral from '../../components/MenuLateral';
 
 const AREAS = [
@@ -46,6 +47,8 @@ function fechaLegible(fecha: string) {
 export default function DashboardPage() {
   const router = useRouter();
   const [nombre, setNombre] = useState('');
+  const [institucionId, setInstitucionId] = useState<string | null>(null);
+  const [rol, setRol] = useState<RolUsuario | null>(null);
   const [xp, setXp] = useState(0);
   const [historial, setHistorial] = useState<Resultado[]>([]);
   const [progreso, setProgreso] = useState<Progreso>({
@@ -64,6 +67,8 @@ export default function DashboardPage() {
       const payload = JSON.parse(atob(token.split('.')[1]));
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setNombre(payload.nombre ?? 'Estudiante');
+      setInstitucionId(payload.institucionId ?? null);
+      setRol(payload.rol ?? null);
     } catch {
       router.push('/login');
       return;
@@ -111,7 +116,7 @@ export default function DashboardPage() {
       {/* NAVBAR */}
       <nav style={{ backgroundColor: '#146C94', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px 0 72px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
+          <Link href="/dashboard" style={{ textDecoration: 'none' }}>
             <span style={{ fontSize: 22, fontWeight: 800, color: '#ffffff' }}>
               Saber<span style={{ color: '#8DD8FF' }}>Plus</span>
             </span>
@@ -126,6 +131,8 @@ export default function DashboardPage() {
 
       <main style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px' }}>
 
+        {rol === 'ESTUDIANTE' ? (
+        <>
         {/* BARRA DE PROGRESO GRANDE */}
         <div style={{
           backgroundColor: '#ffffff',
@@ -170,6 +177,23 @@ export default function DashboardPage() {
           </p>
         </div>
         
+        {/* BANNER: unirse a clase si aún no pertenece a ninguna institución */}
+        {!institucionId && (
+          <Link href="/unirse-clase" style={{ textDecoration: 'none' }}>
+            <div style={{
+              backgroundColor: '#FFF3CD',
+              border: '1.5px solid #F0D68A',
+              borderRadius: 14,
+              padding: '16px 20px',
+              marginBottom: 24,
+              cursor: 'pointer',
+            }}>
+              <strong style={{ color: '#7a5a00' }}>¿Tu profesor te dio un código de clase?</strong>{' '}
+              <span style={{ color: '#7a5a00' }}>Únete aquí →</span>
+            </div>
+          </Link>
+        )}
+
         {/* PREGUNTAS ALEATORIAS */}
         <Link href="/preguntas-aleatorias" style={{ textDecoration: 'none' }}>
           <div style={{
@@ -243,6 +267,25 @@ export default function DashboardPage() {
             })}
           </div>
         </div>
+        </>
+        ) : (
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 20,
+            padding: '32px 36px',
+            border: '1.5px solid #AFD3E2',
+            boxShadow: '0 4px 20px rgba(20,108,148,0.08)',
+          }}>
+            <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1a2a3a', marginBottom: 4 }}>
+              Hola, {nombre.split(' ')[0]}
+            </h1>
+            <p style={{ color: '#4a5a6a', fontSize: 15 }}>
+              {rol === 'PROFESOR'
+                ? 'Bienvenido a tu panel de profesor. Desde el menú puedes gestionar tu institución, estudiantes y grupos.'
+                : 'Bienvenido al panel de administración.'}
+            </p>
+          </div>
+        )}
       </main>
     </div>
   );

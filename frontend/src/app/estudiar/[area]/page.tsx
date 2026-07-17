@@ -389,7 +389,7 @@ export default function AreaPage() {
               {AREA_NOMBRES[area] ?? area}
             </span>
           </div>
-          <Link href="/" style={{ textDecoration: 'none' }}>
+          <Link href="/dashboard" style={{ textDecoration: 'none' }}>
             <span style={{ fontSize: 18, fontWeight: 800, color: '#ffffff' }}>
               Saber<span style={{ color: '#8DD8FF' }}>Plus</span>
             </span>

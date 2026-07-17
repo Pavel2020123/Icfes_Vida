@@ -128,6 +128,17 @@ export async function crearGrupoInstitucion(nombre: string) {
   return data;
 }
 
+export async function unirseAClase(codigoIngreso: string) {
+  const res = await fetch(`${API_URL}/instituciones/unirse`, {
+    method: 'POST',
+    headers: crearEncabezados(),
+    body: JSON.stringify({ codigoIngreso }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error al unirse a la clase');
+  return data;
+}
+
 export function guardarToken(token: string) {
   localStorage.setItem('saberplus_token', token);
 }
