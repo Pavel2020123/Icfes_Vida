@@ -148,6 +148,110 @@ export class InstitucionService {
     });
   }
 
+  async obtenerAnaliticasDeMiInstitucion(usuarioId: string) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    const totalSubtemas = await this.prisma.subtema.count();
+
+    const estudiantes = await this.prisma.usuario.findMany({
+      where: { institucionId, rol: 'ESTUDIANTE' },
+      select: {
+        id: true,
+        nombre: true,
+        correo: true,
+        xpTotal: true,
+        ClaseEstudiante: {
+          select: { Clase: { select: { id: true, nombre: true } } },
+        },
+        resultados: {
+          select: { area: true, puntaje: true, fechaRealizado: true },
+        },
+        progresotemas: {
+          select: { completado: true },
+        },
+      },
+      orderBy: { nombre: 'asc' },
+    });
+
+    const resumenEstudiantes = estudiantes.map((est) => {
+      const totalSimulacros = est.resultados.length;
+      const promedioPuntaje =
+        totalSimulacros > 0
+          ? Math.round(
+              (est.resultados.reduce((acc, r) => acc + r.puntaje, 0) /
+                totalSimulacros) *
+                10,
+            ) / 10
+          : 0;
+      const fechas = est.resultados.map((r) => r.fechaRealizado.getTime());
+      const ultimoSimulacro =
+        fechas.length > 0 ? new Date(Math.max(...fechas)) : null;
+
+      const temasCompletados = est.progresotemas.filter(
+        (p) => p.completado,
+      ).length;
+      const progresoPorcentaje =
+        totalSubtemas > 0
+          ? Math.round((temasCompletados / totalSubtemas) * 100)
+          : 0;
+
+      const porAreaMap: Record<string, { suma: number; cantidad: number }> = {};
+      est.resultados.forEach((r) => {
+        if (!porAreaMap[r.area]) porAreaMap[r.area] = { suma: 0, cantidad: 0 };
+        porAreaMap[r.area].suma += r.puntaje;
+        porAreaMap[r.area].cantidad += 1;
+      });
+      const porArea = Object.entries(porAreaMap).map(([area, v]) => ({
+        area,
+        promedio: Math.round((v.suma / v.cantidad) * 10) / 10,
+        cantidad: v.cantidad,
+      }));
+
+      return {
+        id: est.id,
+        nombre: est.nombre,
+        correo: est.correo,
+        xpTotal: est.xpTotal ?? 0,
+        grupos: est.ClaseEstudiante.map((ce) => ce.Clase.nombre),
+        totalSimulacros,
+        promedioPuntaje,
+        ultimoSimulacro,
+        temasCompletados,
+        totalSubtemas,
+        progresoPorcentaje,
+        porArea,
+      };
+    });
+
+    const conSimulacros = resumenEstudiantes.filter(
+      (e) => e.totalSimulacros > 0,
+    );
+    const promedioGeneral =
+      conSimulacros.length > 0
+        ? Math.round(
+            (conSimulacros.reduce((acc, e) => acc + e.promedioPuntaje, 0) /
+              conSimulacros.length) *
+              10,
+          ) / 10
+        : 0;
+    const totalSimulacrosInstitucion = resumenEstudiantes.reduce(
+      (acc, e) => acc + e.totalSimulacros,
+      0,
+    );
+
+    return {
+      institucion: {
+        totalEstudiantes: resumenEstudiantes.length,
+        promedioGeneral,
+        totalSimulacros: totalSimulacrosInstitucion,
+      },
+      estudiantes: resumenEstudiantes,
+    };
+  }
+
   async crearEstudianteEnMiInstitucion(
     usuarioId: string,
     nombre: string,

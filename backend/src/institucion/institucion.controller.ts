@@ -105,6 +105,13 @@ export class InstitucionController {
     );
   }
 
+  @Get('me/analiticas')
+  obtenerAnaliticas(@Request() req: any) {
+    return this.institucionService.obtenerAnaliticasDeMiInstitucion(
+      req.usuario.sub as string,
+    );
+  }
+
   @Post('me/estudiantes')
   crearEstudiante(@Body() body: CrearEstudianteDto, @Request() req: any) {
     return this.institucionService.crearEstudianteEnMiInstitucion(

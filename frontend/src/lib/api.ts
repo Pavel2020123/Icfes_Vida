@@ -65,6 +65,15 @@ export async function obtenerEstudiantesInstitucion() {
   return data;
 }
 
+export async function obtenerAnaliticasInstitucion() {
+  const res = await fetch(`${API_URL}/instituciones/me/analiticas`, {
+    headers: crearEncabezados(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error obteniendo las analíticas');
+  return data;
+}
+
 export async function crearEstudianteInstitucion(nombre: string, correo: string, contrasena: string) {
   const res = await fetch(`${API_URL}/instituciones/me/estudiantes`, {
     method: 'POST',
