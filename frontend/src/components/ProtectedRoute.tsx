@@ -29,6 +29,7 @@ export default function ProtectedRoute({ children, rolesPermitidos }: ProtectedR
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAutorizado(true);
     setCargando(false);
   }, [router, rolesPermitidos]);

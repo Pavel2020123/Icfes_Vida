@@ -148,6 +148,34 @@ export async function unirseAClase(codigoIngreso: string) {
   return data;
 }
 
+export async function actualizarInstitucion(
+  nombre?: string,
+  mensajeBienvenida?: string,
+  logoUrl?: string,
+  colorPrimario?: string,
+  colorSecundario?: string,
+) {
+  const res = await fetch(`${API_URL}/instituciones/me`, {
+    method: 'PATCH',
+    headers: crearEncabezados(),
+    body: JSON.stringify({
+      nombre,
+      mensajeBienvenida,
+      logoUrl,
+      colorPrimario,
+      colorSecundario,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || 'Error actualizando la institución');
+  }
+
+  return data;
+}
+
 export function guardarToken(token: string) {
   localStorage.setItem('saberplus_token', token);
 }

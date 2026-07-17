@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { crearInstitucion } from '../../../lib/api';
+import { actualizarInstitucion, obtenerMiInstitucion } from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 
-export default function CrearInstitucionPage() {
+export default function EditarInstitucionPage() {
   const router = useRouter();
   const [nombre, setNombre] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -15,6 +15,25 @@ export default function CrearInstitucionPage() {
   const [colorSecundario, setColorSecundario] = useState('#19A7CE');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [cargandoDatos, setCargandoDatos] = useState(true);
+
+  // PASO 4: Cargar los datos de la institución al iniciar
+  useEffect(() => {
+    obtenerMiInstitucion()
+      .then((institucion) => {
+        setNombre(institucion.nombre || '');
+        setMensaje(institucion.mensajeBienvenida || '');
+        setLogoUrl(institucion.logoUrl || '');
+        setColorPrimario(institucion.colorPrimario || '#146C94');
+        setColorSecundario(institucion.colorSecundario || '#19A7CE');
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : 'No se pudo cargar la institución');
+      })
+      .finally(() => {
+        setCargandoDatos(false);
+      });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,24 +41,44 @@ export default function CrearInstitucionPage() {
     setCargando(true);
 
     try {
-      await crearInstitucion(nombre.trim(), mensaje.trim(), logoUrl.trim() || undefined, colorPrimario, colorSecundario);
+      // PASO 5: Usar actualizarInstitucion
+      await actualizarInstitucion(nombre.trim(), mensaje.trim(), logoUrl.trim() || undefined, colorPrimario, colorSecundario);
       router.push('/institucion');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear la institución');
+      // PASO 6: Cambiar mensaje de error
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar la institución');
     } finally {
       setCargando(false);
     }
   };
 
+  // PASO 8: Pantalla de carga mientras se obtienen los datos
+  if (cargandoDatos) {
+    return (
+      <ProtectedRoute rolesPermitidos={['PROFESOR']}>
+        <div
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <h2>Cargando institución...</h2>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute rolesPermitidos={['PROFESOR']}>
       <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', padding: 24 }}>
-        {/* Aumentamos un poco el maxWidth a 960 para que las dos columnas respiren bien */}
         <div style={{ maxWidth: 960, margin: '0 auto', backgroundColor: '#ffffff', borderRadius: 24, padding: 32, boxShadow: '0 12px 40px rgba(20,108,148,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
             <div>
-              <h1 style={{ fontSize: 30, fontWeight: 900, color: '#1a2a3a', marginBottom: 8 }}>Crear institución</h1>
-              <p style={{ color: '#4a5a6a', fontSize: 16 }}>Define el nombre de tu institución, su imagen y colores para que los estudiantes sientan que este espacio es suyo.</p>
+              {/* Cambié el título a "Editar institución" por coherencia */}
+              <h1 style={{ fontSize: 30, fontWeight: 900, color: '#1a2a3a', marginBottom: 8 }}>Editar institución</h1>
+              <p style={{ color: '#4a5a6a', fontSize: 16 }}>Modifica el nombre de tu institución, su imagen y colores para que los estudiantes sientan que este espacio es suyo.</p>
             </div>
             <Link href="/institucion" style={{ textDecoration: 'none' }}>
               <button style={{ backgroundColor: '#F0F7FC', color: '#146C94', borderRadius: 14, padding: '12px 18px', border: 'none', fontWeight: 700, cursor: 'pointer' }}>
@@ -257,7 +296,7 @@ export default function CrearInstitucionPage() {
               </div>
             </div>
 
-            {/* BOTÓN DE SUBMIT - Al estar en el grid original, caerá en la parte inferior izquierda bajo los inputs */}
+            {/* PASO 7: Botón de Guardar cambios */}
             <button
               type="submit"
               disabled={cargando}
@@ -273,7 +312,7 @@ export default function CrearInstitucionPage() {
                 marginTop: 10,
               }}
             >
-              {cargando ? 'Creando...' : 'Crear institución'}
+              {cargando ? 'Guardando...' : 'Guardar cambios'}
             </button>
           </form>
         </div>
