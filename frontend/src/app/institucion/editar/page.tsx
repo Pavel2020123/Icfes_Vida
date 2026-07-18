@@ -1,21 +1,39 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { actualizarInstitucion, eliminarInstitucion, guardarToken, obtenerMiInstitucion } from '../../../lib/api';
+import {
+  actualizarInstitucion,
+  eliminarInstitucion,
+  eliminarLogoInstitucion,
+  guardarToken,
+  obtenerMiInstitucion,
+  obtenerUrlLogo,
+  subirLogoInstitucion,
+} from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
+import { useBranding } from '../../../context/ThemeContext';
 
+const TIPOS_PERMITIDOS = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
+const TAMANO_MAXIMO_BYTES = 3 * 1024 * 1024; // 3MB, igual que el backend
 export default function EditarInstitucionPage() {
   const router = useRouter();
+  const { refrescarBranding } = useBranding();
   const [nombre, setNombre] = useState('');
   const [mensaje, setMensaje] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
+  const [logoUrl, setLogoUrl] = useState(''); // ruta que devuelve el backend (o vacío si no hay logo)
   const [colorPrimario, setColorPrimario] = useState('#146C94');
   const [colorSecundario, setColorSecundario] = useState('#19A7CE');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   const [cargandoDatos, setCargandoDatos] = useState(true);
+
+  // Subida/eliminación del logo real (archivo, no URL de texto)
+  const inputArchivoRef = useRef<HTMLInputElement>(null);
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
+  const [eliminandoLogo, setEliminandoLogo] = useState(false);
+  const [errorLogo, setErrorLogo] = useState('');
 
   // Zona de peligro: eliminar institución
   const [mostrarEliminar, setMostrarEliminar] = useState(false);
@@ -47,14 +65,64 @@ export default function EditarInstitucionPage() {
     setCargando(true);
 
     try {
-      // PASO 5: Usar actualizarInstitucion
-      await actualizarInstitucion(nombre.trim(), mensaje.trim(), logoUrl.trim() || undefined, colorPrimario, colorSecundario);
+      // PASO 5: Usar actualizarInstitucion. El logo ya no viaja acá: se
+      // sube/elimina aparte con su propio endpoint (ver handlers de logo).
+      await actualizarInstitucion(nombre.trim(), mensaje.trim(), undefined, colorPrimario, colorSecundario);
+      await refrescarBranding();
       router.push('/institucion');
     } catch (err: unknown) {
       // PASO 6: Cambiar mensaje de error
       setError(err instanceof Error ? err.message : 'No se pudo actualizar la institución');
     } finally {
       setCargando(false);
+    }
+  };
+
+  const handleSeleccionarArchivo = () => {
+    setErrorLogo('');
+    inputArchivoRef.current?.click();
+  };
+
+  const handleArchivoElegido = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const archivo = e.target.files?.[0];
+    e.target.value = ''; // permite volver a elegir el mismo archivo después
+
+    if (!archivo) return;
+
+    if (!TIPOS_PERMITIDOS.includes(archivo.type)) {
+      setErrorLogo('Solo se permiten imágenes en formato PNG, JPG, WEBP o GIF.');
+      return;
+    }
+    if (archivo.size > TAMANO_MAXIMO_BYTES) {
+      setErrorLogo('La imagen no puede pesar más de 3MB.');
+      return;
+    }
+
+    setErrorLogo('');
+    setSubiendoLogo(true);
+    try {
+      const institucionActualizada = await subirLogoInstitucion(archivo);
+      setLogoUrl(institucionActualizada.logoUrl || '');
+      // Actualiza el navbar/sidebar de inmediato y avisa a otras pestañas.
+      await refrescarBranding();
+    } catch (err: unknown) {
+      setErrorLogo(err instanceof Error ? err.message : 'No se pudo subir el logo');
+    } finally {
+      setSubiendoLogo(false);
+    }
+  };
+
+  const handleEliminarLogo = async () => {
+    setErrorLogo('');
+    setEliminandoLogo(true);
+    try {
+      await eliminarLogoInstitucion();
+      setLogoUrl('');
+      await refrescarBranding();
+    } catch (err: unknown) {
+      setErrorLogo(err instanceof Error ? err.message : 'No se pudo eliminar el logo');
+    } finally {
+      setEliminandoLogo(false);
     }
   };
 
@@ -65,6 +133,7 @@ export default function EditarInstitucionPage() {
     try {
       const respuesta = await eliminarInstitucion();
       guardarToken(respuesta.accessToken);
+      await refrescarBranding();
       router.push('/dashboard');
     } catch (err: unknown) {
       setErrorEliminar(err instanceof Error ? err.message : 'No se pudo eliminar la institución');
@@ -145,13 +214,87 @@ export default function EditarInstitucionPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Logo (URL opcional)</label>
-                <input
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="https://..."
-                  style={{ width: '100%', padding: '14px 16px', borderRadius: 14, border: '1.5px solid #AFD3E2', fontSize: 15 }}
-                />
+                <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Logo</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: 16,
+                      border: '1.5px solid #AFD3E2',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#F6F1F1',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {logoUrl ? (
+                      <img
+                        src={obtenerUrlLogo(logoUrl) ?? undefined}
+                        alt="Logo actual"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: 24, fontWeight: 900, color: colorPrimario }}>
+                        {nombre ? nombre.charAt(0).toUpperCase() : 'I'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <input
+                        ref={inputArchivoRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={handleArchivoElegido}
+                        style={{ display: 'none' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSeleccionarArchivo}
+                        disabled={subiendoLogo || eliminandoLogo}
+                        style={{
+                          backgroundColor: '#F0F7FC',
+                          color: '#146C94',
+                          border: '1.5px solid #AFD3E2',
+                          borderRadius: 12,
+                          padding: '10px 16px',
+                          fontWeight: 700,
+                          cursor: subiendoLogo || eliminandoLogo ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {subiendoLogo ? 'Subiendo...' : logoUrl ? 'Cambiar logo' : 'Subir logo'}
+                      </button>
+                      {logoUrl && (
+                        <button
+                          type="button"
+                          onClick={handleEliminarLogo}
+                          disabled={subiendoLogo || eliminandoLogo}
+                          style={{
+                            backgroundColor: '#FDE8E4',
+                            color: '#7A2A2A',
+                            border: '1.5px solid #F1BCBC',
+                            borderRadius: 12,
+                            padding: '10px 16px',
+                            fontWeight: 700,
+                            cursor: subiendoLogo || eliminandoLogo ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {eliminandoLogo ? 'Eliminando...' : 'Eliminar logo'}
+                        </button>
+                      )}
+                    </div>
+                    <p style={{ fontSize: 12, color: '#7a8a9a', margin: 0 }}>
+                      PNG, JPG, WEBP o GIF · máximo 3MB. Se sube desde tu computador, no hace falta un enlace.
+                    </p>
+                    {errorLogo && (
+                      <p style={{ fontSize: 13, color: '#C24B4B', margin: 0 }}>{errorLogo}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -208,7 +351,7 @@ export default function EditarInstitucionPage() {
                 >
                   {logoUrl ? (
                     <img
-                      src={logoUrl}
+                      src={obtenerUrlLogo(logoUrl) ?? undefined}
                       alt="Logo"
                       style={{
                         width: 90,

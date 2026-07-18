@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { cerrarSesion, obtenerToken } from '../lib/api';
 import { decodificarToken, RolUsuario } from '../lib/auth';
 import { useBranding } from '../context/ThemeContext';
+import Logotipo from './Logotipo';
 
 const AREAS = [
   { key: 'LECTURA_CRITICA', nombre: 'Lectura Crítica' },
@@ -137,9 +138,7 @@ export default function MenuLateral({
                 </span>
               </div>
             ) : (
-              <span style={{ fontSize: 20, fontWeight: 800, color: '#ffffff' }}>
-                Saber<span style={{ color: 'var(--color-secundario, #19A7CE)' }}>Plus</span>
-              </span>
+              <Logotipo size={30} colorTexto="#ffffff" colorAcento="#8DD8FF" />
             )}
             <button
               onClick={() => setAbierto(false)}
@@ -360,6 +359,14 @@ export default function MenuLateral({
           )}
 
         </div>
+
+        {/* Marca de SaberPlus cuando se está mostrando el branding de la institución */}
+        {branding.logoUrl && (
+          <div style={{ padding: '0 16px 10px', display: 'flex', alignItems: 'center', gap: 6, opacity: 0.65 }}>
+            <span style={{ fontSize: 11, color: '#8a9aaa' }}>Con tecnología de</span>
+            <Logotipo size={16} colorTexto="#4a5a6a" colorAcento="#19A7CE" />
+          </div>
+        )}
 
         {/* CERRAR SESIÓN */}
         <div style={{ padding: '16px 12px', borderTop: '1px solid #AFD3E2' }}>

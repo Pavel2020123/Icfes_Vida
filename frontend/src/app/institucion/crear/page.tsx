@@ -10,7 +10,6 @@ export default function CrearInstitucionPage() {
   const router = useRouter();
   const [nombre, setNombre] = useState('');
   const [mensaje, setMensaje] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
   const [colorPrimario, setColorPrimario] = useState('#146C94');
   const [colorSecundario, setColorSecundario] = useState('#19A7CE');
   const [error, setError] = useState('');
@@ -22,8 +21,7 @@ export default function CrearInstitucionPage() {
     setCargando(true);
 
     try {
-      await crearInstitucion(nombre.trim(), mensaje.trim(), logoUrl.trim() || undefined, colorPrimario, colorSecundario);
-      router.push('/institucion');
+        await crearInstitucion(nombre.trim(), mensaje.trim(), undefined, colorPrimario, colorSecundario);      router.push('/institucion');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'No se pudo crear la institución');
     } finally {
@@ -85,14 +83,8 @@ export default function CrearInstitucionPage() {
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Logo (URL opcional)</label>
-                <input
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="https://..."
-                  style={{ width: '100%', padding: '14px 16px', borderRadius: 14, border: '1.5px solid #AFD3E2', fontSize: 15 }}
-                />
+              <div style={{ backgroundColor: '#F0F7FC', borderRadius: 14, padding: '14px 16px', color: '#146C94', fontSize: 14 }}>
+                Podrás subir el logo de tu institución (desde tu computador) apenas la crees, en &quot;Editar institución&quot;.
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -147,38 +139,23 @@ export default function CrearInstitucionPage() {
                     textAlign: 'center',
                   }}
                 >
-                  {logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt="Logo"
-                      style={{
-                        width: 90,
-                        height: 90,
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                        background: '#fff',
-                        border: '4px solid white',
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 90,
-                        height: 90,
-                        borderRadius: '50%',
-                        background: '#F3F4F6',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 34,
-                        fontWeight: 900,
-                        color: colorPrimario,
-                        border: '4px solid white',
-                      }}
-                    >
-                      {nombre ? nombre.charAt(0).toUpperCase() : 'I'}
-                    </div>
-                  )}
+                  <div
+                    style={{
+                      width: 90,
+                      height: 90,
+                      borderRadius: '50%',
+                      background: '#F3F4F6',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 34,
+                      fontWeight: 900,
+                      color: colorPrimario,
+                      border: '4px solid white',
+                    }}
+                  >
+                    {nombre ? nombre.charAt(0).toUpperCase() : 'I'}
+                  </div>
 
                   <h2
                     style={{

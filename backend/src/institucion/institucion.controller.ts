@@ -9,9 +9,16 @@ import {
   UseGuards,
   Param,
   Delete,
+  UseInterceptors,
+  UseFilters,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { InstitucionService } from './institucion.service';
 import { JwtGuard } from '../auth/jwt.guard';
+import { logoMulterOptions } from './logo-upload.config';
+import { MulterExceptionFilter } from './multer-exception.filter';
 
 interface CrearInstitucionDto {
   nombre: string;
@@ -101,6 +108,30 @@ export class InstitucionController {
   @Delete('me')
   eliminarMiInstitucion(@Request() req: any) {
     return this.institucionService.eliminarMiInstitucion(
+      req.usuario.sub as string,
+    );
+  }
+
+  @Post('me/logo')
+  @UseInterceptors(FileInterceptor('logo', logoMulterOptions))
+  @UseFilters(MulterExceptionFilter)
+  subirLogo(@UploadedFile() archivo: Express.Multer.File, @Request() req: any) {
+    if (!archivo) {
+      throw new BadRequestException(
+        'Debes seleccionar una imagen para el logo.',
+      );
+    }
+
+    return this.institucionService.subirLogoDeMiInstitucion(
+      req.usuario.sub as string,
+      archivo,
+    );
+  }
+
+  @Delete('me/logo')
+  eliminarLogo(@Request() req: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return this.institucionService.eliminarLogoDeMiInstitucion(
       req.usuario.sub as string,
     );
   }

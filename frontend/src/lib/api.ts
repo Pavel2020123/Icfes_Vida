@@ -1,4 +1,17 @@
-const API_URL = 'http://localhost:3000';
+export const API_URL = 'http://localhost:3000';
+
+// El backend guarda los logos en disco local y los sirve como
+// '/uploads/logos/xxx.png' (ruta relativa). Esta función la convierte en
+// una URL absoluta que el navegador sí puede cargar. Si en el futuro
+// migramos a Supabase Storage, logoUrl ya vendrá con una URL absoluta
+// (http...) y esta función simplemente la deja pasar sin tocarla.
+export function obtenerUrlLogo(logoUrl?: string | null): string | null {
+  if (!logoUrl) return null;
+  if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
+    return logoUrl;
+  }
+  return `${API_URL}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`;
+}
 
 export async function loginUsuario(correo: string, contrasena: string) {
   const res = await fetch(`${API_URL}/auth/login`, {
@@ -173,6 +186,37 @@ export async function actualizarInstitucion(
     throw new Error(data.message || 'Error actualizando la institución');
   }
 
+  return data;
+}
+
+// Sube (o reemplaza) el logo real de la institución. Se envía como
+// multipart/form-data, por eso NO usamos crearEncabezados() aquí: si
+// fijamos 'Content-Type': 'application/json' el navegador no puede armar
+// el boundary del form-data y el backend no recibe el archivo. Dejamos
+// que fetch ponga el Content-Type correcto solo, y mandamos únicamente
+// el header de Authorization.
+export async function subirLogoInstitucion(archivo: File) {
+  const formData = new FormData();
+  formData.append('logo', archivo);
+
+  const token = obtenerToken();
+  const res = await fetch(`${API_URL}/instituciones/me/logo`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error subiendo el logo');
+  return data;
+}
+
+export async function eliminarLogoInstitucion() {
+  const res = await fetch(`${API_URL}/instituciones/me/logo`, {
+    method: 'DELETE',
+    headers: crearEncabezados(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error eliminando el logo');
   return data;
 }
 

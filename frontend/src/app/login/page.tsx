@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { loginUsuario, guardarToken } from '../../lib/api';
 import { useBranding } from '../../context/ThemeContext';
+import Logotipo from '../../components/Logotipo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,11 +43,9 @@ export default function LoginPage() {
       <div style={{ width: '100%', maxWidth: 440 }}>
 
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <span style={{ fontSize: 28, fontWeight: 900, color: '#146C94' }}>
-              Saber<span style={{ color: '#19A7CE' }}>Plus</span>
-            </span>
+            <Logotipo size={38} colorTexto="#1a2a3a" colorAcento="#19A7CE" />
           </Link>
         </div>
 

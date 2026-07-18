@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerMiInstitucion } from '../../lib/api';
+import { obtenerMiInstitucion, obtenerUrlLogo } from '../../lib/api';
 import ProtectedRoute from '../../components/ProtectedRoute';
+import { IconoUsuarios, IconoGrupo } from '../../components/Iconos';
 
 interface Institucion {
   id: string;
@@ -54,17 +55,17 @@ export default function InstitucionPage() {
     return (
       <ProtectedRoute rolesPermitidos={['PROFESOR']}>
         <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', padding: 24 }}>
-          <div style={{ maxWidth: 720, margin: '0 auto', backgroundColor: '#ffffff', borderRadius: 24, padding: 32, boxShadow: '0 12px 40px rgba(20,108,148,0.08)' }}>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#1a2a3a', marginBottom: 12 }}>Aún no tienes una institución</h1>
-            <p style={{ color: '#4a5a6a', fontSize: 16, marginBottom: 24 }}>
+          <div style={{ maxWidth: 640, margin: '64px auto 0', backgroundColor: '#ffffff', borderRadius: 20, padding: 36, boxShadow: '0 12px 40px rgba(20,108,148,0.08)', textAlign: 'center' }}>
+            <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1a2a3a', marginBottom: 10 }}>Aún no tienes una institución</h1>
+            <p style={{ color: '#6b7c8c', fontSize: 15, marginBottom: 26, lineHeight: 1.5 }}>
               Crea el espacio de tu colegio y comienza a matricular estudiantes y crear grupos.
             </p>
             <Link href="/institucion/crear" style={{ textDecoration: 'none' }}>
-              <button style={{ backgroundColor: '#146C94', color: '#ffffff', padding: '14px 22px', borderRadius: 14, border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
+              <button style={{ backgroundColor: '#146C94', color: '#ffffff', padding: '13px 24px', borderRadius: 12, border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                 Crear mi institución
               </button>
             </Link>
-            {error && <p style={{ marginTop: 24, color: '#BC7C7C' }}>{error}</p>}
+            {error && <p style={{ marginTop: 20, color: '#C0392B', fontSize: 13.5 }}>{error}</p>}
           </div>
         </div>
       </ProtectedRoute>
@@ -72,61 +73,55 @@ export default function InstitucionPage() {
   }
 
   const colorPrimario = institucion.colorPrimario || '#146C94';
-  const colorSecundario = institucion.colorSecundario || '#19A7CE';
+  const totalEstudiantes = institucion.Usuario?.filter((u) => u.rol === 'ESTUDIANTE').length ?? 0;
+  const totalGrupos = institucion.Clase?.length ?? 0;
 
   return (
     <ProtectedRoute rolesPermitidos={['PROFESOR']}>
       <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', padding: 24 }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gap: 24 }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 32, boxShadow: '0 12px 40px rgba(20,108,148,0.08)' }}>
-            
-            {/* SEGUNDA MEJORA APLICADA: alignItems: 'flex-start' en lugar de 'center' */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 24 }}>
-              
-              <div style={{ width: 100, height: 100, borderRadius: 24, backgroundColor: colorPrimario, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: 32, fontWeight: 800 }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gap: 20 }}>
+
+          {/* Hero */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '28px 30px', boxShadow: '0 10px 30px rgba(20,108,148,0.07)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 22 }}>
+
+              <div style={{ width: 76, height: 76, borderRadius: 20, backgroundColor: colorPrimario, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: 26, fontWeight: 800, flexShrink: 0, overflow: 'hidden' }}>
                 {institucion.logoUrl ? (
-                  <img src={institucion.logoUrl} alt="Logo de la institución" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 24 }} />
+                  <img src={obtenerUrlLogo(institucion.logoUrl) ?? undefined} alt="Logo de la institución" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   institucion.nombre.slice(0, 2).toUpperCase()
                 )}
               </div>
-              
-              <div style={{ flex: 1, minWidth: 250 }}>
-                <h1 style={{ fontSize: 32, fontWeight: 900, color: '#1a2a3a', marginBottom: 8 }}>{institucion.nombre}</h1>
-                <p style={{ color: '#4a5a6a', fontSize: 16, marginBottom: 14 }}>
+
+              <div style={{ flex: 1, minWidth: 240 }}>
+                <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1a2a3a', marginBottom: 6 }}>{institucion.nombre}</h1>
+                <p style={{ color: '#6b7c8c', fontSize: 14.5, marginBottom: 16, lineHeight: 1.5 }}>
                   {institucion.mensajeBienvenida || 'Tu espacio institucional está listo para crecer.'}
                 </p>
-                
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 18 }}>
-                  <div style={{ background: '#F8FAFC', padding: '12px 18px', borderRadius: 14, border: '1px solid #E5E7EB', minWidth: 150 }}>
-                    <div style={{ fontSize: 12, color: '#6B7280' }}>Plan</div>
-                    <div style={{ fontWeight: 800, color: colorPrimario, marginTop: 4 }}>{institucion.planActual || 'GRATIS'}</div>
-                  </div>
 
-                  <div style={{ background: '#F8FAFC', padding: '12px 18px', borderRadius: 14, border: '1px solid #E5E7EB', minWidth: 180 }}>
-                    <div style={{ fontSize: 12, color: '#6B7280' }}>Código de ingreso</div>
-                    <div style={{ fontWeight: 800, color: colorPrimario, marginTop: 4 }}>{institucion.codigoUnico}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ background: '#F8FAFC', padding: '10px 16px', borderRadius: 12, border: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: 11.5, color: '#8a9aaa' }}>Plan</div>
+                    <div style={{ fontWeight: 800, color: colorPrimario, marginTop: 2, fontSize: 14 }}>{institucion.planActual || 'GRATIS'}</div>
                   </div>
-
-                  <div style={{ background: '#F8FAFC', padding: '12px 18px', borderRadius: 14, border: '1px solid #E5E7EB', minWidth: 140 }}>
-                    <div style={{ fontSize: 12, color: '#6B7280' }}>Estudiantes</div>
-                    <div style={{ fontWeight: 800, color: colorPrimario, marginTop: 4 }}>
-                      {institucion.Usuario?.filter((u) => u.rol === 'ESTUDIANTE').length ?? 0}
-                    </div>
+                  <div style={{ background: '#F8FAFC', padding: '10px 16px', borderRadius: 12, border: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: 11.5, color: '#8a9aaa' }}>Código de ingreso</div>
+                    <div style={{ fontWeight: 800, color: colorPrimario, marginTop: 2, fontSize: 14 }}>{institucion.codigoUnico}</div>
                   </div>
-
-                  <div style={{ background: '#F8FAFC', padding: '12px 18px', borderRadius: 14, border: '1px solid #E5E7EB', minWidth: 120 }}>
-                    <div style={{ fontSize: 12, color: '#6B7280' }}>Grupos</div>
-                    <div style={{ fontWeight: 800, color: colorPrimario, marginTop: 4 }}>
-                      {institucion.Clase?.length ?? 0}
-                    </div>
+                  <div style={{ background: '#F8FAFC', padding: '10px 16px', borderRadius: 12, border: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: 11.5, color: '#8a9aaa' }}>Estudiantes</div>
+                    <div style={{ fontWeight: 800, color: colorPrimario, marginTop: 2, fontSize: 14 }}>{totalEstudiantes}</div>
+                  </div>
+                  <div style={{ background: '#F8FAFC', padding: '10px 16px', borderRadius: 12, border: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: 11.5, color: '#8a9aaa' }}>Grupos</div>
+                    <div style={{ fontWeight: 800, color: colorPrimario, marginTop: 2, fontSize: 14 }}>{totalGrupos}</div>
                   </div>
                 </div>
               </div>
 
               <Link href="/institucion/editar">
                 <button
-                  style={{ backgroundColor: colorPrimario, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 20px', cursor: 'pointer', fontWeight: 700 }}
+                  style={{ backgroundColor: '#F6F1F1', color: '#1a2a3a', border: '1.5px solid #E5E7EB', borderRadius: 12, padding: '11px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13.5 }}
                 >
                   Editar identidad
                 </button>
@@ -134,22 +129,37 @@ export default function InstitucionPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
-            <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 24, boxShadow: '0 10px 28px rgba(20,108,148,0.06)' }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>Estudiantes</h2>
-              <p style={{ color: '#4a5a6a', fontSize: 14, marginBottom: 18 }}>{institucion.Usuario?.filter((u) => u.rol === 'ESTUDIANTE').length ?? 0} estudiantes vinculados</p>
+          {/* Accesos rápidos */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+            <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 24, boxShadow: '0 10px 30px rgba(20,108,148,0.07)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: '#EAF3F8', color: colorPrimario, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <IconoUsuarios size={20} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 15.5, fontWeight: 800, color: '#1a2a3a', margin: 0 }}>Estudiantes</h2>
+                  <p style={{ color: '#8a9aaa', fontSize: 13, margin: 0 }}>{totalEstudiantes} vinculados</p>
+                </div>
+              </div>
               <Link href="/institucion/estudiantes" style={{ textDecoration: 'none' }}>
-                <button style={{ backgroundColor: colorPrimario, color: '#ffffff', padding: '12px 18px', borderRadius: 14, border: 'none', fontWeight: 700, cursor: 'pointer' }}>
+                <button style={{ width: '100%', backgroundColor: colorPrimario, color: '#ffffff', padding: '11px 18px', borderRadius: 12, border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
                   Ver estudiantes
                 </button>
               </Link>
             </div>
 
-            <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 24, boxShadow: '0 10px 28px rgba(20,108,148,0.06)' }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>Grupos</h2>
-              <p style={{ color: '#4a5a6a', fontSize: 14, marginBottom: 18 }}>{institucion.Clase?.length ?? 0} grupos creados</p>
+            <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 24, boxShadow: '0 10px 30px rgba(20,108,148,0.07)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: '#EAF3F8', color: colorPrimario, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <IconoGrupo size={20} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 15.5, fontWeight: 800, color: '#1a2a3a', margin: 0 }}>Grupos</h2>
+                  <p style={{ color: '#8a9aaa', fontSize: 13, margin: 0 }}>{totalGrupos} creados</p>
+                </div>
+              </div>
               <Link href="/institucion/grupos" style={{ textDecoration: 'none' }}>
-                <button style={{ backgroundColor: colorPrimario, color: '#ffffff', padding: '12px 18px', borderRadius: 14, border: 'none', fontWeight: 700, cursor: 'pointer' }}>
+                <button style={{ width: '100%', backgroundColor: colorPrimario, color: '#ffffff', padding: '11px 18px', borderRadius: 12, border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
                   Ver grupos
                 </button>
               </Link>

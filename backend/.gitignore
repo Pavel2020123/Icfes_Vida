@@ -46,6 +46,10 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Archivos subidos por usuarios (logos, etc.) — no se versionan
+/uploads/*
+!/uploads/.gitkeep
+
 # Runtime data
 pids
 *.pid

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { obtenerGruposInstitucion, crearGrupoInstitucion, obtenerEstudiantesInstitucion, agregarEstudianteAGrupo, quitarEstudianteDeGrupo } from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
+import Modal from '../../../components/Modal';
+import { IconoGrupo, IconoMas, IconoUsuarios } from '../../../components/Iconos';
 
 interface Grupo {
   id: string;
@@ -18,12 +20,19 @@ interface Estudiante {
   correo: string;
 }
 
+const estiloInput = { width: '100%', padding: '13px 14px', borderRadius: 12, border: '1.5px solid #DCE6ED', fontSize: 14.5, color: '#1a2a3a', boxSizing: 'border-box' as const };
+const estiloLabel = { fontWeight: 700, fontSize: 13.5, color: '#1a2a3a', marginBottom: -8 };
+
 export default function GruposPage() {
   const router = useRouter();
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
-  const [nombre, setNombre] = useState('');
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState('');
+
+  // Modal: crear grupo
+  const [modalCrearAbierto, setModalCrearAbierto] = useState(false);
+  const [nombre, setNombre] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -33,7 +42,7 @@ export default function GruposPage() {
   const [errorGrupoId, setErrorGrupoId] = useState<string | null>(null);
   const [errorGrupoMsg, setErrorGrupoMsg] = useState('');
 
-    const cargarDatos = async (isMounted: boolean = true) => {
+  const cargarDatos = async (isMounted: boolean = true) => {
     const [listaGrupos, listaEstudiantes] = await Promise.all([
       obtenerGruposInstitucion(),
       obtenerEstudiantesInstitucion(),
@@ -44,8 +53,7 @@ export default function GruposPage() {
     }
   };
 
-
-    useEffect(() => {
+  useEffect(() => {
     let mounted = true;
 
     const token = window.localStorage.getItem('saberplus_token');
@@ -60,7 +68,7 @@ export default function GruposPage() {
         await cargarDatos(mounted);
       } catch (err: unknown) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Error cargando grupos');
+          setErrorCarga(err instanceof Error ? err.message : 'Error cargando grupos');
         }
       } finally {
         if (mounted) setCargando(false);
@@ -74,6 +82,11 @@ export default function GruposPage() {
     };
   }, [router]);
 
+  const abrirModalCrear = () => {
+    setError('');
+    setMensaje('');
+    setModalCrearAbierto(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +98,10 @@ export default function GruposPage() {
       setMensaje('Grupo creado con éxito.');
       setNombre('');
       await cargarDatos();
+      setTimeout(() => {
+        setModalCrearAbierto(false);
+        setMensaje('');
+      }, 1100);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error creando grupo');
     } finally {
@@ -129,125 +146,175 @@ export default function GruposPage() {
   };
 
   const estudiantesPorId = Object.fromEntries(estudiantes.map((e) => [e.id, e]));
+  const totalEnGrupos = grupos.reduce((acc, g) => acc + g.ClaseEstudiante.length, 0);
+  const promedioPorGrupo = grupos.length === 0 ? 0 : Math.round((totalEnGrupos / grupos.length) * 10) / 10;
 
   return (
     <ProtectedRoute rolesPermitidos={['PROFESOR']}>
       <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', padding: 24 }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gap: 24 }}>
-        <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 32, boxShadow: '0 12px 40px rgba(20,108,148,0.08)' }}>
-          <h1 style={{ fontSize: 30, fontWeight: 900, marginBottom: 10, color: '#1a2a3a' }}>Grupos</h1>
-          <p style={{ color: '#4a5a6a', fontSize: 16 }}>Crea los grupos de tu institución y asigna estudiantes a cada uno.</p>
-        </div>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gap: 20 }}>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 24 }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 28, boxShadow: '0 10px 28px rgba(20,108,148,0.06)' }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 18 }}>Crear grupo</h2>
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 18 }}>
-              <label style={{ fontWeight: 700 }}>Nombre del grupo</label>
-              <input
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="11-A Matemáticas"
-                required
-                style={{ width: '100%', padding: '14px 16px', borderRadius: 14, border: '1.5px solid #AFD3E2', fontSize: 15 }}
-              />
-              <button type="submit" disabled={guardando} style={{ backgroundColor: '#146C94', color: '#ffffff', border: 'none', borderRadius: 14, padding: '16px 18px', fontWeight: 700, cursor: guardando ? 'not-allowed' : 'pointer' }}>
-                {guardando ? 'Creando...' : 'Crear grupo'}
+          {/* Cabecera compacta */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '26px 28px', boxShadow: '0 10px 30px rgba(20,108,148,0.07)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1a2a3a', margin: 0 }}>Grupos</h1>
+                <p style={{ color: '#6b7c8c', fontSize: 14.5, marginTop: 6 }}>Organiza a tus estudiantes por salón o nivel.</p>
+              </div>
+              <button
+                onClick={abrirModalCrear}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#146C94', color: '#ffffff', border: 'none', borderRadius: 12, padding: '11px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 6px 16px rgba(20,108,148,0.25)' }}
+              >
+                <IconoMas size={16} /> Crear grupo
               </button>
-            </form>
-            {mensaje && <p style={{ marginTop: 16, color: '#1C5741' }}>{mensaje}</p>}
-            {error && <p style={{ marginTop: 16, color: '#BC7C7C' }}>{error}</p>}
-          </div>
+            </div>
 
-          <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 28, boxShadow: '0 10px 28px rgba(20,108,148,0.06)' }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 18 }}>Resumen rápido</h2>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#1a2a3a', fontWeight: 700 }}>Total de grupos</span>
-                <span style={{ fontWeight: 700 }}>{grupos.length}</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 22 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F8FAFC', padding: '12px 18px', borderRadius: 14, border: '1px solid #E5E7EB', flex: '1 1 160px' }}>
+                <span style={{ color: '#146C94' }}><IconoGrupo size={20} /></span>
+                <div>
+                  <div style={{ fontSize: 12, color: '#6B7280' }}>Grupos creados</div>
+                  <div style={{ fontWeight: 800, color: '#1a2a3a', marginTop: 2 }}>{grupos.length}</div>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#1a2a3a', fontWeight: 700 }}>Último grupo</span>
-                <span style={{ color: '#4a5a6a' }}>{grupos[0]?.nombre ?? 'N/A'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F8FAFC', padding: '12px 18px', borderRadius: 14, border: '1px solid #E5E7EB', flex: '1 1 160px' }}>
+                <span style={{ color: '#146C94' }}><IconoUsuarios size={20} /></span>
+                <div>
+                  <div style={{ fontSize: 12, color: '#6B7280' }}>Estudiantes por grupo</div>
+                  <div style={{ fontWeight: 800, color: '#146C94', marginTop: 2 }}>{promedioPorGrupo || '—'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F8FAFC', padding: '12px 18px', borderRadius: 14, border: '1px solid #E5E7EB', flex: '1 1 160px' }}>
+                <span style={{ color: '#146C94' }}><IconoGrupo size={20} /></span>
+                <div>
+                  <div style={{ fontSize: 12, color: '#6B7280' }}>Último grupo</div>
+                  <div style={{ fontWeight: 800, color: '#1a2a3a', marginTop: 2 }}>{grupos[0]?.nombre ?? '—'}</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 28, boxShadow: '0 10px 28px rgba(20,108,148,0.06)' }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 18 }}>Lista de grupos</h2>
-          {cargando ? (
-            <p style={{ color: '#4a5a6a' }}>Cargando...</p>
-          ) : grupos.length === 0 ? (
-            <p style={{ color: '#4a5a6a' }}>No hay grupos registrados aún.</p>
-          ) : (
-            <div style={{ display: 'grid', gap: 16 }}>
-              {grupos.map((grupo) => {
-                const idsEnGrupo = new Set(grupo.ClaseEstudiante.map((ce) => ce.usuarioId));
-                const disponibles = estudiantes.filter((e) => !idsEnGrupo.has(e.id));
+          {/* Lista de grupos */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 26, boxShadow: '0 10px 30px rgba(20,108,148,0.07)' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: '#1a2a3a', marginBottom: 16 }}>Lista de grupos</h2>
 
-                return (
-                  <div key={grupo.id} style={{ borderRadius: 18, border: '1px solid #E2E8F0', padding: 18, display: 'grid', gap: 14 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                      <div>
-                        <p style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{grupo.nombre}</p>
-                        <p style={{ color: '#4a5a6a' }}>Código de ingreso: {grupo.codigoIngreso}</p>
+            {errorCarga && <p style={{ color: '#C0392B', marginBottom: 16 }}>{errorCarga}</p>}
+
+            {cargando ? (
+              <p style={{ color: '#6b7c8c' }}>Cargando...</p>
+            ) : grupos.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 20px' }}>
+                <p style={{ color: '#6b7c8c', fontSize: 15, marginBottom: 18 }}>Todavía no has creado ningún grupo.</p>
+                <button
+                  onClick={abrirModalCrear}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#146C94', color: '#ffffff', border: 'none', borderRadius: 12, padding: '12px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                >
+                  <IconoMas size={16} /> Crear tu primer grupo
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {grupos.map((grupo) => {
+                  const idsEnGrupo = new Set(grupo.ClaseEstudiante.map((ce) => ce.usuarioId));
+                  const disponibles = estudiantes.filter((e) => !idsEnGrupo.has(e.id));
+
+                  return (
+                    <div
+                      key={grupo.id}
+                      style={{ borderRadius: 16, border: '1px solid #EDF1F4', borderLeft: '4px solid #19A7CE', padding: '16px 18px', display: 'grid', gap: 14, transition: 'box-shadow 0.15s ease, border-color 0.15s ease' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(20,108,148,0.08)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div>
+                          <p style={{ fontWeight: 700, fontSize: 15, margin: 0, color: '#1a2a3a' }}>{grupo.nombre}</p>
+                          <p style={{ color: '#6b7c8c', fontSize: 13, margin: '2px 0 0' }}>Código de ingreso: <strong style={{ color: '#146C94' }}>{grupo.codigoIngreso}</strong></p>
+                        </div>
+                        <span style={{ color: '#146C94', fontWeight: 800, fontSize: 13, backgroundColor: '#F0F7FC', padding: '6px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                          {grupo.ClaseEstudiante.length} estudiantes
+                        </span>
                       </div>
-                      <span style={{ color: '#146C94', fontWeight: 700 }}>{grupo.ClaseEstudiante.length} estudiantes</span>
-                    </div>
 
-                    {grupo.ClaseEstudiante.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {grupo.ClaseEstudiante.map((ce) => {
-                          const est = estudiantesPorId[ce.usuarioId];
-                          const quitando = accionEnCurso === `quitar-${grupo.id}-${ce.usuarioId}`;
-                          return (
-                            <span key={ce.usuarioId} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#F0F7FC', color: '#146C94', borderRadius: 12, padding: '8px 8px 8px 12px', fontSize: 13 }}>
-                              {est?.nombre ?? 'Estudiante'}
-                              <button
-                                onClick={() => handleQuitarDeGrupo(grupo.id, ce.usuarioId)}
-                                disabled={quitando}
-                                title="Quitar del grupo"
-                                style={{ background: 'none', border: 'none', color: '#BC7C7C', fontWeight: 800, cursor: quitando ? 'not-allowed' : 'pointer', padding: '2px 6px' }}
-                              >
-                                {quitando ? '...' : '✕'}
-                              </button>
-                            </span>
-                          );
-                        })}
+                      {grupo.ClaseEstudiante.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {grupo.ClaseEstudiante.map((ce) => {
+                            const est = estudiantesPorId[ce.usuarioId];
+                            const quitando = accionEnCurso === `quitar-${grupo.id}-${ce.usuarioId}`;
+                            return (
+                              <span key={ce.usuarioId} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#F0F7FC', color: '#146C94', borderRadius: 10, padding: '6px 6px 6px 12px', fontSize: 12.5, fontWeight: 600 }}>
+                                {est?.nombre ?? 'Estudiante'}
+                                <button
+                                  onClick={() => handleQuitarDeGrupo(grupo.id, ce.usuarioId)}
+                                  disabled={quitando}
+                                  title="Quitar del grupo"
+                                  style={{ background: 'none', border: 'none', color: '#8a9aaa', fontWeight: 800, cursor: quitando ? 'not-allowed' : 'pointer', padding: '2px 4px', fontSize: 12 }}
+                                >
+                                  {quitando ? '...' : '✕'}
+                                </button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <select
+                          value={seleccionPorGrupo[grupo.id] ?? ''}
+                          onChange={(e) => setSeleccionPorGrupo((prev) => ({ ...prev, [grupo.id]: e.target.value }))}
+                          style={{ flex: 1, minWidth: 200, padding: '10px 12px', borderRadius: 10, border: '1.5px solid #DCE6ED', fontSize: 13.5, color: '#1a2a3a' }}
+                        >
+                          <option value="">
+                            {disponibles.length === 0 ? 'No hay estudiantes disponibles' : 'Selecciona un estudiante...'}
+                          </option>
+                          {disponibles.map((e) => (
+                            <option key={e.id} value={e.id}>{e.nombre} ({e.correo})</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleAgregarAGrupo(grupo.id)}
+                          disabled={!seleccionPorGrupo[grupo.id] || accionEnCurso === `agregar-${grupo.id}`}
+                          style={{ backgroundColor: '#19A7CE', color: '#ffffff', border: 'none', borderRadius: 10, padding: '10px 16px', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}
+                        >
+                          {accionEnCurso === `agregar-${grupo.id}` ? 'Agregando...' : 'Agregar'}
+                        </button>
                       </div>
-                    )}
-
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <select
-                        value={seleccionPorGrupo[grupo.id] ?? ''}
-                        onChange={(e) => setSeleccionPorGrupo((prev) => ({ ...prev, [grupo.id]: e.target.value }))}
-                        style={{ flex: 1, minWidth: 200, padding: '10px 12px', borderRadius: 12, border: '1.5px solid #AFD3E2', fontSize: 14 }}
-                      >
-                        <option value="">
-                          {disponibles.length === 0 ? 'No hay estudiantes disponibles' : 'Selecciona un estudiante...'}
-                        </option>
-                        {disponibles.map((e) => (
-                          <option key={e.id} value={e.id}>{e.nombre} ({e.correo})</option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => handleAgregarAGrupo(grupo.id)}
-                        disabled={!seleccionPorGrupo[grupo.id] || accionEnCurso === `agregar-${grupo.id}`}
-                        style={{ backgroundColor: '#19A7CE', color: '#ffffff', border: 'none', borderRadius: 12, padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        {accionEnCurso === `agregar-${grupo.id}` ? 'Agregando...' : 'Agregar al grupo'}
-                      </button>
+                      {errorGrupoId === grupo.id && <p style={{ color: '#C0392B', fontSize: 13 }}>{errorGrupoMsg}</p>}
                     </div>
-                    {errorGrupoId === grupo.id && <p style={{ color: '#BC7C7C', fontSize: 13 }}>{errorGrupoMsg}</p>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Modal: crear grupo */}
+      <Modal
+        abierto={modalCrearAbierto}
+        onCerrar={() => setModalCrearAbierto(false)}
+        titulo="Crear grupo"
+        descripcion="Se genera un código de ingreso único para que los estudiantes se unan solos."
+      >
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16 }}>
+          <label style={estiloLabel}>Nombre del grupo</label>
+          <input
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="11-A Matemáticas"
+            required
+            style={estiloInput}
+          />
+          <button
+            type="submit"
+            disabled={guardando}
+            style={{ backgroundColor: '#146C94', color: '#ffffff', border: 'none', borderRadius: 12, padding: '13px 18px', fontWeight: 700, fontSize: 14.5, cursor: guardando ? 'not-allowed' : 'pointer', marginTop: 4 }}
+          >
+            {guardando ? 'Creando...' : 'Crear grupo'}
+          </button>
+          {mensaje && <p style={{ color: '#1C7C45', fontSize: 13.5, margin: 0 }}>{mensaje}</p>}
+          {error && <p style={{ color: '#C0392B', fontSize: 13.5, margin: 0 }}>{error}</p>}
+        </form>
+      </Modal>
     </ProtectedRoute>
   );
 }
