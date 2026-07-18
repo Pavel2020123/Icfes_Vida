@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { obtenerToken } from '../../lib/api';
 import { RolUsuario } from '../../lib/auth';
 import MenuLateral from '../../components/MenuLateral';
+import { useBranding } from '../../context/ThemeContext';
 
 const AREAS = [
   { key: 'LECTURA_CRITICA', nombre: 'Lectura Crítica' },
@@ -46,6 +47,7 @@ function fechaLegible(fecha: string) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { branding } = useBranding();
   const [nombre, setNombre] = useState('');
   const [institucionId, setInstitucionId] = useState<string | null>(null);
   const [rol, setRol] = useState<RolUsuario | null>(null);
@@ -114,16 +116,32 @@ export default function DashboardPage() {
       />
 
       {/* NAVBAR */}
-      <nav style={{ backgroundColor: '#146C94', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+      <nav style={{ backgroundColor: 'var(--color-primario, #146C94)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px 0 72px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <Link href="/dashboard" style={{ textDecoration: 'none' }}>
-            <span style={{ fontSize: 22, fontWeight: 800, color: '#ffffff' }}>
-              Saber<span style={{ color: '#8DD8FF' }}>Plus</span>
-            </span>
+          <Link href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            {branding.logoUrl ? (
+              <>
+                <img
+                  src={branding.logoUrl}
+                  alt={branding.nombre ?? 'Logo institución'}
+                  style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover', backgroundColor: '#ffffff', flexShrink: 0 }}
+                />
+                <span style={{
+                  fontSize: 18, fontWeight: 800, color: '#ffffff',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220,
+                }}>
+                  {branding.nombre}
+                </span>
+              </>
+            ) : (
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#ffffff' }}>
+                Saber<span style={{ color: 'var(--color-secundario, #19A7CE)' }}>Plus</span>
+              </span>
+            )}
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <div style={{ backgroundColor: 'rgba(255,255,255,0.15)', padding: '6px 16px', borderRadius: 20 }}>
-              <span style={{ color: '#8DD8FF', fontWeight: 800, fontSize: 15 }}>{xp} XP</span>
+              <span style={{ color: 'var(--color-secundario, #19A7CE)', fontWeight: 800, fontSize: 15 }}>{xp} XP</span>
             </div>
           </div>
         </div>
@@ -152,7 +170,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: 40, fontWeight: 900, color: '#146C94' }}>
+              <span style={{ fontSize: 40, fontWeight: 900, color: 'var(--color-primario, #146C94)' }}>
                 {progreso.porcentajeGeneral}%
               </span>
               <p style={{ color: '#8a9aaa', fontSize: 13 }}>completado</p>
@@ -163,16 +181,16 @@ export default function DashboardPage() {
           <div style={{ height: 14, backgroundColor: '#D2E0FB', borderRadius: 7, marginBottom: 12, overflow: 'hidden' }}>
             <div style={{
               height: '100%',
-              backgroundColor: '#146C94',
+              backgroundColor: 'var(--color-primario, #146C94)',
               borderRadius: 7,
               width: `${progreso.porcentajeGeneral}%`,
               transition: 'width 1s ease',
-              backgroundImage: 'linear-gradient(90deg, #146C94, #19A7CE)',
+              backgroundImage: 'linear-gradient(90deg, var(--color-primario, #146C94), var(--color-secundario, #19A7CE))',
             }} />
           </div>
 
           <p style={{ color: '#4a5a6a', fontSize: 14 }}>
-            <strong style={{ color: '#146C94' }}>{progreso.temasCompletados}</strong> de{' '}
+            <strong style={{ color: 'var(--color-primario, #146C94)' }}>{progreso.temasCompletados}</strong> de{' '}
             <strong>{progreso.totalSubtemas}</strong> temas completados
           </p>
         </div>
@@ -197,8 +215,8 @@ export default function DashboardPage() {
         {/* PREGUNTAS ALEATORIAS */}
         <Link href="/preguntas-aleatorias" style={{ textDecoration: 'none' }}>
           <div style={{
-            backgroundColor: '#146C94',
-            backgroundImage: 'linear-gradient(120deg, #146C94, #19A7CE)',
+            backgroundColor: 'var(--color-primario, #146C94)',
+            backgroundImage: 'linear-gradient(120deg, var(--color-primario, #146C94), var(--color-secundario, #19A7CE))',
             borderRadius: 18,
             padding: '28px 32px',
             marginBottom: 40,
@@ -219,7 +237,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <span style={{
-              backgroundColor: '#ffffff', color: '#146C94', padding: '12px 24px',
+              backgroundColor: '#ffffff', color: 'var(--color-primario, #146C94)', padding: '12px 24px',
               borderRadius: 10, fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap',
             }}>
               Empezar →
@@ -254,11 +272,11 @@ export default function DashboardPage() {
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
-                    <h3 style={{ fontSize: 15, fontWeight: 700, color: '#146C94', marginBottom: 12 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-primario, #146C94)', marginBottom: 12 }}>
                       {area.nombre}
                     </h3>
                     <div style={{ height: 5, backgroundColor: '#D2E0FB', borderRadius: 3, marginBottom: 8, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', backgroundColor: '#19A7CE', borderRadius: 3, width: `${pct}%`, transition: 'width 0.5s ease' }} />
+                      <div style={{ height: '100%', backgroundColor: 'var(--color-secundario, #19A7CE)', borderRadius: 3, width: `${pct}%`, transition: 'width 0.5s ease' }} />
                     </div>
                     <p style={{ fontSize: 12, color: '#8a9aaa' }}>{pct}% completado</p>
                   </div>
@@ -274,16 +292,33 @@ export default function DashboardPage() {
             borderRadius: 20,
             padding: '32px 36px',
             border: '1.5px solid #AFD3E2',
+            borderLeft: '6px solid var(--color-primario, #146C94)',
             boxShadow: '0 4px 20px rgba(20,108,148,0.08)',
           }}>
             <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1a2a3a', marginBottom: 4 }}>
               Hola, {nombre.split(' ')[0]}
             </h1>
-            <p style={{ color: '#4a5a6a', fontSize: 15 }}>
+            <p style={{ color: '#4a5a6a', fontSize: 15, marginBottom: rol === 'PROFESOR' ? 20 : 0 }}>
               {rol === 'PROFESOR'
                 ? 'Bienvenido a tu panel de profesor. Desde el menú puedes gestionar tu institución, estudiantes y grupos.'
                 : 'Bienvenido al panel de administración.'}
             </p>
+            {rol === 'PROFESOR' && (
+              <Link href="/institucion" style={{ textDecoration: 'none' }}>
+                <button style={{
+                  backgroundColor: 'var(--color-primario, #146C94)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 12,
+                  padding: '12px 20px',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}>
+                  Ir a mi institución
+                </button>
+              </Link>
+            )}
           </div>
         )}
       </main>

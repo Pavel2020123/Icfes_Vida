@@ -98,6 +98,13 @@ export class InstitucionController {
     );
   }
 
+  @Delete('me')
+  eliminarMiInstitucion(@Request() req: any) {
+    return this.institucionService.eliminarMiInstitucion(
+      req.usuario.sub as string,
+    );
+  }
+
   @Get('me/estudiantes')
   obtenerEstudiantes(@Request() req: any) {
     return this.institucionService.obtenerEstudiantesDeMiInstitucion(

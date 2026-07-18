@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { loginUsuario, guardarToken } from '../../lib/api';
+import { useBranding } from '../../context/ThemeContext';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refrescarBranding } = useBranding();
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
@@ -19,6 +21,7 @@ export default function LoginPage() {
     try {
       const data = await loginUsuario(correo, contrasena);
       guardarToken(data.accessToken);
+      await refrescarBranding();
       router.push(data.usuario?.rol === 'ADMIN' ? '/admin' : '/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión');

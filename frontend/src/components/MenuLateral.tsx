@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { cerrarSesion, obtenerToken } from '../lib/api';
 import { decodificarToken, RolUsuario } from '../lib/auth';
+import { useBranding } from '../context/ThemeContext';
 
 const AREAS = [
   { key: 'LECTURA_CRITICA', nombre: 'Lectura Crítica' },
@@ -28,6 +29,7 @@ export default function MenuLateral({
   totalSubtemas,
 }: Props) {
   const router = useRouter();
+  const { branding } = useBranding();
   const [abierto, setAbierto] = useState(false);
   const [areasAbierto, setAreasAbierto] = useState(false);
   const [rol, setRol] = useState<RolUsuario | null>(null);
@@ -66,7 +68,7 @@ export default function MenuLateral({
           top: 12,
           left: 12,
           zIndex: 200,
-          backgroundColor: '#146C94',
+          backgroundColor: 'var(--color-primario, #146C94)',
           border: 'none',
           borderRadius: 10,
           width: 42,
@@ -118,11 +120,27 @@ export default function MenuLateral({
         }}
       >
         {/* CABECERA */}
-        <div style={{ backgroundColor: '#146C94', padding: '24px 20px 20px' }}>
+        <div style={{ backgroundColor: 'var(--color-primario, #146C94)', padding: '24px 20px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <span style={{ fontSize: 20, fontWeight: 800, color: '#ffffff' }}>
-              Saber<span style={{ color: '#8DD8FF' }}>Plus</span>
-            </span>
+            {branding.logoUrl ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <img
+                  src={branding.logoUrl}
+                  alt={branding.nombre ?? 'Logo institución'}
+                  style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', backgroundColor: '#ffffff', flexShrink: 0 }}
+                />
+                <span style={{
+                  fontSize: 16, fontWeight: 800, color: '#ffffff',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {branding.nombre}
+                </span>
+              </div>
+            ) : (
+              <span style={{ fontSize: 20, fontWeight: 800, color: '#ffffff' }}>
+                Saber<span style={{ color: 'var(--color-secundario, #19A7CE)' }}>Plus</span>
+              </span>
+            )}
             <button
               onClick={() => setAbierto(false)}
               style={{ background: 'none', border: 'none', color: '#ffffff', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}
@@ -139,12 +157,12 @@ export default function MenuLateral({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ color: '#D2E0FB', fontSize: 12 }}>Progreso general</span>
-              <span style={{ color: '#8DD8FF', fontSize: 12, fontWeight: 700 }}>{progresoGeneral}%</span>
+              <span style={{ color: 'var(--color-secundario, #19A7CE)', fontSize: 12, fontWeight: 700 }}>{progresoGeneral}%</span>
             </div>
             <div style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3 }}>
               <div style={{
                 height: '100%',
-                backgroundColor: '#8DD8FF',
+                backgroundColor: 'var(--color-secundario, #19A7CE)',
                 borderRadius: 3,
                 width: `${progresoGeneral}%`,
                 transition: 'width 0.5s ease',

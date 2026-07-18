@@ -120,6 +120,60 @@ export class InstitucionService {
     });
   }
 
+  async eliminarMiInstitucion(usuarioId: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        id: true,
+        correo: true,
+        rol: true,
+        nombre: true,
+        institucionId: true,
+      },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado.');
+    }
+
+    if (!usuario.institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    if (usuario.rol !== 'PROFESOR' && usuario.rol !== 'ADMIN') {
+      throw new UnauthorizedException(
+        'Solo un profesor o administrador puede eliminar la institución.',
+      );
+    }
+
+    const institucionId = usuario.institucionId;
+
+    // Usuario no tiene onDelete: Cascade hacia Institucion, así que
+    // desvinculamos a todos antes de borrar (Clase sí cascadea solo).
+    await this.prisma.$transaction([
+      this.prisma.usuario.updateMany({
+        where: { institucionId },
+        data: { institucionId: null },
+      }),
+      this.prisma.institucion.delete({ where: { id: institucionId } }),
+    ]);
+
+    // El institucionId viaja en el JWT, así que emitimos uno nuevo sin él.
+    const payload = {
+      sub: usuario.id,
+      correo: usuario.correo,
+      rol: usuario.rol,
+      nombre: usuario.nombre,
+      institucionId: null,
+    };
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    return {
+      mensaje: 'La institución fue eliminada correctamente.',
+      accessToken,
+    };
+  }
+
   async obtenerEstudiantesDeMiInstitucion(usuarioId: string) {
     const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
     if (!institucionId) {

@@ -176,6 +176,16 @@ export async function actualizarInstitucion(
   return data;
 }
 
+export async function eliminarInstitucion() {
+  const res = await fetch(`${API_URL}/instituciones/me`, {
+    method: 'DELETE',
+    headers: crearEncabezados(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error eliminando la institución');
+  return data;
+}
+
 export function guardarToken(token: string) {
   localStorage.setItem('saberplus_token', token);
 }

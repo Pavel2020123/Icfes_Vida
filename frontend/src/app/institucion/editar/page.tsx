@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { actualizarInstitucion, obtenerMiInstitucion } from '../../../lib/api';
+import { actualizarInstitucion, eliminarInstitucion, guardarToken, obtenerMiInstitucion } from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 
 export default function EditarInstitucionPage() {
@@ -16,6 +16,12 @@ export default function EditarInstitucionPage() {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   const [cargandoDatos, setCargandoDatos] = useState(true);
+
+  // Zona de peligro: eliminar institución
+  const [mostrarEliminar, setMostrarEliminar] = useState(false);
+  const [textoConfirmacion, setTextoConfirmacion] = useState('');
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState('');
 
   // PASO 4: Cargar los datos de la institución al iniciar
   useEffect(() => {
@@ -49,6 +55,20 @@ export default function EditarInstitucionPage() {
       setError(err instanceof Error ? err.message : 'No se pudo actualizar la institución');
     } finally {
       setCargando(false);
+    }
+  };
+
+  const handleEliminarInstitucion = async () => {
+    if (textoConfirmacion.trim() !== nombre.trim()) return;
+    setErrorEliminar('');
+    setEliminando(true);
+    try {
+      const respuesta = await eliminarInstitucion();
+      guardarToken(respuesta.accessToken);
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      setErrorEliminar(err instanceof Error ? err.message : 'No se pudo eliminar la institución');
+      setEliminando(false);
     }
   };
 
@@ -315,6 +335,69 @@ export default function EditarInstitucionPage() {
               {cargando ? 'Guardando...' : 'Guardar cambios'}
             </button>
           </form>
+
+          {/* Zona de peligro: eliminar institución */}
+          <div style={{ marginTop: 40, borderTop: '1px solid #F1D9D9', paddingTop: 24 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#7A2A2A', marginBottom: 8 }}>Zona de peligro</h3>
+            <p style={{ color: '#4a5a6a', fontSize: 14, marginBottom: 16 }}>
+              Eliminar la institución es una acción permanente. Se borrarán todos los grupos y se desvincularán todos los estudiantes y profesores.
+            </p>
+
+            {!mostrarEliminar ? (
+              <button
+                type="button"
+                onClick={() => setMostrarEliminar(true)}
+                style={{ backgroundColor: '#FDE8E4', color: '#7A2A2A', border: '1.5px solid #F1BCBC', borderRadius: 14, padding: '12px 20px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Eliminar institución
+              </button>
+            ) : (
+              <div style={{ backgroundColor: '#FFF5F5', border: '1.5px solid #F1BCBC', borderRadius: 16, padding: 20 }}>
+                <p style={{ fontSize: 14, color: '#7A2A2A', marginBottom: 12 }}>
+                  Para confirmar, escribe el nombre de la institución (<strong>{nombre}</strong>) y presiona eliminar. Esta acción no se puede deshacer.
+                </p>
+                <input
+                  value={textoConfirmacion}
+                  onChange={(e) => setTextoConfirmacion(e.target.value)}
+                  placeholder={nombre}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid #F1BCBC', fontSize: 15, marginBottom: 12 }}
+                />
+                {errorEliminar && (
+                  <p style={{ color: '#7A2A2A', fontSize: 13, marginBottom: 12 }}>{errorEliminar}</p>
+                )}
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button
+                    type="button"
+                    onClick={handleEliminarInstitucion}
+                    disabled={textoConfirmacion.trim() !== nombre.trim() || eliminando}
+                    style={{
+                      backgroundColor: '#C24B4B',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 12,
+                      padding: '12px 20px',
+                      fontWeight: 700,
+                      cursor: textoConfirmacion.trim() === nombre.trim() && !eliminando ? 'pointer' : 'not-allowed',
+                      opacity: textoConfirmacion.trim() === nombre.trim() && !eliminando ? 1 : 0.6,
+                    }}
+                  >
+                    {eliminando ? 'Eliminando...' : 'Sí, eliminar definitivamente'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMostrarEliminar(false);
+                      setTextoConfirmacion('');
+                      setErrorEliminar('');
+                    }}
+                    style={{ backgroundColor: '#F0F7FC', color: '#146C94', border: 'none', borderRadius: 12, padding: '12px 20px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </ProtectedRoute>
