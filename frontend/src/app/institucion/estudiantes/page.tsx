@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { obtenerAnaliticasInstitucion, crearEstudianteInstitucion, agregarEstudianteExistenteInstitucion } from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Modal from '../../../components/Modal';
-import { IconoUsuarioMas, IconoVinculo, IconoUsuarios, IconoGrafico, IconoLlave } from '../../../components/Iconos';
+import { IconoUsuarioMas, IconoVinculo, IconoUsuarios, IconoGrafico, IconoLlave, IconoFlechaIzquierda } from '../../../components/Iconos';
 
 interface EstudianteAnalitica {
   id: string;
@@ -139,6 +140,13 @@ export default function EstudiantesPage() {
 
           {/* Cabecera compacta con acciones y resumen en una sola tarjeta */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '26px 28px', boxShadow: '0 10px 30px rgba(20,108,148,0.07)' }}>
+            <Link href="/institucion" style={{ textDecoration: 'none' }}>
+              <button
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#F0F7FC', color: '#146C94', border: '1.5px solid #CFE6F2', borderRadius: 12, padding: '10px 16px', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', marginBottom: 18 }}
+              >
+                <IconoFlechaIzquierda size={16} /> Volver a institución
+              </button>
+            </Link>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
               <div>
                 <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1a2a3a', margin: 0 }}>Estudiantes</h1>

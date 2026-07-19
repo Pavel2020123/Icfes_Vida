@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerToken } from '../../lib/api';
+import { obtenerToken, API_URL } from '../../lib/api';
 import MenuLateral from '../../components/MenuLateral';
 
 interface Perfil {
@@ -41,10 +41,10 @@ export default function PerfilPage() {
     if (!token) { router.push('/login'); return; }
 
     Promise.all([
-      fetch('http://localhost:3000/auth/perfil', {
+      fetch(`${API_URL}/auth/perfil`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
-      fetch('http://localhost:3000/simulacros/progreso', {
+      fetch(`${API_URL}/simulacros/progreso`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
     ])
@@ -71,7 +71,7 @@ export default function PerfilPage() {
     if (!token) return;
     setGuardando(true);
     try {
-      await fetch('http://localhost:3000/auth/perfil', {
+      await fetch(`${API_URL}/auth/perfil`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

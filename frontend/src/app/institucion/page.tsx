@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { obtenerMiInstitucion, obtenerUrlLogo } from '../../lib/api';
 import ProtectedRoute from '../../components/ProtectedRoute';
-import { IconoUsuarios, IconoGrupo } from '../../components/Iconos';
+import { IconoUsuarios, IconoGrupo, IconoFlechaIzquierda } from '../../components/Iconos';
 
 interface Institucion {
   id: string;
@@ -55,7 +55,16 @@ export default function InstitucionPage() {
     return (
       <ProtectedRoute rolesPermitidos={['PROFESOR']}>
         <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', padding: 24 }}>
-          <div style={{ maxWidth: 640, margin: '64px auto 0', backgroundColor: '#ffffff', borderRadius: 20, padding: 36, boxShadow: '0 12px 40px rgba(20,108,148,0.08)', textAlign: 'center' }}>
+          <div style={{ maxWidth: 640, margin: '24px auto 0' }}>
+            <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+              <button
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#ffffff', color: '#146C94', border: '1.5px solid #CFE6F2', borderRadius: 12, padding: '10px 16px', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}
+              >
+                <IconoFlechaIzquierda size={16} /> Volver al panel
+              </button>
+            </Link>
+          </div>
+          <div style={{ maxWidth: 640, margin: '20px auto 0', backgroundColor: '#ffffff', borderRadius: 20, padding: 36, boxShadow: '0 12px 40px rgba(20,108,148,0.08)', textAlign: 'center' }}>
             <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1a2a3a', marginBottom: 10 }}>Aún no tienes una institución</h1>
             <p style={{ color: '#6b7c8c', fontSize: 15, marginBottom: 26, lineHeight: 1.5 }}>
               Crea el espacio de tu colegio y comienza a matricular estudiantes y crear grupos.
@@ -80,6 +89,14 @@ export default function InstitucionPage() {
     <ProtectedRoute rolesPermitidos={['PROFESOR']}>
       <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', padding: 24 }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gap: 20 }}>
+
+          <Link href="/dashboard" style={{ textDecoration: 'none', justifySelf: 'start' }}>
+            <button
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#ffffff', color: '#146C94', border: '1.5px solid #CFE6F2', borderRadius: 12, padding: '10px 16px', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}
+            >
+              <IconoFlechaIzquierda size={16} /> Volver al panel
+            </button>
+          </Link>
 
           {/* Hero */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '28px 30px', boxShadow: '0 10px 30px rgba(20,108,148,0.07)' }}>

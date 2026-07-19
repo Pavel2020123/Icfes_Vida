@@ -150,6 +150,27 @@ export async function crearGrupoInstitucion(nombre: string) {
   return data;
 }
 
+export async function actualizarGrupoInstitucion(claseId: string, nombre: string) {
+  const res = await fetch(`${API_URL}/instituciones/me/grupos/${claseId}`, {
+    method: 'PATCH',
+    headers: crearEncabezados(),
+    body: JSON.stringify({ nombre }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error actualizando el grupo');
+  return data;
+}
+
+export async function eliminarGrupoInstitucion(claseId: string) {
+  const res = await fetch(`${API_URL}/instituciones/me/grupos/${claseId}`, {
+    method: 'DELETE',
+    headers: crearEncabezados(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error eliminando el grupo');
+  return data;
+}
+
 export async function unirseAClase(codigoIngreso: string) {
   const res = await fetch(`${API_URL}/instituciones/unirse`, {
     method: 'POST',

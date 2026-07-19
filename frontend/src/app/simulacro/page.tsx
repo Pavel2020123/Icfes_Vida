@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { obtenerToken } from '../../lib/api';
+import { obtenerToken, API_URL } from '../../lib/api';
 
 interface Respuesta {
   id: string;
@@ -45,9 +45,10 @@ export default function SimulacroPage() {
 
     const query = new URLSearchParams(window.location.search);
     const selectedArea = query.get('area') ?? 'MATEMATICAS';
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setArea(selectedArea);
 
-    fetch(`http://localhost:3000/simulacros/generar?area=${selectedArea}`)
+    fetch(`${API_URL}/simulacros/generar?area=${selectedArea}`)
       .then(r => r.json())
       .then(data => {
         if (data.preguntas && data.preguntas.length > 0) {
@@ -75,7 +76,7 @@ export default function SimulacroPage() {
         respuestaId,
       }));
 
-      const res = await fetch('http://localhost:3000/simulacros/calificar', {
+      const res = await fetch(`${API_URL}/simulacros/calificar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

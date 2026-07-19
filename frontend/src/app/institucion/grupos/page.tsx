@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { obtenerGruposInstitucion, crearGrupoInstitucion, obtenerEstudiantesInstitucion, agregarEstudianteAGrupo, quitarEstudianteDeGrupo } from '../../../lib/api';
+import Link from 'next/link';
+import { obtenerGruposInstitucion, crearGrupoInstitucion, actualizarGrupoInstitucion, eliminarGrupoInstitucion, obtenerEstudiantesInstitucion, agregarEstudianteAGrupo, quitarEstudianteDeGrupo } from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Modal from '../../../components/Modal';
-import { IconoGrupo, IconoMas, IconoUsuarios } from '../../../components/Iconos';
+import { IconoGrupo, IconoMas, IconoUsuarios, IconoFlechaIzquierda, IconoLapiz, IconoBasura } from '../../../components/Iconos';
 
 interface Grupo {
   id: string;
@@ -41,6 +42,16 @@ export default function GruposPage() {
   const [accionEnCurso, setAccionEnCurso] = useState<string | null>(null);
   const [errorGrupoId, setErrorGrupoId] = useState<string | null>(null);
   const [errorGrupoMsg, setErrorGrupoMsg] = useState('');
+
+  // Renombrar grupo (edición en línea)
+  const [editandoGrupoId, setEditandoGrupoId] = useState<string | null>(null);
+  const [nombreEditado, setNombreEditado] = useState('');
+  const [guardandoNombre, setGuardandoNombre] = useState(false);
+
+  // Eliminar grupo (modal de confirmación)
+  const [grupoAEliminar, setGrupoAEliminar] = useState<Grupo | null>(null);
+  const [eliminandoGrupo, setEliminandoGrupo] = useState(false);
+  const [errorEliminarGrupo, setErrorEliminarGrupo] = useState('');
 
   const cargarDatos = async (isMounted: boolean = true) => {
     const [listaGrupos, listaEstudiantes] = await Promise.all([
@@ -145,6 +156,61 @@ export default function GruposPage() {
     }
   };
 
+  const iniciarEdicionNombre = (grupo: Grupo) => {
+    setErrorGrupoId(null);
+    setErrorGrupoMsg('');
+    setEditandoGrupoId(grupo.id);
+    setNombreEditado(grupo.nombre);
+  };
+
+  const cancelarEdicionNombre = () => {
+    setEditandoGrupoId(null);
+    setNombreEditado('');
+  };
+
+  const handleGuardarNombre = async (grupoId: string) => {
+    const nombreLimpio = nombreEditado.trim();
+    if (!nombreLimpio) return;
+
+    setErrorGrupoId(null);
+    setErrorGrupoMsg('');
+    setGuardandoNombre(true);
+
+    try {
+      await actualizarGrupoInstitucion(grupoId, nombreLimpio);
+      await cargarDatos();
+      setEditandoGrupoId(null);
+      setNombreEditado('');
+    } catch (err: unknown) {
+      setErrorGrupoId(grupoId);
+      setErrorGrupoMsg(err instanceof Error ? err.message : 'Error renombrando el grupo');
+    } finally {
+      setGuardandoNombre(false);
+    }
+  };
+
+  const abrirConfirmarEliminar = (grupo: Grupo) => {
+    setErrorEliminarGrupo('');
+    setGrupoAEliminar(grupo);
+  };
+
+  const handleEliminarGrupo = async () => {
+    if (!grupoAEliminar) return;
+
+    setErrorEliminarGrupo('');
+    setEliminandoGrupo(true);
+
+    try {
+      await eliminarGrupoInstitucion(grupoAEliminar.id);
+      await cargarDatos();
+      setGrupoAEliminar(null);
+    } catch (err: unknown) {
+      setErrorEliminarGrupo(err instanceof Error ? err.message : 'Error eliminando el grupo');
+    } finally {
+      setEliminandoGrupo(false);
+    }
+  };
+
   const estudiantesPorId = Object.fromEntries(estudiantes.map((e) => [e.id, e]));
   const totalEnGrupos = grupos.reduce((acc, g) => acc + g.ClaseEstudiante.length, 0);
   const promedioPorGrupo = grupos.length === 0 ? 0 : Math.round((totalEnGrupos / grupos.length) * 10) / 10;
@@ -156,6 +222,13 @@ export default function GruposPage() {
 
           {/* Cabecera compacta */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '26px 28px', boxShadow: '0 10px 30px rgba(20,108,148,0.07)' }}>
+            <Link href="/institucion" style={{ textDecoration: 'none' }}>
+              <button
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#F0F7FC', color: '#146C94', border: '1.5px solid #CFE6F2', borderRadius: 12, padding: '10px 16px', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', marginBottom: 18 }}
+              >
+                <IconoFlechaIzquierda size={16} /> Volver a institución
+              </button>
+            </Link>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
               <div>
                 <h1 style={{ fontSize: 24, fontWeight: 900, color: '#1a2a3a', margin: 0 }}>Grupos</h1>
@@ -226,13 +299,56 @@ export default function GruposPage() {
                       onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <div>
-                          <p style={{ fontWeight: 700, fontSize: 15, margin: 0, color: '#1a2a3a' }}>{grupo.nombre}</p>
+                        <div style={{ flex: 1, minWidth: 180 }}>
+                          {editandoGrupoId === grupo.id ? (
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <input
+                                value={nombreEditado}
+                                onChange={(e) => setNombreEditado(e.target.value)}
+                                autoFocus
+                                style={{ padding: '8px 10px', borderRadius: 10, border: '1.5px solid #AFD3E2', fontSize: 14.5, fontWeight: 700, color: '#1a2a3a' }}
+                              />
+                              <button
+                                onClick={() => handleGuardarNombre(grupo.id)}
+                                disabled={guardandoNombre || !nombreEditado.trim()}
+                                style={{ backgroundColor: '#146C94', color: '#ffffff', border: 'none', borderRadius: 8, padding: '7px 12px', fontWeight: 700, fontSize: 12.5, cursor: guardandoNombre ? 'not-allowed' : 'pointer' }}
+                              >
+                                {guardandoNombre ? 'Guardando...' : 'Guardar'}
+                              </button>
+                              <button
+                                onClick={cancelarEdicionNombre}
+                                disabled={guardandoNombre}
+                                style={{ backgroundColor: '#F6F1F1', color: '#4a5a6a', border: 'none', borderRadius: 8, padding: '7px 12px', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <p style={{ fontWeight: 700, fontSize: 15, margin: 0, color: '#1a2a3a' }}>{grupo.nombre}</p>
+                              <button
+                                onClick={() => iniciarEdicionNombre(grupo)}
+                                title="Renombrar grupo"
+                                style={{ background: 'none', border: 'none', color: '#8a9aaa', cursor: 'pointer', padding: 4, display: 'flex' }}
+                              >
+                                <IconoLapiz size={14} />
+                              </button>
+                            </div>
+                          )}
                           <p style={{ color: '#6b7c8c', fontSize: 13, margin: '2px 0 0' }}>Código de ingreso: <strong style={{ color: '#146C94' }}>{grupo.codigoIngreso}</strong></p>
                         </div>
-                        <span style={{ color: '#146C94', fontWeight: 800, fontSize: 13, backgroundColor: '#F0F7FC', padding: '6px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-                          {grupo.ClaseEstudiante.length} estudiantes
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ color: '#146C94', fontWeight: 800, fontSize: 13, backgroundColor: '#F0F7FC', padding: '6px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                            {grupo.ClaseEstudiante.length} estudiantes
+                          </span>
+                          <button
+                            onClick={() => abrirConfirmarEliminar(grupo)}
+                            title="Eliminar grupo"
+                            style={{ background: '#FDE8E4', border: 'none', color: '#C0392B', cursor: 'pointer', padding: 8, borderRadius: 10, display: 'flex' }}
+                          >
+                            <IconoBasura size={15} />
+                          </button>
+                        </div>
                       </div>
 
                       {grupo.ClaseEstudiante.length > 0 && (
@@ -314,6 +430,38 @@ export default function GruposPage() {
           {mensaje && <p style={{ color: '#1C7C45', fontSize: 13.5, margin: 0 }}>{mensaje}</p>}
           {error && <p style={{ color: '#C0392B', fontSize: 13.5, margin: 0 }}>{error}</p>}
         </form>
+      </Modal>
+
+      {/* Modal: confirmar eliminación de grupo */}
+      <Modal
+        abierto={grupoAEliminar !== null}
+        onCerrar={() => setGrupoAEliminar(null)}
+        titulo="Eliminar grupo"
+        descripcion={
+          grupoAEliminar
+            ? `¿Seguro que quieres eliminar "${grupoAEliminar.nombre}"? Los ${grupoAEliminar.ClaseEstudiante.length} estudiante(s) del grupo quedarán sin grupo asignado. Esta acción no se puede deshacer.`
+            : undefined
+        }
+      >
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            type="button"
+            onClick={handleEliminarGrupo}
+            disabled={eliminandoGrupo}
+            style={{ backgroundColor: '#C24B4B', color: '#ffffff', border: 'none', borderRadius: 12, padding: '12px 20px', fontWeight: 700, cursor: eliminandoGrupo ? 'not-allowed' : 'pointer' }}
+          >
+            {eliminandoGrupo ? 'Eliminando...' : 'Sí, eliminar'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setGrupoAEliminar(null)}
+            disabled={eliminandoGrupo}
+            style={{ backgroundColor: '#F0F7FC', color: '#146C94', border: 'none', borderRadius: 12, padding: '12px 20px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Cancelar
+          </button>
+        </div>
+        {errorEliminarGrupo && <p style={{ color: '#C0392B', fontSize: 13.5, marginTop: 12 }}>{errorEliminarGrupo}</p>}
       </Modal>
     </ProtectedRoute>
   );

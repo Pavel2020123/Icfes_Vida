@@ -82,3 +82,32 @@ export function IconoLlave({ size = 18, color = 'currentColor' }: IconoProps) {
     </svg>
   );
 }
+
+export function IconoFlechaIzquierda({ size = 16, color = 'currentColor' }: IconoProps) {
+  return (
+    <svg {...propsBase(size, color)}>
+      <path d="M19 12H5" />
+      <path d="M11 18 5 12l6-6" />
+    </svg>
+  );
+}
+
+export function IconoLapiz({ size = 16, color = 'currentColor' }: IconoProps) {
+  return (
+    <svg {...propsBase(size, color)}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+export function IconoBasura({ size = 16, color = 'currentColor' }: IconoProps) {
+  return (
+    <svg {...propsBase(size, color)}>
+      <path d="M4 7h16" />
+      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+      <path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { obtenerToken } from '../../lib/api';
+import { obtenerToken, API_URL } from '../../lib/api';
 import EditorBloquesContenido from '../../components/EditorBloquesContenido';
 import ProtectedRoute from '../../components/ProtectedRoute';
 
@@ -97,7 +97,7 @@ function ContenidoEditor({ temas, getHeaders, mostrarMensaje, inputStyle, btnSty
   const guardar = async () => {
     if (!subtemaId) { mostrarMensaje('Selecciona un subtema'); return; }
     setGuardando(true);
-    await fetch(`http://localhost:3000/admin/subtemas/${subtemaId}/contenido`, {
+    await fetch(`${API_URL}/admin/subtemas/${subtemaId}/contenido`, {
       method: 'PATCH',
       headers: getHeaders(),
       body: JSON.stringify({ contenido, videoUrl, imagenUrl }),
@@ -211,7 +211,7 @@ function InteractivoEditor({ temas, getHeaders, mostrarMensaje, inputStyle, btnS
     if (espacios.some(e => e.opciones.some(o => !o.trim()))) { mostrarMensaje('Completa todas las opciones de cada espacio'); return; }
 
     setGuardando(true);
-    await fetch(`http://localhost:3000/admin/subtemas/${subtemaId}/interactivo`, {
+    await fetch(`${API_URL}/admin/subtemas/${subtemaId}/interactivo`, {
       method: 'PATCH',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -370,6 +370,7 @@ export default function AdminPage() {
         router.push('/dashboard');
         return;
       }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMiId(payload.sub);
     } catch {
       router.push('/login');
@@ -385,9 +386,9 @@ export default function AdminPage() {
       setCargando(true);
       try {
         const [statsRes, temasRes, usuariosRes] = await Promise.all([
-          fetch('http://localhost:3000/admin/estadisticas', { headers }),
-          fetch('http://localhost:3000/admin/temas', { headers }),
-          fetch('http://localhost:3000/admin/usuarios', { headers }),
+          fetch(`${API_URL}/admin/estadisticas`, { headers }),
+          fetch(`${API_URL}/admin/temas`, { headers }),
+          fetch(`${API_URL}/admin/usuarios`, { headers }),
         ]);
         setStats(await statsRes.json());
         setTemas(await temasRes.json());
@@ -409,9 +410,9 @@ export default function AdminPage() {
     setCargando(true);
     try {
       const [statsRes, temasRes, usuariosRes] = await Promise.all([
-        fetch('http://localhost:3000/admin/estadisticas', { headers: getHeaders() }),
-        fetch('http://localhost:3000/admin/temas', { headers: getHeaders() }),
-        fetch('http://localhost:3000/admin/usuarios', { headers: getHeaders() }),
+        fetch(`${API_URL}/admin/estadisticas`, { headers: getHeaders() }),
+        fetch(`${API_URL}/admin/temas`, { headers: getHeaders() }),
+        fetch(`${API_URL}/admin/usuarios`, { headers: getHeaders() }),
       ]);
       setStats(await statsRes.json());
       setTemas(await temasRes.json());
@@ -429,7 +430,7 @@ export default function AdminPage() {
   // ─── LISTAR / ELIMINAR PREGUNTAS ────────────────────────────
   const cargarPreguntasDeSubtema = async (subtemaId: string) => {
     if (!subtemaId) { setPreguntasSubtema([]); return; }
-    const res = await fetch(`http://localhost:3000/admin/preguntas/${subtemaId}`, { headers: getHeaders() });
+    const res = await fetch(`${API_URL}/admin/preguntas/${subtemaId}`, { headers: getHeaders() });
     setPreguntasSubtema(await res.json());
   };
 
@@ -437,7 +438,7 @@ export default function AdminPage() {
     const temaBanco = temas.find(t => t.nombre === 'Banco General' && t.area === area);
     const subtemaBanco = temaBanco?.subtemas[0];
     if (!subtemaBanco) { setPreguntasBanco([]); return; }
-    const res = await fetch(`http://localhost:3000/admin/preguntas/${subtemaBanco.id}`, { headers: getHeaders() });
+    const res = await fetch(`${API_URL}/admin/preguntas/${subtemaBanco.id}`, { headers: getHeaders() });
     setPreguntasBanco(await res.json());
   };
 
@@ -455,7 +456,7 @@ export default function AdminPage() {
 
   const eliminarPreguntaSubtema = async (id: string) => {
     if (!confirm('¿Eliminar esta pregunta?')) return;
-    await fetch(`http://localhost:3000/admin/preguntas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await fetch(`${API_URL}/admin/preguntas/${id}`, { method: 'DELETE', headers: getHeaders() });
     mostrarMensaje('Pregunta eliminada');
     cargarPreguntasDeSubtema(subtemaSeleccionado);
     cargarDatos();
@@ -463,7 +464,7 @@ export default function AdminPage() {
 
   const eliminarPreguntaBanco = async (id: string) => {
     if (!confirm('¿Eliminar esta pregunta?')) return;
-    await fetch(`http://localhost:3000/admin/preguntas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await fetch(`${API_URL}/admin/preguntas/${id}`, { method: 'DELETE', headers: getHeaders() });
     mostrarMensaje('Pregunta eliminada');
     cargarPreguntasDelBanco(nuevaPreguntaAleatoria.area);
     cargarDatos();
@@ -471,7 +472,7 @@ export default function AdminPage() {
 
   const crearTema = async () => {
     if (!nuevoTema.nombre) return;
-    await fetch('http://localhost:3000/admin/temas', {
+    await fetch(`${API_URL}/admin/temas`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ nombre: nuevoTema.nombre, area: nuevoTema.area }),
@@ -483,7 +484,7 @@ export default function AdminPage() {
 
   const crearSubtema = async () => {
     if (!nuevoSubtema.nombre || !nuevoSubtema.temaId) return;
-    await fetch('http://localhost:3000/admin/subtemas', {
+    await fetch(`${API_URL}/admin/subtemas`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(nuevoSubtema),
@@ -495,14 +496,14 @@ export default function AdminPage() {
 
   const eliminarTema = async (id: string) => {
     if (!confirm('¿Eliminar este tema y todos sus subtemas y preguntas?')) return;
-    await fetch(`http://localhost:3000/admin/temas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await fetch(`${API_URL}/admin/temas/${id}`, { method: 'DELETE', headers: getHeaders() });
     mostrarMensaje('Tema eliminado');
     cargarDatos();
   };
 
   const eliminarSubtema = async (id: string) => {
     if (!confirm('¿Eliminar este subtema y sus preguntas?')) return;
-    await fetch(`http://localhost:3000/admin/subtemas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await fetch(`${API_URL}/admin/subtemas/${id}`, { method: 'DELETE', headers: getHeaders() });
     mostrarMensaje('Subtema eliminado');
     cargarDatos();
   };
@@ -522,7 +523,7 @@ export default function AdminPage() {
       return;
     }
 
-    await fetch('http://localhost:3000/admin/preguntas', {
+    await fetch(`${API_URL}/admin/preguntas`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -564,7 +565,7 @@ export default function AdminPage() {
       return;
     }
 
-    await fetch('http://localhost:3000/admin/preguntas-aleatorias', {
+    await fetch(`${API_URL}/admin/preguntas-aleatorias`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -591,7 +592,7 @@ export default function AdminPage() {
   };
 
   const cambiarRol = async (usuarioId: string, rol: string) => {
-    await fetch(`http://localhost:3000/admin/usuarios/${usuarioId}/rol`, {
+    await fetch(`${API_URL}/admin/usuarios/${usuarioId}/rol`, {
       method: 'PATCH',
       headers: getHeaders(),
       body: JSON.stringify({ rol }),
@@ -604,7 +605,7 @@ export default function AdminPage() {
     if (!confirm(`¿Eliminar la cuenta de ${nombreUsuario}? Esta acción no se puede deshacer.`)) {
       return;
     }
-    const res = await fetch(`http://localhost:3000/admin/usuarios/${usuarioId}`, {
+    const res = await fetch(`${API_URL}/admin/usuarios/${usuarioId}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });

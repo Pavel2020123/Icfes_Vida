@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { obtenerToken } from '../../lib/api';
+import { obtenerToken, API_URL } from '../../lib/api';
 
 const AREA_NOMBRES: Record<string, string> = {
   LECTURA_CRITICA: 'Lectura Crítica',
@@ -59,7 +59,7 @@ export default function SimulacroPersonalizadoPage() {
 
     const params = new URLSearchParams({ areas, cantidad: quantity });
 
-    fetch(`http://localhost:3000/simulacros/generar-personalizado?${params.toString()}`)
+     fetch(`${API_URL}/simulacros/generar-personalizado?${params.toString()}`)
       .then(r => r.json())
       .then(data => {
         if (data.preguntas && data.preguntas.length > 0) {
@@ -86,7 +86,7 @@ export default function SimulacroPersonalizadoPage() {
         respuestaId,
       }));
 
-      const res = await fetch('http://localhost:3000/simulacros/calificar-personalizado', {
+      const res = await fetch(`${API_URL}/simulacros/calificar-personalizado`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

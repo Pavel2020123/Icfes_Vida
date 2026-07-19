@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerToken } from '../../../lib/api';
+import { obtenerToken, API_URL } from '../../../lib/api';
 import LectorContenido from '../../../components/LectorContenido';
 
 const AREA_NOMBRES: Record<string, string> = {
@@ -278,7 +278,7 @@ export default function AreaPage() {
       return;
     }
 
-    fetch(`http://localhost:3000/simulacros/temas?area=${area}`)
+    fetch(`${API_URL}/simulacros/temas?area=${area}`)
       .then(r => r.json())
       .then(data => {
         setTemas(data.temas ?? []);
@@ -301,7 +301,7 @@ export default function AreaPage() {
     setResultado(null);
     try {
       const token = obtenerToken();
-      const res = await fetch(`http://localhost:3000/admin/preguntas/${subtemaId}`, {
+      const res = await fetch(`${API_URL}/admin/preguntas/${subtemaId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -332,7 +332,7 @@ export default function AreaPage() {
         respuestaId,
       }));
 
-      const res = await fetch('http://localhost:3000/simulacros/calificar', {
+      const res = await fetch(`${API_URL}/simulacros/calificar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -350,7 +350,7 @@ export default function AreaPage() {
       setResultado({ correctas, total });
 
       const porcentaje = Math.round((correctas / total) * 100);
-      await fetch('http://localhost:3000/simulacros/progreso', {
+      await fetch(`${API_URL}/simulacros/progreso`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

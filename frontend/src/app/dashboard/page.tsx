@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerToken } from '../../lib/api';
+import { obtenerToken, API_URL } from '../../lib/api';
 import { RolUsuario } from '../../lib/auth';
 import MenuLateral from '../../components/MenuLateral';
 import { useBranding } from '../../context/ThemeContext';
@@ -77,10 +77,10 @@ export default function DashboardPage() {
     }
 
     Promise.all([
-      fetch('http://localhost:3000/simulacros/historial', {
+      fetch(`${API_URL}/simulacros/historial`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
-      fetch('http://localhost:3000/simulacros/progreso', {
+      fetch(`${API_URL}/simulacros/progreso`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
     ])
