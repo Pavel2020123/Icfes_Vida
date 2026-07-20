@@ -87,22 +87,22 @@ export async function obtenerAnaliticasInstitucion() {
   return data;
 }
 
-export async function crearEstudianteInstitucion(nombre: string, correo: string, contrasena: string) {
+export async function crearEstudianteInstitucion(nombre: string, correo: string, contrasena: string, claseId?: string) {
   const res = await fetch(`${API_URL}/instituciones/me/estudiantes`, {
     method: 'POST',
     headers: crearEncabezados(),
-    body: JSON.stringify({ nombre, correo, contrasena }),
+    body: JSON.stringify({ nombre, correo, contrasena, claseId: claseId || undefined }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Error creando el estudiante');
   return data;
 }
 
-export async function agregarEstudianteExistenteInstitucion(correo: string) {
+export async function agregarEstudianteExistenteInstitucion(correo: string, claseId?: string) {
   const res = await fetch(`${API_URL}/instituciones/me/estudiantes/agregar`, {
     method: 'POST',
     headers: crearEncabezados(),
-    body: JSON.stringify({ correo }),
+    body: JSON.stringify({ correo, claseId: claseId || undefined }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Error agregando el estudiante');

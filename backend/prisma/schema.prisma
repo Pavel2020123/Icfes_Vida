@@ -37,6 +37,8 @@ model Institucion {
   colorSecundario  String?   @db.VarChar(20)
   mensajeBienvenida String?  @db.Text
   imagenPortada    String?   @db.VarChar(255)
+  limiteGrado10    Int?
+  limiteGrado11    Int?
   Clase            Clase[]
   Usuario          Usuario[]
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerAnaliticasInstitucion, crearEstudianteInstitucion, agregarEstudianteExistenteInstitucion } from '../../../lib/api';
+import { obtenerAnaliticasInstitucion, crearEstudianteInstitucion, agregarEstudianteExistenteInstitucion, obtenerGruposInstitucion } from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Modal from '../../../components/Modal';
 import { IconoUsuarioMas, IconoVinculo, IconoUsuarios, IconoGrafico, IconoLlave, IconoFlechaIzquierda } from '../../../components/Iconos';
@@ -28,6 +28,11 @@ interface AnaliticasInstitucion {
   estudiantes: EstudianteAnalitica[];
 }
 
+interface GrupoOpcion {
+  id: string;
+  nombre: string;
+}
+
 const estiloInput = { width: '100%', padding: '13px 14px', borderRadius: 12, border: '1.5px solid #DCE6ED', fontSize: 14.5, color: '#1a2a3a', boxSizing: 'border-box' as const };
 const estiloLabel = { fontWeight: 700, fontSize: 13.5, color: '#1a2a3a', marginBottom: -8 };
 
@@ -48,6 +53,7 @@ export default function EstudiantesPage() {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
+  const [grupoSeleccionado, setGrupoSeleccionado] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -55,14 +61,23 @@ export default function EstudiantesPage() {
   // Modal: agregar estudiante existente
   const [modalExistenteAbierto, setModalExistenteAbierto] = useState(false);
   const [correoExistente, setCorreoExistente] = useState('');
+  const [grupoSeleccionadoExistente, setGrupoSeleccionadoExistente] = useState('');
   const [guardandoExistente, setGuardandoExistente] = useState(false);
   const [errorExistente, setErrorExistente] = useState('');
   const [mensajeExistente, setMensajeExistente] = useState('');
+
+  // Grupos de la institución, para asignarlos desde el mismo formulario
+  const [grupos, setGrupos] = useState<GrupoOpcion[]>([]);
 
   const cargarAnaliticas = async () => {
     const data: AnaliticasInstitucion = await obtenerAnaliticasInstitucion();
     setEstudiantes(data.estudiantes);
     setResumenInstitucion(data.institucion);
+  };
+
+  const cargarGrupos = async () => {
+    const data: GrupoOpcion[] = await obtenerGruposInstitucion();
+    setGrupos(data);
   };
 
   useEffect(() => {
@@ -75,17 +90,20 @@ export default function EstudiantesPage() {
     cargarAnaliticas()
       .catch((err: unknown) => setErrorCarga(err instanceof Error ? err.message : 'Error cargando estudiantes'))
       .finally(() => setCargando(false));
+    cargarGrupos().catch(() => {});
   }, [router]);
 
   const abrirModalCrear = () => {
     setError('');
     setMensaje('');
+    setGrupoSeleccionado('');
     setModalCrearAbierto(true);
   };
 
   const abrirModalExistente = () => {
     setErrorExistente('');
     setMensajeExistente('');
+    setGrupoSeleccionadoExistente('');
     setModalExistenteAbierto(true);
   };
 
@@ -95,11 +113,12 @@ export default function EstudiantesPage() {
     setGuardando(true);
 
     try {
-      await crearEstudianteInstitucion(nombre.trim(), correo.trim(), contrasena);
+      await crearEstudianteInstitucion(nombre.trim(), correo.trim(), contrasena, grupoSeleccionado || undefined);
       setMensaje('Estudiante creado con éxito.');
       setNombre('');
       setCorreo('');
       setContrasena('');
+      setGrupoSeleccionado('');
       await cargarAnaliticas();
       setTimeout(() => {
         setModalCrearAbierto(false);
@@ -118,9 +137,10 @@ export default function EstudiantesPage() {
     setMensajeExistente('');
     setGuardandoExistente(true);
     try {
-      await agregarEstudianteExistenteInstitucion(correoExistente.trim());
+      await agregarEstudianteExistenteInstitucion(correoExistente.trim(), grupoSeleccionadoExistente || undefined);
       setMensajeExistente('Estudiante agregado con éxito.');
       setCorreoExistente('');
+      setGrupoSeleccionadoExistente('');
       await cargarAnaliticas();
       setTimeout(() => {
         setModalExistenteAbierto(false);
@@ -335,6 +355,17 @@ export default function EstudiantesPage() {
             required
             style={estiloInput}
           />
+          <label style={estiloLabel}>Grupo (opcional)</label>
+          <select
+            value={grupoSeleccionado}
+            onChange={(e) => setGrupoSeleccionado(e.target.value)}
+            style={estiloInput}
+          >
+            <option value="">Sin grupo por ahora</option>
+            {grupos.map((g) => (
+              <option key={g.id} value={g.id}>{g.nombre}</option>
+            ))}
+          </select>
           <button
             type="submit"
             disabled={guardando}
@@ -364,6 +395,17 @@ export default function EstudiantesPage() {
             required
             style={estiloInput}
           />
+          <label style={estiloLabel}>Grupo (opcional)</label>
+          <select
+            value={grupoSeleccionadoExistente}
+            onChange={(e) => setGrupoSeleccionadoExistente(e.target.value)}
+            style={estiloInput}
+          >
+            <option value="">Sin grupo por ahora</option>
+            {grupos.map((g) => (
+              <option key={g.id} value={g.id}>{g.nombre}</option>
+            ))}
+          </select>
           <button
             type="submit"
             disabled={guardandoExistente}

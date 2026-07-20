@@ -40,6 +40,7 @@ interface CrearEstudianteDto {
   nombre: string;
   correo: string;
   contrasena: string;
+  claseId?: string;
 }
 
 interface CrearGrupoDto {
@@ -48,6 +49,7 @@ interface CrearGrupoDto {
 
 interface AgregarEstudianteExistenteDto {
   correo: string;
+  claseId?: string;
 }
 
 interface AgregarEstudianteAGrupoDto {
@@ -157,6 +159,7 @@ export class InstitucionController {
       body.nombre,
       body.correo,
       body.contrasena,
+      body.claseId,
     );
   }
 
@@ -168,6 +171,7 @@ export class InstitucionController {
     return this.institucionService.agregarEstudianteExistenteAMiInstitucion(
       req.usuario.sub as string,
       body.correo,
+      body.claseId,
     );
   }
 

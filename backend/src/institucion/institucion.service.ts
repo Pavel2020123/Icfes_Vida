@@ -421,6 +421,7 @@ export class InstitucionService {
     nombre: string,
     correo: string,
     contrasena: string,
+    claseId?: string,
   ) {
     const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
     if (!institucionId) {
@@ -434,27 +435,59 @@ export class InstitucionService {
       throw new BadRequestException('Ya existe un usuario con ese correo.');
     }
 
+    if (claseId) {
+      const grupo = await this.prisma.clase.findUnique({
+        where: { id: claseId },
+        select: { institucionId: true },
+      });
+      if (!grupo || grupo.institucionId !== institucionId) {
+        throw new NotFoundException('Grupo no encontrado.');
+      }
+    }
+
     const contrasenaHash = await bcrypt.hash(contrasena, 10);
 
-    return this.prisma.usuario.create({
-      data: {
-        nombre,
-        correo,
-        contrasenaHash,
-        rol: 'ESTUDIANTE',
-        institucionId,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const nuevoEstudiante = await tx.usuario.create({
+        data: {
+          nombre,
+          correo,
+          contrasenaHash,
+          rol: 'ESTUDIANTE',
+          institucionId,
+        },
+      });
+
+      if (claseId) {
+        await tx.claseEstudiante.create({
+          data: { usuarioId: nuevoEstudiante.id, claseId },
+        });
+      }
+
+      return nuevoEstudiante;
     });
   }
 
   async agregarEstudianteExistenteAMiInstitucion(
     usuarioId: string,
     correo: string,
+    claseId?: string,
   ) {
     const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
     if (!institucionId) {
       throw new BadRequestException('No perteneces a una institución.');
     }
+
+    if (claseId) {
+      const grupo = await this.prisma.clase.findUnique({
+        where: { id: claseId },
+        select: { institucionId: true },
+      });
+      if (!grupo || grupo.institucionId !== institucionId) {
+        throw new NotFoundException('Grupo no encontrado.');
+      }
+    }
+
     const estudiante = await this.prisma.usuario.findUnique({
       where: { correo },
       select: { id: true, rol: true, institucionId: true },
@@ -479,9 +512,19 @@ export class InstitucionService {
         'Ese estudiante ya pertenece a otra institución.',
       );
     }
-    return this.prisma.usuario.update({
-      where: { id: estudiante.id },
-      data: { institucionId },
+    return this.prisma.$transaction(async (tx) => {
+      const actualizado = await tx.usuario.update({
+        where: { id: estudiante.id },
+        data: { institucionId },
+      });
+
+      if (claseId) {
+        await tx.claseEstudiante.create({
+          data: { usuarioId: estudiante.id, claseId },
+        });
+      }
+
+      return actualizado;
     });
   }
 
