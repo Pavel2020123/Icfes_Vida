@@ -438,11 +438,12 @@ export class InstitucionService {
     if (claseId) {
       const grupo = await this.prisma.clase.findUnique({
         where: { id: claseId },
-        select: { institucionId: true },
+        select: { institucionId: true, grado: true },
       });
       if (!grupo || grupo.institucionId !== institucionId) {
         throw new NotFoundException('Grupo no encontrado.');
       }
+      await this.verificarCupoDisponible(institucionId, grupo.grado);
     }
 
     const contrasenaHash = await bcrypt.hash(contrasena, 10);
@@ -481,11 +482,12 @@ export class InstitucionService {
     if (claseId) {
       const grupo = await this.prisma.clase.findUnique({
         where: { id: claseId },
-        select: { institucionId: true },
+        select: { institucionId: true, grado: true },
       });
       if (!grupo || grupo.institucionId !== institucionId) {
         throw new NotFoundException('Grupo no encontrado.');
       }
+      await this.verificarCupoDisponible(institucionId, grupo.grado);
     }
 
     const estudiante = await this.prisma.usuario.findUnique({
@@ -528,6 +530,47 @@ export class InstitucionService {
     });
   }
 
+  private async verificarCupoDisponible(
+    institucionId: string,
+    grado: 'DECIMO' | 'ONCE',
+    estudianteId?: string,
+  ) {
+    const institucion = await this.prisma.institucion.findUnique({
+      where: { id: institucionId },
+      select: { limiteGrado10: true, limiteGrado11: true },
+    });
+
+    const limite =
+      grado === 'DECIMO'
+        ? institucion?.limiteGrado10
+        : institucion?.limiteGrado11;
+
+    // NULL = sin límite fijo (plan "Colegio", cotización directa).
+    if (limite === null || limite === undefined) {
+      return;
+    }
+
+    const estudiantesEnGrado = await this.prisma.claseEstudiante.findMany({
+      where: { Clase: { institucionId, grado } },
+      select: { usuarioId: true },
+      distinct: ['usuarioId'],
+    });
+
+    // Si el estudiante ya cuenta para el cupo de este grado (porque ya está
+    // en otro grupo del mismo grado), no lo volvemos a contar: no está
+    // ocupando un cupo nuevo, solo se está agregando a un segundo grupo.
+    const yaContabilizado = estudianteId
+      ? estudiantesEnGrado.some((e) => e.usuarioId === estudianteId)
+      : false;
+
+    if (!yaContabilizado && estudiantesEnGrado.length >= limite) {
+      const nombreGrado = grado === 'DECIMO' ? '10' : '11';
+      throw new BadRequestException(
+        `Se alcanzó el cupo de ${limite} estudiantes de grado ${nombreGrado} para tu institución.`,
+      );
+    }
+  }
+
   async obtenerGruposDeMiInstitucion(usuarioId: string) {
     const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
     if (!institucionId) {
@@ -540,6 +583,7 @@ export class InstitucionService {
         id: true,
         nombre: true,
         codigoIngreso: true,
+        grado: true,
         ClaseEstudiante: {
           select: {
             usuarioId: true,
@@ -550,10 +594,18 @@ export class InstitucionService {
     });
   }
 
-  async crearGrupoEnMiInstitucion(usuarioId: string, nombre: string) {
+  async crearGrupoEnMiInstitucion(
+    usuarioId: string,
+    nombre: string,
+    grado: 'DECIMO' | 'ONCE',
+  ) {
     const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
     if (!institucionId) {
       throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    if (grado !== 'DECIMO' && grado !== 'ONCE') {
+      throw new BadRequestException('El grado debe ser DECIMO u ONCE.');
     }
 
     const codigoIngreso = await this.generarCodigoIngreso();
@@ -562,6 +614,7 @@ export class InstitucionService {
       data: {
         nombre,
         codigoIngreso,
+        grado,
         institucionId,
       },
     });
@@ -617,7 +670,7 @@ export class InstitucionService {
     }
     const grupo = await this.prisma.clase.findUnique({
       where: { id: claseId },
-      select: { institucionId: true },
+      select: { institucionId: true, grado: true },
     });
     if (!grupo || grupo.institucionId !== institucionId) {
       throw new NotFoundException('Grupo no encontrado.');
@@ -641,6 +694,11 @@ export class InstitucionService {
     if (yaAsignado) {
       throw new BadRequestException('El estudiante ya está en ese grupo.');
     }
+    await this.verificarCupoDisponible(
+      institucionId,
+      grupo.grado,
+      estudianteId,
+    );
     return this.prisma.claseEstudiante.create({
       data: { usuarioId: estudianteId, claseId },
     });
@@ -709,6 +767,12 @@ export class InstitucionService {
     if (yaInscrito) {
       throw new BadRequestException('Ya estás inscrito en esa clase.');
     }
+
+    await this.verificarCupoDisponible(
+      clase.institucionId,
+      clase.grado,
+      usuarioId,
+    );
 
     const [usuarioActualizado] = await this.prisma.$transaction([
       this.prisma.usuario.update({

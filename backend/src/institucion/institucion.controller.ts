@@ -45,6 +45,11 @@ interface CrearEstudianteDto {
 
 interface CrearGrupoDto {
   nombre: string;
+  grado: 'DECIMO' | 'ONCE';
+}
+
+interface ActualizarGrupoDto {
+  nombre?: string;
 }
 
 interface AgregarEstudianteExistenteDto {
@@ -187,13 +192,14 @@ export class InstitucionController {
     return this.institucionService.crearGrupoEnMiInstitucion(
       req.usuario.sub as string,
       body.nombre,
+      body.grado,
     );
   }
 
   @Patch('me/grupos/:id')
   editarGrupo(
     @Param('id') id: string,
-    @Body() body: CrearGrupoDto,
+    @Body() body: ActualizarGrupoDto,
     @Request() req: any,
   ) {
     return this.institucionService.actualizarGrupo(

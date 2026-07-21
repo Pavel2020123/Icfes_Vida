@@ -12,6 +12,7 @@ interface Grupo {
   id: string;
   nombre: string;
   codigoIngreso: string;
+  grado: 'DECIMO' | 'ONCE';
   ClaseEstudiante: { usuarioId: string }[];
 }
 
@@ -34,6 +35,7 @@ export default function GruposPage() {
   // Modal: crear grupo
   const [modalCrearAbierto, setModalCrearAbierto] = useState(false);
   const [nombre, setNombre] = useState('');
+  const [grado, setGrado] = useState<'DECIMO' | 'ONCE'>('ONCE');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -96,6 +98,8 @@ export default function GruposPage() {
   const abrirModalCrear = () => {
     setError('');
     setMensaje('');
+    setNombre('');
+    setGrado('ONCE');
     setModalCrearAbierto(true);
   };
 
@@ -105,9 +109,10 @@ export default function GruposPage() {
     setGuardando(true);
 
     try {
-      await crearGrupoInstitucion(nombre.trim());
+      await crearGrupoInstitucion(nombre.trim(), grado);
       setMensaje('Grupo creado con éxito.');
       setNombre('');
+      setGrado('ONCE');
       await cargarDatos();
       setTimeout(() => {
         setModalCrearAbierto(false);
@@ -326,6 +331,9 @@ export default function GruposPage() {
                           ) : (
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                               <p style={{ fontWeight: 700, fontSize: 15, margin: 0, color: '#1a2a3a' }}>{grupo.nombre}</p>
+                              <span style={{ fontWeight: 800, fontSize: 11, color: '#146C94', backgroundColor: '#F0F7FC', borderRadius: 8, padding: '3px 8px', whiteSpace: 'nowrap' }}>
+                                Grado {grupo.grado === 'DECIMO' ? '10' : '11'}
+                              </span>
                               <button
                                 onClick={() => iniciarEdicionNombre(grupo)}
                                 title="Renombrar grupo"
@@ -420,6 +428,16 @@ export default function GruposPage() {
             required
             style={estiloInput}
           />
+          <label style={estiloLabel}>Grado</label>
+          <select
+            value={grado}
+            onChange={(e) => setGrado(e.target.value as 'DECIMO' | 'ONCE')}
+            required
+            style={estiloInput}
+          >
+            <option value="DECIMO">Grado 10</option>
+            <option value="ONCE">Grado 11</option>
+          </select>
           <button
             type="submit"
             disabled={guardando}

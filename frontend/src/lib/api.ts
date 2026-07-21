@@ -139,11 +139,11 @@ export async function obtenerGruposInstitucion() {
   return data;
 }
 
-export async function crearGrupoInstitucion(nombre: string) {
+export async function crearGrupoInstitucion(nombre: string, grado: 'DECIMO' | 'ONCE') {
   const res = await fetch(`${API_URL}/instituciones/me/grupos`, {
     method: 'POST',
     headers: crearEncabezados(),
-    body: JSON.stringify({ nombre }),
+    body: JSON.stringify({ nombre, grado }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Error creando el grupo');
