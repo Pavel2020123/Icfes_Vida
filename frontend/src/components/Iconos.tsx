@@ -111,3 +111,12 @@ export function IconoBasura({ size = 16, color = 'currentColor' }: IconoProps) {
     </svg>
   );
 }
+
+export function IconoSubir({ size = 18, color = 'currentColor' }: IconoProps) {
+  return (
+    <svg {...propsBase(size, color)}>
+      <path d="M12 16V4M12 4l-4 4M12 4l4 4" />
+      <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </svg>
+  );
+}

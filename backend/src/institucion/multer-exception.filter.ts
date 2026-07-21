@@ -10,7 +10,7 @@ export class MulterExceptionFilter implements ExceptionFilter {
 
     const mensaje =
       excepcion.code === 'LIMIT_FILE_SIZE'
-        ? 'La imagen no puede pesar más de 3MB.'
+        ? 'El archivo supera el tamaño máximo permitido.'
         : 'No se pudo procesar el archivo subido.';
 
     respuesta.status(400).json({ statusCode: 400, message: mensaje });

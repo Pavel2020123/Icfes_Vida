@@ -530,10 +530,217 @@ export class InstitucionService {
     });
   }
 
+  // Parser de CSV liviano (sin dependencias externas). Soporta comillas
+  // dobles para valores con comas, saltos de línea CRLF/LF y encabezado en
+  // cualquier orden. Columnas esperadas: nombre, correo, contrasena.
+  private parsearCsvEstudiantes(contenidoCsv: string): {
+    nombre: string;
+    correo: string;
+    contrasena: string;
+    fila: number;
+  }[] {
+    const lineas = contenidoCsv
+      .split(/\r\n|\n|\r/)
+      .filter((linea) => linea.trim().length > 0);
+
+    if (lineas.length === 0) {
+      throw new BadRequestException('El archivo CSV está vacío.');
+    }
+
+    const parsearLinea = (linea: string): string[] => {
+      const valores: string[] = [];
+      let actual = '';
+      let dentroDeComillas = false;
+
+      for (let i = 0; i < linea.length; i++) {
+        const caracter = linea[i];
+
+        if (dentroDeComillas) {
+          if (caracter === '"') {
+            if (linea[i + 1] === '"') {
+              actual += '"';
+              i++;
+            } else {
+              dentroDeComillas = false;
+            }
+          } else {
+            actual += caracter;
+          }
+        } else if (caracter === '"') {
+          dentroDeComillas = true;
+        } else if (caracter === ',') {
+          valores.push(actual.trim());
+          actual = '';
+        } else {
+          actual += caracter;
+        }
+      }
+      valores.push(actual.trim());
+      return valores;
+    };
+
+    const encabezado = parsearLinea(lineas[0]).map((columna) =>
+      columna.trim().toLowerCase(),
+    );
+    const indiceNombre = encabezado.indexOf('nombre');
+    const indiceCorreo = encabezado.indexOf('correo');
+    const indiceContrasena = encabezado.indexOf('contrasena');
+
+    if (indiceNombre === -1 || indiceCorreo === -1 || indiceContrasena === -1) {
+      throw new BadRequestException(
+        'El CSV debe tener las columnas: nombre, correo, contrasena.',
+      );
+    }
+
+    return lineas.slice(1).map((linea, indice) => {
+      const valores = parsearLinea(linea);
+      return {
+        nombre: (valores[indiceNombre] ?? '').trim(),
+        correo: (valores[indiceCorreo] ?? '').trim().toLowerCase(),
+        contrasena: (valores[indiceContrasena] ?? '').trim(),
+        fila: indice + 2, // +2: fila 1 es el encabezado, y es base 1
+      };
+    });
+  }
+
+  async importarEstudiantesCsv(
+    usuarioId: string,
+    archivo: Express.Multer.File,
+    claseId?: string,
+  ) {
+    const institucionId = await this.obtenerInstitucionIdDelUsuario(usuarioId);
+    if (!institucionId) {
+      throw new BadRequestException('No perteneces a una institución.');
+    }
+
+    let grupo: { grado: 'DECIMO' | 'ONCE' } | null = null;
+    if (claseId) {
+      const encontrado = await this.prisma.clase.findUnique({
+        where: { id: claseId },
+        select: { institucionId: true, grado: true },
+      });
+      if (!encontrado || encontrado.institucionId !== institucionId) {
+        throw new NotFoundException('Grupo no encontrado.');
+      }
+      grupo = encontrado;
+    }
+
+    const filas = this.parsearCsvEstudiantes(archivo.buffer.toString('utf-8'));
+    if (filas.length === 0) {
+      throw new BadRequestException(
+        'El CSV no tiene estudiantes para importar.',
+      );
+    }
+
+    const omitidos: { fila: number; correo: string; motivo: string }[] = [];
+    const correosVistos = new Set<string>();
+    const filasValidas: {
+      nombre: string;
+      correo: string;
+      contrasena: string;
+      fila: number;
+    }[] = [];
+
+    const correoValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    for (const fila of filas) {
+      if (!fila.nombre || !fila.correo || !fila.contrasena) {
+        omitidos.push({
+          fila: fila.fila,
+          correo: fila.correo || '(vacío)',
+          motivo: 'Faltan datos (nombre, correo o contraseña).',
+        });
+        continue;
+      }
+      if (!correoValido.test(fila.correo)) {
+        omitidos.push({
+          fila: fila.fila,
+          correo: fila.correo,
+          motivo: 'Correo con formato inválido.',
+        });
+        continue;
+      }
+      if (fila.contrasena.length < 6) {
+        omitidos.push({
+          fila: fila.fila,
+          correo: fila.correo,
+          motivo: 'La contraseña debe tener al menos 6 caracteres.',
+        });
+        continue;
+      }
+      if (correosVistos.has(fila.correo)) {
+        omitidos.push({
+          fila: fila.fila,
+          correo: fila.correo,
+          motivo: 'Correo repetido dentro del mismo archivo.',
+        });
+        continue;
+      }
+      correosVistos.add(fila.correo);
+      filasValidas.push(fila);
+    }
+
+    if (filasValidas.length > 0) {
+      const existentes = await this.prisma.usuario.findMany({
+        where: { correo: { in: filasValidas.map((f) => f.correo) } },
+        select: { correo: true },
+      });
+      const correosExistentes = new Set(existentes.map((u) => u.correo));
+
+      for (let i = filasValidas.length - 1; i >= 0; i--) {
+        if (correosExistentes.has(filasValidas[i].correo)) {
+          omitidos.push({
+            fila: filasValidas[i].fila,
+            correo: filasValidas[i].correo,
+            motivo: 'Ya existe un usuario con ese correo.',
+          });
+          filasValidas.splice(i, 1);
+        }
+      }
+    }
+
+    if (grupo && filasValidas.length > 0) {
+      await this.verificarCupoDisponible(
+        institucionId,
+        grupo.grado,
+        undefined,
+        filasValidas.length,
+      );
+    }
+
+    if (filasValidas.length === 0) {
+      return { creados: 0, omitidos };
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const fila of filasValidas) {
+        const contrasenaHash = await bcrypt.hash(fila.contrasena, 10);
+        const nuevoEstudiante = await tx.usuario.create({
+          data: {
+            nombre: fila.nombre,
+            correo: fila.correo,
+            contrasenaHash,
+            rol: 'ESTUDIANTE',
+            institucionId,
+          },
+        });
+
+        if (claseId) {
+          await tx.claseEstudiante.create({
+            data: { usuarioId: nuevoEstudiante.id, claseId },
+          });
+        }
+      }
+    });
+
+    return { creados: filasValidas.length, omitidos };
+  }
+
   private async verificarCupoDisponible(
     institucionId: string,
     grado: 'DECIMO' | 'ONCE',
     estudianteId?: string,
+    cantidadNueva: number = 1,
   ) {
     const institucion = await this.prisma.institucion.findUnique({
       where: { id: institucionId },
@@ -563,8 +770,19 @@ export class InstitucionService {
       ? estudiantesEnGrado.some((e) => e.usuarioId === estudianteId)
       : false;
 
-    if (!yaContabilizado && estudiantesEnGrado.length >= limite) {
+    // cantidadNueva permite validar un lote completo de una sola vez (por
+    // ejemplo, una importación por CSV) en lugar de un estudiante a la vez.
+    if (
+      !yaContabilizado &&
+      estudiantesEnGrado.length + cantidadNueva - 1 >= limite
+    ) {
       const nombreGrado = grado === 'DECIMO' ? '10' : '11';
+      if (cantidadNueva > 1) {
+        const disponibles = Math.max(limite - estudiantesEnGrado.length, 0);
+        throw new BadRequestException(
+          `Solo hay ${disponibles} cupo(s) disponible(s) de grado ${nombreGrado} y el archivo trae ${cantidadNueva} estudiantes nuevos.`,
+        );
+      }
       throw new BadRequestException(
         `Se alcanzó el cupo de ${limite} estudiantes de grado ${nombreGrado} para tu institución.`,
       );

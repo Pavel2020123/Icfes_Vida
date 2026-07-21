@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerAnaliticasInstitucion, crearEstudianteInstitucion, agregarEstudianteExistenteInstitucion, obtenerGruposInstitucion } from '../../../lib/api';
+import { obtenerAnaliticasInstitucion, crearEstudianteInstitucion, agregarEstudianteExistenteInstitucion, obtenerGruposInstitucion, importarEstudiantesCsvInstitucion } from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Modal from '../../../components/Modal';
-import { IconoUsuarioMas, IconoVinculo, IconoUsuarios, IconoGrafico, IconoLlave, IconoFlechaIzquierda } from '../../../components/Iconos';
+import { IconoUsuarioMas, IconoVinculo, IconoUsuarios, IconoGrafico, IconoLlave, IconoFlechaIzquierda, IconoSubir } from '../../../components/Iconos';
 
 interface EstudianteAnalitica {
   id: string;
@@ -31,6 +31,11 @@ interface AnaliticasInstitucion {
 interface GrupoOpcion {
   id: string;
   nombre: string;
+}
+
+interface ResultadoImportacion {
+  creados: number;
+  omitidos: { fila: number; correo: string; motivo: string }[];
 }
 
 const estiloInput = { width: '100%', padding: '13px 14px', borderRadius: 12, border: '1.5px solid #DCE6ED', fontSize: 14.5, color: '#1a2a3a', boxSizing: 'border-box' as const };
@@ -65,6 +70,14 @@ export default function EstudiantesPage() {
   const [guardandoExistente, setGuardandoExistente] = useState(false);
   const [errorExistente, setErrorExistente] = useState('');
   const [mensajeExistente, setMensajeExistente] = useState('');
+
+  // Modal: importar estudiantes por CSV
+  const [modalCsvAbierto, setModalCsvAbierto] = useState(false);
+  const [archivoCsv, setArchivoCsv] = useState<File | null>(null);
+  const [grupoSeleccionadoCsv, setGrupoSeleccionadoCsv] = useState('');
+  const [importandoCsv, setImportandoCsv] = useState(false);
+  const [errorCsv, setErrorCsv] = useState('');
+  const [resultadoCsv, setResultadoCsv] = useState<ResultadoImportacion | null>(null);
 
   // Grupos de la institución, para asignarlos desde el mismo formulario
   const [grupos, setGrupos] = useState<GrupoOpcion[]>([]);
@@ -105,6 +118,35 @@ export default function EstudiantesPage() {
     setMensajeExistente('');
     setGrupoSeleccionadoExistente('');
     setModalExistenteAbierto(true);
+  };
+
+const abrirModalCsv = () => {
+    setErrorCsv('');
+    setResultadoCsv(null);
+    setArchivoCsv(null);
+    setGrupoSeleccionadoCsv('');
+    setModalCsvAbierto(true);
+  };
+
+  const handleImportarCsv = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!archivoCsv) {
+      setErrorCsv('Selecciona un archivo CSV.');
+      return;
+    }
+    setErrorCsv('');
+    setResultadoCsv(null);
+    setImportandoCsv(true);
+    try {
+      const resultado: ResultadoImportacion = await importarEstudiantesCsvInstitucion(archivoCsv, grupoSeleccionadoCsv || undefined);
+      setResultadoCsv(resultado);
+      setArchivoCsv(null);
+      await cargarAnaliticas();
+    } catch (err: unknown) {
+      setErrorCsv(err instanceof Error ? err.message : 'Error importando el archivo');
+    } finally {
+      setImportandoCsv(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,6 +215,12 @@ export default function EstudiantesPage() {
                 <p style={{ color: '#6b7c8c', fontSize: 14.5, marginTop: 6 }}>Matrícula y desempeño de tu institución.</p>
               </div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button
+                  onClick={abrirModalCsv}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#F0F7FC', color: '#146C94', border: '1.5px solid #CFE6F2', borderRadius: 12, padding: '11px 16px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                >
+                  <IconoSubir size={16} /> Importar CSV
+                </button>
                 <button
                   onClick={abrirModalExistente}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#F0F7FC', color: '#146C94', border: '1.5px solid #CFE6F2', borderRadius: 12, padding: '11px 16px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
@@ -415,6 +463,62 @@ export default function EstudiantesPage() {
           </button>
           {mensajeExistente && <p style={{ color: '#1C7C45', fontSize: 13.5, margin: 0 }}>{mensajeExistente}</p>}
           {errorExistente && <p style={{ color: '#C0392B', fontSize: 13.5, margin: 0 }}>{errorExistente}</p>}
+        </form>
+      </Modal>
+
+      {/* Modal: importar estudiantes por CSV */}
+      <Modal
+        abierto={modalCsvAbierto}
+        onCerrar={() => setModalCsvAbierto(false)}
+        titulo="Importar estudiantes por CSV"
+        descripcion="El archivo debe tener las columnas nombre, correo y contrasena (fila 1 = encabezado)."
+      >
+        <form onSubmit={handleImportarCsv} style={{ display: 'grid', gap: 16 }}>
+          <label style={estiloLabel}>Archivo CSV</label>
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={(e) => setArchivoCsv(e.target.files?.[0] ?? null)}
+            style={estiloInput}
+          />
+          <label style={estiloLabel}>Grupo (opcional)</label>
+          <select
+            value={grupoSeleccionadoCsv}
+            onChange={(e) => setGrupoSeleccionadoCsv(e.target.value)}
+            style={estiloInput}
+          >
+            <option value="">Sin grupo por ahora</option>
+            {grupos.map((g) => (
+              <option key={g.id} value={g.id}>{g.nombre}</option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            disabled={importandoCsv}
+            style={{ backgroundColor: '#146C94', color: '#ffffff', border: 'none', borderRadius: 12, padding: '13px 18px', fontWeight: 700, fontSize: 14.5, cursor: importandoCsv ? 'not-allowed' : 'pointer', marginTop: 4 }}
+          >
+            {importandoCsv ? 'Importando...' : 'Importar estudiantes'}
+          </button>
+          {errorCsv && <p style={{ color: '#C0392B', fontSize: 13.5, margin: 0 }}>{errorCsv}</p>}
+          {resultadoCsv && (
+            <div style={{ display: 'grid', gap: 8 }}>
+              <p style={{ color: '#1C7C45', fontSize: 13.5, margin: 0, fontWeight: 700 }}>
+                {resultadoCsv.creados} estudiante(s) creado(s) con éxito.
+              </p>
+              {resultadoCsv.omitidos.length > 0 && (
+                <div style={{ backgroundColor: '#FBF5EC', border: '1px solid #F0DFC0', borderRadius: 10, padding: '10px 12px', maxHeight: 160, overflowY: 'auto' }}>
+                  <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 12.5, color: '#8a6d1f' }}>
+                    {resultadoCsv.omitidos.length} fila(s) omitida(s):
+                  </p>
+                  {resultadoCsv.omitidos.map((o, i) => (
+                    <p key={i} style={{ margin: '2px 0', fontSize: 12, color: '#6b7c8c' }}>
+                      Fila {o.fila} ({o.correo}): {o.motivo}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </form>
       </Modal>
     </ProtectedRoute>

@@ -109,6 +109,22 @@ export async function agregarEstudianteExistenteInstitucion(correo: string, clas
   return data;
 }
 
+export async function importarEstudiantesCsvInstitucion(archivo: File, claseId?: string) {
+  const formData = new FormData();
+  formData.append('archivo', archivo);
+  if (claseId) formData.append('claseId', claseId);
+
+  const token = obtenerToken();
+  const res = await fetch(`${API_URL}/instituciones/me/estudiantes/importar-csv`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error importando el archivo CSV');
+  return data;
+}
+
 export async function agregarEstudianteAGrupo(claseId: string, estudianteId: string) {
   const res = await fetch(`${API_URL}/instituciones/me/grupos/${claseId}/estudiantes`, {
     method: 'POST',

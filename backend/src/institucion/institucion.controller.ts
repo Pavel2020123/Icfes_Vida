@@ -18,6 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { InstitucionService } from './institucion.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { logoMulterOptions } from './logo-upload.config';
+import { csvMulterOptions } from './csv-upload.config';
 import { MulterExceptionFilter } from './multer-exception.filter';
 
 interface CrearInstitucionDto {
@@ -177,6 +178,25 @@ export class InstitucionController {
       req.usuario.sub as string,
       body.correo,
       body.claseId,
+    );
+  }
+
+  @Post('me/estudiantes/importar-csv')
+  @UseInterceptors(FileInterceptor('archivo', csvMulterOptions))
+  @UseFilters(MulterExceptionFilter)
+  importarEstudiantesCsv(
+    @UploadedFile() archivo: Express.Multer.File,
+    @Body('claseId') claseId: string | undefined,
+    @Request() req: any,
+  ) {
+    if (!archivo) {
+      throw new BadRequestException('Debes seleccionar un archivo CSV.');
+    }
+
+    return this.institucionService.importarEstudiantesCsv(
+      req.usuario.sub as string,
+      archivo,
+      claseId || undefined,
     );
   }
 
