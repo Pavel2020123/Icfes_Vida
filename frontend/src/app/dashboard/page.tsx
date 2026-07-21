@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerToken, API_URL } from '../../lib/api';
+import { obtenerToken, API_URL, obtenerPerfilCompleto } from '../../lib/api';
 import { RolUsuario } from '../../lib/auth';
 import MenuLateral from '../../components/MenuLateral';
+import MuroDePago from '../../components/MuroDePago';
 import { useBranding } from '../../context/ThemeContext';
 
 const AREAS = [
@@ -60,6 +61,7 @@ export default function DashboardPage() {
     porArea: {},
   });
   const [cargando, setCargando] = useState(true);
+  const [planVencido, setPlanVencido] = useState(false);
 
   useEffect(() => {
     const token = obtenerToken();
@@ -83,14 +85,16 @@ export default function DashboardPage() {
       fetch(`${API_URL}/simulacros/progreso`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
+      obtenerPerfilCompleto().catch(() => null),
     ])
-      .then(([historialData, progresoData]) => {
+      .then(([historialData, progresoData, perfil]) => {
         setHistorial(historialData.resultados ?? []);
         const totalXp = (historialData.resultados ?? []).reduce(
           (acc: number, r: Resultado) => acc + (r.xpGanado ?? 0), 0
         );
         setXp(totalXp);
         setProgreso(progresoData);
+        setPlanVencido(Boolean(perfil?.planVencido));
       })
       .catch(() => {})
       .finally(() => setCargando(false));
@@ -102,6 +106,10 @@ export default function DashboardPage() {
         <p style={{ color: '#146C94', fontSize: 18, fontWeight: 600 }}>Cargando...</p>
       </div>
     );
+  }
+
+  if (planVencido) {
+    return <MuroDePago />;
   }
 
   return (

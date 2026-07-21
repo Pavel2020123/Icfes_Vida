@@ -6,6 +6,10 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import {
+  calcularFechaVencimientoPrueba,
+  planEstudianteVencido,
+} from './plan.util';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +33,13 @@ export class AuthService {
 
     const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
 
+    // El autoregistro siempre es un estudiante/profesor INDIVIDUAL (sin
+    // institución todavía). Solo el estudiante individual arranca con la
+    // prueba gratis de 3 días; los que luego entren a una institución
+    // quedan regidos por el cupo/vigencia del colegio, no por esta fecha.
+    const fechaVencimientoPlan =
+      rol === 'ESTUDIANTE' ? calcularFechaVencimientoPrueba() : null;
+
     const nuevoUsuario = await this.prisma.usuario.create({
       data: {
         nombre,
@@ -36,6 +47,7 @@ export class AuthService {
         contrasenaHash: contrasenaEncriptada,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         rol: rol as any,
+        fechaVencimientoPlan,
       },
     });
 
@@ -71,9 +83,7 @@ export class AuthService {
       nombre: usuario.nombre,
       institucionId: usuario.institucionId,
     };
- 
     const token = await this.jwtService.signAsync(payload);
- 
     return {
       mensaje: '¡Bienvenido de vuelta!',
       accessToken: token,
@@ -101,9 +111,18 @@ export class AuthService {
         fotoPerfil: true,
         descripcion: true,
         institucionId: true,
+        fechaVencimientoPlan: true,
       },
     });
-    return usuario;
+
+    if (!usuario) return usuario;
+
+    return {
+      ...usuario,
+      // Ya resuelto en el backend para que el frontend no tenga que
+      // repetir la lógica de "quién queda exento del muro de pago".
+      planVencido: planEstudianteVencido(usuario),
+    };
   }
 
   // ─── ACTUALIZAR PERFIL ───────────────────────────────────────

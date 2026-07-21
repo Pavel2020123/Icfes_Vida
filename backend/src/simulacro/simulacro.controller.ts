@@ -10,6 +10,7 @@ import {
 import { SimulacroService } from './simulacro.service';
 import { AreaIcfes, Dificultad } from '@prisma/client';
 import { JwtGuard } from '../auth/jwt.guard';
+import { PlanVigenteGuard } from '../auth/plan-vigente.guard';
 
 interface CalificarDto {
   area: AreaIcfes;
@@ -31,7 +32,7 @@ export class SimulacroController {
 
   // POST /simulacros/calificar  ← Ruta protegida con JWT
   // Body: { area: "MATEMATICAS", respuestas: [{ preguntaId: "...", respuestaId: "..." }] }
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, PlanVigenteGuard)
   @Post('calificar')
   calificar(@Body() body: CalificarDto, @Request() req: any) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
@@ -70,7 +71,7 @@ export class SimulacroController {
   // POST /simulacros/calificar-personalizado ← Ruta protegida con JWT
   // Body: { respuestas: [{ preguntaId: "...", respuestaId: "..." }] }
   // No requiere "area": se calcula por pregunta y se guarda el desglose.
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, PlanVigenteGuard)
   @Post('calificar-personalizado')
   calificarPersonalizado(
     @Body()
@@ -108,7 +109,7 @@ export class SimulacroController {
     return this.simulacroService.obtenerTemasPorArea(area);
   }
   // POST /simulacros/progreso  ← Marcar tema como visto
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, PlanVigenteGuard)
   @Post('progreso')
   actualizarProgreso(
     @Body() body: { subtemaId: string; porcentaje: number },

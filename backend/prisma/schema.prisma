@@ -57,6 +57,7 @@ model Usuario {
   rol             RolUsuario?         @default(ESTUDIANTE)
   xpTotal         Int?                @default(0)
   fechaCreacion   DateTime?           @default(now()) @db.Timestamp(6)
+  fechaVencimientoPlan DateTime?      @db.Timestamp(6)
   institucionId   String?             @db.Uuid
   fotoPerfil      String?
   descripcion     String?

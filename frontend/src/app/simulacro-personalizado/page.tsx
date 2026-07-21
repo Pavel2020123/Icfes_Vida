@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { obtenerToken, API_URL } from '../../lib/api';
+import { obtenerToken, API_URL, esRespuestaPlanVencido } from '../../lib/api';
 
 const AREA_NOMBRES: Record<string, string> = {
   LECTURA_CRITICA: 'Lectura Crítica',
@@ -96,6 +96,17 @@ export default function SimulacroPersonalizadoPage() {
       });
 
       const data = await res.json();
+
+      if (!res.ok) {
+        if (esRespuestaPlanVencido(res.status, data)) {
+          router.push('/planes?vencido=1');
+          return;
+        }
+        setError(data.mensaje || data.message || 'No se pudo enviar el simulacro.');
+        setEnviando(false);
+        return;
+      }
+
       sessionStorage.setItem(
         'resultado_simulacro',
         JSON.stringify({ ...data, tipo: 'personalizado', areasSeleccionadas: areasParam.split(',') })

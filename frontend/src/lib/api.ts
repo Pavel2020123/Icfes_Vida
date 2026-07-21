@@ -278,3 +278,20 @@ export function obtenerToken(): string | null {
 export function cerrarSesion() {
   localStorage.removeItem('saberplus_token');
 }
+
+// ─── MURO DE PAGO (punto 5) ──────────────────────────────────
+export async function obtenerPerfilCompleto() {
+  const res = await fetch(`${API_URL}/auth/perfil`, {
+    headers: crearEncabezados(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error obteniendo el perfil');
+  return data;
+}
+
+// El backend responde 403 con { codigo: 'PLAN_VENCIDO', mensaje } cuando la
+// prueba gratis de 3 días de un estudiante individual ya terminó.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function esRespuestaPlanVencido(status: number, data: any): boolean {
+  return status === 403 && data?.codigo === 'PLAN_VENCIDO';
+}

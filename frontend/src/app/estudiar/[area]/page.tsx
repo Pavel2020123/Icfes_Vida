@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerToken, API_URL } from '../../../lib/api';
+import { obtenerToken, API_URL, esRespuestaPlanVencido } from '../../../lib/api';
 import LectorContenido from '../../../components/LectorContenido';
 
 const AREA_NOMBRES: Record<string, string> = {
@@ -344,6 +344,16 @@ export default function AreaPage() {
         }),
       });
       const data = await res.json();
+
+      if (!res.ok) {
+        if (esRespuestaPlanVencido(res.status, data)) {
+          router.push('/planes?vencido=1');
+          return;
+        }
+        setEnviando(false);
+        return;
+      }
+
       const correctas = data.resumen?.respuestasCorrectas ?? 0;
       const total = data.resumen?.totalPreguntas ?? preguntas.length;
 

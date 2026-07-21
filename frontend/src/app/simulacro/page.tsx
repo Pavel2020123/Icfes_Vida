@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { obtenerToken, API_URL } from '../../lib/api';
+import { obtenerToken, API_URL, esRespuestaPlanVencido } from '../../lib/api';
 
 interface Respuesta {
   id: string;
@@ -86,6 +86,17 @@ export default function SimulacroPage() {
       });
 
       const data = await res.json();
+
+      if (!res.ok) {
+        if (esRespuestaPlanVencido(res.status, data)) {
+          router.push('/planes?vencido=1');
+          return;
+        }
+        setError(data.mensaje || data.message || 'No se pudo enviar el simulacro.');
+        setEnviando(false);
+        return;
+      }
+
       // Guardar resultado en sessionStorage para mostrarlo en la página de resultados
       sessionStorage.setItem('resultado_simulacro', JSON.stringify({ ...data, area }));
       router.push('/resultados');
