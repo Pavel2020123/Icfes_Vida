@@ -14,6 +14,21 @@ enum Grado {
   ONCE
 }
 
+enum CalendarioTipo {
+  A
+  B
+}
+
+model CalendarioIcfes {
+  id            String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  anio          Int
+  calendario    CalendarioTipo
+  fechaExamen   DateTime       @db.Date
+  fechaCreacion DateTime       @default(now()) @db.Timestamp(6)
+
+  @@unique([anio, calendario])
+}
+
 model Clase {
   id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   nombre          String            @db.VarChar(255)
@@ -45,6 +60,10 @@ model Institucion {
   imagenPortada    String?   @db.VarChar(255)
   limiteGrado10    Int?
   limiteGrado11    Int?
+  // Calendario ICFES que rige a este colegio (define contra qué fecha
+  // de examen se calcula la vigencia del plan institucional). Punto 6.
+  calendarioIcfes  CalendarioTipo? @default(A)
+  fechaVencimientoPlan DateTime? @db.Timestamp(6)
   Clase            Clase[]
   Usuario          Usuario[]
 }
@@ -58,6 +77,10 @@ model Usuario {
   xpTotal         Int?                @default(0)
   fechaCreacion   DateTime?           @default(now()) @db.Timestamp(6)
   fechaVencimientoPlan DateTime?      @db.Timestamp(6)
+  // Calendario ICFES del estudiante individual (A o B). Solo aplica
+  // cuando no pertenece a institución; si pertenece, hereda el de su
+  // colegio. Punto 6.
+  calendarioIcfes CalendarioTipo?     @default(A)
   institucionId   String?             @db.Uuid
   fotoPerfil      String?
   descripcion     String?
