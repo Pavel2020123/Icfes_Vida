@@ -81,6 +81,11 @@ model Usuario {
   // cuando no pertenece a institución; si pertenece, hereda el de su
   // colegio. Punto 6.
   calendarioIcfes CalendarioTipo?     @default(A)
+  // Verificación de correo (punto 7): evita que alguien reinicie la
+  // prueba gratis de 3 días registrándose con correos falsos.
+  correoVerificado        Boolean?  @default(false)
+  tokenVerificacion       String?   @unique @db.VarChar(255)
+  tokenVerificacionExpira DateTime? @db.Timestamp(6)
   institucionId   String?             @db.Uuid
   fotoPerfil      String?
   descripcion     String?

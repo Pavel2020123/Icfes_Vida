@@ -27,6 +27,14 @@ interface PerfilDto {
   fotoPerfil?: string;
 }
 
+interface VerificarCorreoDto {
+  token: string;
+}
+
+interface ReenviarVerificacionDto {
+  correo: string;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -44,6 +52,16 @@ export class AuthController {
   @Post('login')
   login(@Body() body: LoginDto) {
     return this.authService.login(body.correo, body.contrasena);
+  }
+
+  @Post('verificar-correo')
+  verificarCorreo(@Body() body: VerificarCorreoDto) {
+    return this.authService.verificarCorreo(body.token);
+  }
+
+  @Post('reenviar-verificacion')
+  reenviarVerificacion(@Body() body: ReenviarVerificacionDto) {
+    return this.authService.reenviarVerificacion(body.correo);
   }
 
   @UseGuards(JwtGuard)

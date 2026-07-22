@@ -49,7 +49,7 @@ export default function RegistroPage() {
     setCargando(true);
     try {
       await registrarUsuario(nombre, correo, contrasena, rol);
-      router.push('/planes');
+      router.push(`/registro/confirmar?correo=${encodeURIComponent(correo)}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al registrarse');
     } finally {

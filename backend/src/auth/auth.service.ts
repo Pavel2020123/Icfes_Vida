@@ -10,12 +10,19 @@ import {
   calcularFechaVencimientoPrueba,
   planEstudianteVencido,
 } from './plan.util';
+import {
+  generarTokenVerificacion,
+  calcularExpiracionToken,
+  requiereVerificacionCorreo,
+} from './verificacion.util';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) {}
 
   // ─── REGISTRO ───────────────────────────────────────────────
@@ -33,12 +40,11 @@ export class AuthService {
 
     const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
 
-    // El autoregistro siempre es un estudiante/profesor INDIVIDUAL (sin
-    // institución todavía). Solo el estudiante individual arranca con la
-    // prueba gratis de 3 días; los que luego entren a una institución
-    // quedan regidos por el cupo/vigencia del colegio, no por esta fecha.
-    const fechaVencimientoPlan =
-      rol === 'ESTUDIANTE' ? calcularFechaVencimientoPrueba() : null;
+    // La prueba gratis de 3 días YA NO arranca aquí: arranca cuando se
+    // confirma el correo (verificarCorreo), para que nadie la reinicie
+    // registrándose con correos falsos. Punto 7.
+    const tokenVerificacion = generarTokenVerificacion();
+    const tokenVerificacionExpira = calcularExpiracionToken();
 
     const nuevoUsuario = await this.prisma.usuario.create({
       data: {
@@ -47,11 +53,92 @@ export class AuthService {
         contrasenaHash: contrasenaEncriptada,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         rol: rol as any,
+        correoVerificado: false,
+        tokenVerificacion,
+        tokenVerificacionExpira,
+      },
+    });
+
+    await this.mailService.enviarVerificacionCorreo(
+      correo,
+      nombre,
+      tokenVerificacion,
+    );
+
+    return {
+      mensaje: '¡Cuenta creada con éxito! Revisa tu correo para confirmarla.',
+      usuarioId: nuevoUsuario.id,
+    };
+  }
+
+  // ─── VERIFICACIÓN DE CORREO ─────────────────────────────────
+  async verificarCorreo(token: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { tokenVerificacion: token },
+    });
+
+    if (!usuario) {
+      throw new BadRequestException('El enlace de verificación no es válido.');
+    }
+
+    if (
+      usuario.tokenVerificacionExpira &&
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      usuario.tokenVerificacionExpira.getTime() < Date.now()
+    ) {
+      throw new BadRequestException(
+        'El enlace de verificación venció. Pide que te reenviemos uno nuevo.',
+      );
+    }
+
+    // Aquí SÍ arranca la prueba gratis de 3 días, ya con el correo confirmado.
+    const fechaVencimientoPlan =
+      usuario.rol === 'ESTUDIANTE' && !usuario.institucionId
+        ? calcularFechaVencimientoPrueba()
+        : usuario.fechaVencimientoPlan;
+
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        correoVerificado: true,
+        tokenVerificacion: null,
+        tokenVerificacionExpira: null,
         fechaVencimientoPlan,
       },
     });
 
-    return { mensaje: '¡Cuenta creada con éxito!', usuarioId: nuevoUsuario.id };
+    return { mensaje: '¡Correo confirmado! Ya puedes empezar a estudiar.' };
+  }
+
+  // ─── REENVIAR VERIFICACIÓN ───────────────────────────────────
+  async reenviarVerificacion(correo: string) {
+    const usuario = await this.prisma.usuario.findUnique({ where: { correo } });
+
+    // Mensaje genérico: no revelamos si el correo existe o no.
+    const mensajeGenerico = {
+      mensaje:
+        'Si el correo existe y no está verificado, te reenviamos el enlace.',
+    };
+
+    if (!usuario || usuario.correoVerificado) {
+      return mensajeGenerico;
+    }
+
+    const tokenVerificacion = generarTokenVerificacion();
+    const tokenVerificacionExpira = calcularExpiracionToken();
+
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { tokenVerificacion, tokenVerificacionExpira },
+    });
+
+    await this.mailService.enviarVerificacionCorreo(
+      correo,
+      usuario.nombre,
+      tokenVerificacion,
+    );
+
+    return mensajeGenerico;
   }
 
   // ─── LOGIN ──────────────────────────────────────────────────
@@ -112,6 +199,7 @@ export class AuthService {
         descripcion: true,
         institucionId: true,
         fechaVencimientoPlan: true,
+        correoVerificado: true,
       },
     });
 
@@ -122,6 +210,8 @@ export class AuthService {
       // Ya resuelto en el backend para que el frontend no tenga que
       // repetir la lógica de "quién queda exento del muro de pago".
       planVencido: planEstudianteVencido(usuario),
+      // Igual, pero para el aviso de "confirma tu correo".
+      requiereVerificacionCorreo: requiereVerificacionCorreo(usuario),
     };
   }
 

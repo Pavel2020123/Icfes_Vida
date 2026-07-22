@@ -295,3 +295,35 @@ export async function obtenerPerfilCompleto() {
 export function esRespuestaPlanVencido(status: number, data: any): boolean {
   return status === 403 && data?.codigo === 'PLAN_VENCIDO';
 }
+
+// ─── VERIFICACIÓN DE CORREO (punto 7) ────────────────────────
+export async function verificarCorreo(token: string) {
+  // El "token" viene siempre de la URL que el usuario abre desde su
+  // correo (?token=xxxx), nunca hay que escribirlo ni guardarlo a mano.
+  const res = await fetch(`${API_URL}/auth/verificar-correo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'No se pudo confirmar el correo');
+  return data;
+}
+
+export async function reenviarVerificacionCorreo(correo: string) {
+  const res = await fetch(`${API_URL}/auth/reenviar-verificacion`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ correo }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'No se pudo reenviar el correo');
+  return data;
+}
+
+// El backend responde 403 con { codigo: 'CORREO_NO_VERIFICADO', mensaje }
+// cuando un estudiante individual intenta estudiar sin confirmar su correo.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function esRespuestaCorreoNoVerificado(status: number, data: any): boolean {
+  return status === 403 && data?.codigo === 'CORREO_NO_VERIFICADO';
+}

@@ -7,6 +7,7 @@ import { obtenerToken, API_URL, obtenerPerfilCompleto } from '../../lib/api';
 import { RolUsuario } from '../../lib/auth';
 import MenuLateral from '../../components/MenuLateral';
 import MuroDePago from '../../components/MuroDePago';
+import AvisoVerificarCorreo from '../../components/AvisoVerificarCorreo';
 import { useBranding } from '../../context/ThemeContext';
 
 const AREAS = [
@@ -62,6 +63,8 @@ export default function DashboardPage() {
   });
   const [cargando, setCargando] = useState(true);
   const [planVencido, setPlanVencido] = useState(false);
+  const [correo, setCorreo] = useState('');
+  const [requiereVerificacion, setRequiereVerificacion] = useState(false);
 
   useEffect(() => {
     const token = obtenerToken();
@@ -73,6 +76,7 @@ export default function DashboardPage() {
       setNombre(payload.nombre ?? 'Estudiante');
       setInstitucionId(payload.institucionId ?? null);
       setRol(payload.rol ?? null);
+      setCorreo(payload.correo ?? '');
     } catch {
       router.push('/login');
       return;
@@ -95,6 +99,7 @@ export default function DashboardPage() {
         setXp(totalXp);
         setProgreso(progresoData);
         setPlanVencido(Boolean(perfil?.planVencido));
+        setRequiereVerificacion(Boolean(perfil?.requiereVerificacionCorreo));
       })
       .catch(() => {})
       .finally(() => setCargando(false));
@@ -156,6 +161,8 @@ export default function DashboardPage() {
       </nav>
 
       <main style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px' }}>
+
+        {requiereVerificacion && <AvisoVerificarCorreo correo={correo} />}
 
         {rol === 'ESTUDIANTE' ? (
         <>
