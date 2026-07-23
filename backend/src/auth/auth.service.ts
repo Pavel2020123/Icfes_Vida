@@ -15,6 +15,10 @@ import {
   calcularExpiracionToken,
   requiereVerificacionCorreo,
 } from './verificacion.util';
+import {
+  generarTokenRecuperacion,
+  calcularExpiracionTokenRecuperacion,
+} from './recuperacion.util';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
@@ -139,6 +143,73 @@ export class AuthService {
     );
 
     return mensajeGenerico;
+  }
+
+  // ─── SOLICITAR RECUPERACIÓN DE CONTRASEÑA ────────────────────
+  async solicitarRecuperacionContrasena(correo: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { correo },
+    });
+
+    // Mensaje genérico: no revelamos si el correo existe o no.
+    const mensajeGenerico = {
+      mensaje:
+        'Si el correo existe, te enviamos un enlace para restablecer tu contraseña.',
+    };
+
+    if (!usuario) {
+      return mensajeGenerico;
+    }
+
+    const tokenRecuperacion = generarTokenRecuperacion();
+    const tokenRecuperacionExpira = calcularExpiracionTokenRecuperacion();
+
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { tokenRecuperacion, tokenRecuperacionExpira },
+    });
+
+    await this.mailService.enviarRecuperacionContrasena(
+      correo,
+      usuario.nombre,
+      tokenRecuperacion,
+    );
+
+    return mensajeGenerico;
+  }
+
+  // ─── RESTABLECER CONTRASEÑA ───────────────────────────────────
+  async restablecerContrasena(token: string, nuevaContrasena: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { tokenRecuperacion: token },
+    });
+
+    if (!usuario) {
+      throw new BadRequestException('El enlace de recuperación no es válido.');
+    }
+
+    if (
+      usuario.tokenRecuperacionExpira &&
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      usuario.tokenRecuperacionExpira.getTime() < Date.now()
+    ) {
+      throw new BadRequestException(
+        'El enlace de recuperación venció. Pide uno nuevo.',
+      );
+    }
+
+    const contrasenaEncriptada = await bcrypt.hash(nuevaContrasena, 10);
+
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        contrasenaHash: contrasenaEncriptada,
+        tokenRecuperacion: null,
+        tokenRecuperacionExpira: null,
+      },
+    });
+
+    return { mensaje: 'Contraseña actualizada. Ya puedes iniciar sesión.' };
   }
 
   // ─── LOGIN ──────────────────────────────────────────────────

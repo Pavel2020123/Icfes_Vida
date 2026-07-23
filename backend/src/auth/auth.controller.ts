@@ -35,6 +35,15 @@ interface ReenviarVerificacionDto {
   correo: string;
 }
 
+interface SolicitarRecuperacionDto {
+  correo: string;
+}
+
+interface RestablecerContrasenaDto {
+  token: string;
+  nuevaContrasena: string;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -62,6 +71,19 @@ export class AuthController {
   @Post('reenviar-verificacion')
   reenviarVerificacion(@Body() body: ReenviarVerificacionDto) {
     return this.authService.reenviarVerificacion(body.correo);
+  }
+
+  @Post('solicitar-recuperacion')
+  solicitarRecuperacion(@Body() body: SolicitarRecuperacionDto) {
+    return this.authService.solicitarRecuperacionContrasena(body.correo);
+  }
+
+  @Post('restablecer-contrasena')
+  restablecerContrasena(@Body() body: RestablecerContrasenaDto) {
+    return this.authService.restablecerContrasena(
+      body.token,
+      body.nuevaContrasena,
+    );
   }
 
   @UseGuards(JwtGuard)

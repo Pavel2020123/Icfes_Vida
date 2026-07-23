@@ -42,4 +42,33 @@ export class MailService {
       );
     }
   }
+
+  async enviarRecuperacionContrasena(
+    correo: string,
+    nombre: string,
+    token: string,
+  ) {
+    const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/restablecer-contrasena?token=${token}`;
+
+    try {
+      await this.transporter.sendMail({
+        from: process.env.MAIL_FROM || '"ICFES Vida" <no-reply@icfesvida.com>',
+        to: correo,
+        subject: 'Recupera tu contraseña — ICFES Vida',
+        html: `
+          <p>Hola ${nombre},</p>
+          <p>Recibimos una solicitud para restablecer tu contraseña. Este enlace vence en 1 hora:</p>
+          <p><a href="${url}">Elegir una nueva contraseña</a></p>
+          <p>Si no fuiste tú, ignora este mensaje: tu contraseña actual sigue funcionando.</p>
+        `,
+      });
+    } catch (error) {
+      // No revelamos si el envío falló al frontend; el mensaje siempre
+      // es genérico para no filtrar qué correos existen.
+      this.logger.error(
+        `No se pudo enviar el correo de recuperación a ${correo}`,
+        error as Error,
+      );
+    }
+  }
 }

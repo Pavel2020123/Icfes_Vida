@@ -86,6 +86,11 @@ model Usuario {
   correoVerificado        Boolean?  @default(false)
   tokenVerificacion       String?   @unique @db.VarChar(255)
   tokenVerificacionExpira DateTime? @db.Timestamp(6)
+  // Recuperación de contraseña (punto 8): token de un solo uso y vida
+  // corta para que quien olvidó su contraseña elija una nueva sin
+  // necesitar acceso previo a la cuenta.
+  tokenRecuperacion       String?   @unique @db.VarChar(255)
+  tokenRecuperacionExpira DateTime? @db.Timestamp(6)
   institucionId   String?             @db.Uuid
   fotoPerfil      String?
   descripcion     String?

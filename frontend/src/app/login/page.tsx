@@ -122,6 +122,11 @@ export default function LoginPage() {
                   boxSizing: 'border-box',
                 }}
               />
+              <div style={{ textAlign: 'right', marginTop: 8 }}>
+                <Link href="/recuperar-contrasena" style={{ fontSize: 13, color: '#146C94', textDecoration: 'none', fontWeight: 600 }}>
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
             </div>
 
             <button

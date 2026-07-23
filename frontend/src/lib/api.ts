@@ -327,3 +327,26 @@ export async function reenviarVerificacionCorreo(correo: string) {
 export function esRespuestaCorreoNoVerificado(status: number, data: any): boolean {
   return status === 403 && data?.codigo === 'CORREO_NO_VERIFICADO';
 }
+
+// ─── RECUPERACIÓN DE CONTRASEÑA (punto 8) ────────────────────
+export async function solicitarRecuperacionContrasena(correo: string) {
+  const res = await fetch(`${API_URL}/auth/solicitar-recuperacion`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ correo }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'No se pudo enviar el correo de recuperación');
+  return data;
+}
+
+export async function restablecerContrasena(token: string, nuevaContrasena: string) {
+  const res = await fetch(`${API_URL}/auth/restablecer-contrasena`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, nuevaContrasena }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'No se pudo restablecer la contraseña');
+  return data;
+}
