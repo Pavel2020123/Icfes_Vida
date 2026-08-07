@@ -5,9 +5,9 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { requiereVerificacionCorreo } from './verificacion.util';
+import { AuthenticatedRequest } from './auth.types';
 
 // ─── GUARD: CORREO VERIFICADO ────────────────────────────────
 // Se usa DESPUÉS de JwtGuard, igual que PlanVigenteGuard:
@@ -17,9 +17,8 @@ export class EmailVerificadoGuard implements CanActivate {
   constructor(private prisma: PrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const usuarioId = request['usuario']?.sub as string | undefined;
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const usuarioId = request.usuario?.sub;
 
     if (!usuarioId) {
       throw new UnauthorizedException(

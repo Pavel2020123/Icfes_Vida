@@ -9,39 +9,71 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtGuard } from './jwt.guard';
+import { AuthenticatedRequest } from './auth.types';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
-interface RegistroDto {
-  nombre: string;
-  correo: string;
-  contrasena: string;
-  rol?: string;
+class RegistroDto {
+  @IsString()
+  @IsNotEmpty()
+  nombre!: string;
+
+  @IsEmail()
+  correo!: string;
+
+  @IsString()
+  @MinLength(6)
+  contrasena!: string;
 }
 
-interface LoginDto {
-  correo: string;
-  contrasena: string;
+class LoginDto {
+  @IsEmail()
+  correo!: string;
+
+  @IsString()
+  @MinLength(6)
+  contrasena!: string;
 }
 
-interface PerfilDto {
+class PerfilDto {
+  @IsOptional()
+  @IsString()
   descripcion?: string;
+
+  @IsOptional()
+  @IsString()
   fotoPerfil?: string;
 }
 
-interface VerificarCorreoDto {
-  token: string;
+class VerificarCorreoDto {
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
 }
 
-interface ReenviarVerificacionDto {
-  correo: string;
+class ReenviarVerificacionDto {
+  @IsEmail()
+  correo!: string;
 }
 
-interface SolicitarRecuperacionDto {
-  correo: string;
+class SolicitarRecuperacionDto {
+  @IsEmail()
+  correo!: string;
 }
 
-interface RestablecerContrasenaDto {
-  token: string;
-  nuevaContrasena: string;
+class RestablecerContrasenaDto {
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+
+  @IsString()
+  @MinLength(6)
+  nuevaContrasena!: string;
 }
 
 @Controller('auth')
@@ -54,7 +86,6 @@ export class AuthController {
       body.nombre,
       body.correo,
       body.contrasena,
-      body.rol,
     );
   }
 
@@ -88,20 +119,18 @@ export class AuthController {
 
   @UseGuards(JwtGuard)
   @Get('perfil')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  obtenerPerfil(@Request() req: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    return this.authService.obtenerPerfil(req.usuario.sub as string);
+  obtenerPerfil(@Request() req: AuthenticatedRequest) {
+    return this.authService.obtenerPerfil(req.usuario.sub);
   }
 
   @UseGuards(JwtGuard)
   @Patch('perfil')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  actualizarPerfil(@Body() body: PerfilDto, @Request() req: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  actualizarPerfil(
+    @Body() body: PerfilDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     return this.authService.actualizarPerfil(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      req.usuario.sub as string,
+      req.usuario.sub,
       body.descripcion,
       body.fotoPerfil,
     );

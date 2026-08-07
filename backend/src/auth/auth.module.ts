@@ -18,7 +18,8 @@ if (!jwtSecret) {
     JwtModule.register({
       global: true, // disponible en TODO el app sin reimportarlo
       secret: jwtSecret,
-      signOptions: { expiresIn: '7d' }, // token válido 7 días
+      signOptions: { expiresIn: '7d', algorithm: 'HS256' },
+      verifyOptions: { algorithms: ['HS256'] },
     }),
   ],
   providers: [AuthService],

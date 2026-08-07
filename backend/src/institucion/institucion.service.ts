@@ -7,7 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { join } from 'path';
+import { resolve, relative } from 'path';
 import { unlink } from 'fs/promises';
 
 @Injectable()
@@ -179,7 +179,15 @@ export class InstitucionService {
   // Convierte una logoUrl relativa (ej. '/uploads/logos/xxx.png') en la
   // ruta absoluta del archivo en disco.
   private rutaAbsolutaDesdeLogoUrl(logoUrl: string) {
-    return join(process.cwd(), logoUrl.replace(/^\/+/, ''));
+    const uploadsRoot = resolve(process.cwd(), 'uploads');
+    const rutaDestino = resolve(process.cwd(), logoUrl.replace(/^\/+/, ''));
+    const rutaRelativa = relative(uploadsRoot, rutaDestino);
+
+    if (rutaRelativa.startsWith('..') || rutaRelativa.startsWith('..' + '\\')) {
+      throw new BadRequestException('Ruta de logo inválida.');
+    }
+
+    return rutaDestino;
   }
 
   // Solo borramos del disco los logos que nosotros subimos (rutas locales

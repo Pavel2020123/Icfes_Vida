@@ -34,7 +34,6 @@ export class AuthService {
     nombre: string,
     correo: string,
     contrasena: string,
-    rol: string = 'ESTUDIANTE',
   ) {
     const usuarioExiste = await this.prisma.usuario.findUnique({
       where: { correo },
@@ -55,8 +54,7 @@ export class AuthService {
         nombre,
         correo,
         contrasenaHash: contrasenaEncriptada,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        rol: rol as any,
+        rol: 'ESTUDIANTE',
         correoVerificado: false,
         tokenVerificacion,
         tokenVerificacionExpira,
@@ -87,7 +85,6 @@ export class AuthService {
 
     if (
       usuario.tokenVerificacionExpira &&
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       usuario.tokenVerificacionExpira.getTime() < Date.now()
     ) {
       throw new BadRequestException(
@@ -190,7 +187,6 @@ export class AuthService {
 
     if (
       usuario.tokenRecuperacionExpira &&
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       usuario.tokenRecuperacionExpira.getTime() < Date.now()
     ) {
       throw new BadRequestException(

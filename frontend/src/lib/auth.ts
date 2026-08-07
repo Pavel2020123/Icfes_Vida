@@ -15,18 +15,31 @@ export function decodificarToken(token: string | null): TokenPayload | null {
     if (partes.length !== 3) return null;
     // Decodificamos sin verificar (cliente). Normalizamos claim 'sub' -> 'id'
     // para mantener compatibilidad con el backend que firma usando 'sub'.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const raw = JSON.parse(atob(partes[1]));
-    const payload: any = {
-      id: raw.sub ?? raw.id,
-      nombre: raw.nombre,
-      correo: raw.correo,
-      rol: raw.rol,
-      institucionId: raw.institucionId ?? raw.institucion_id,
+    const raw = JSON.parse(atob(partes[1])) as Record<string, unknown>;
+    const id = String(raw.sub ?? raw.id ?? '');
+    const nombre = typeof raw.nombre === 'string' ? raw.nombre : '';
+    const correo = typeof raw.correo === 'string' ? raw.correo : '';
+    const rolRaw = typeof raw.rol === 'string' ? raw.rol : undefined;
+    const rol =
+      rolRaw === 'ESTUDIANTE' || rolRaw === 'PROFESOR' || rolRaw === 'ADMIN'
+        ? rolRaw
+        : null;
+    const institucionId =
+      typeof raw.institucionId === 'string'
+        ? raw.institucionId
+        : typeof raw.institucion_id === 'string'
+        ? raw.institucion_id
+        : undefined;
+
+    if (!id || !correo || !rol) return null;
+
+    return {
+      id,
+      nombre,
+      correo,
+      rol,
+      institucionId,
     };
-    // Basic validation
-    if (!payload.id || !payload.correo) return null;
-    return payload as TokenPayload;
   } catch {
     return null;
   }
