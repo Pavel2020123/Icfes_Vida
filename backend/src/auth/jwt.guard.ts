@@ -24,12 +24,9 @@ export class JwtGuard implements CanActivate {
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret:
-          process.env.JWT_SECRET || 'icfes-vida-super-secreto-cambiar-en-prod',
-      });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      request['usuario'] = payload;
+      const payload = await this.jwtService.verifyAsync(token);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            request['usuario'] = payload;
     } catch {
       throw new UnauthorizedException('Token inválido o expirado.');
     }
@@ -57,16 +54,13 @@ export class AdminGuard implements CanActivate {
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const payload = await this.jwtService.verifyAsync(tokenLimpio, {
-        secret:
-          process.env.JWT_SECRET || 'icfes-vida-super-secreto-cambiar-en-prod',
-      });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      if (payload.rol !== 'ADMIN') {
-        throw new UnauthorizedException('No tienes permiso de administrador.');
-      }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      request['usuario'] = payload;
+      const payload = await this.jwtService.verifyAsync(tokenLimpio);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            if (payload.rol !== 'ADMIN') {
+              throw new UnauthorizedException('No tienes permiso de administrador.');
+            }
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            request['usuario'] = payload;
     } catch {
       throw new UnauthorizedException('Token inválido o sin permiso.');
     }
