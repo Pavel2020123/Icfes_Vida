@@ -5,9 +5,9 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { planEstudianteVencido } from './plan.util';
+import { AuthenticatedRequest } from './auth.types';
 
 // ─── GUARD: MURO DE PAGO DEL ESTUDIANTE INDIVIDUAL ──────────
 // IMPORTANTE: siempre se usa DESPUÉS de JwtGuard, así:
@@ -18,9 +18,8 @@ export class PlanVigenteGuard implements CanActivate {
   constructor(private prisma: PrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const usuarioId = request['usuario']?.sub as string | undefined;
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const usuarioId = request.usuario?.sub;
 
     if (!usuarioId) {
       throw new UnauthorizedException(

@@ -13,8 +13,33 @@ export function decodificarToken(token: string | null): TokenPayload | null {
   try {
     const partes = token.split('.');
     if (partes.length !== 3) return null;
-    const payload = JSON.parse(atob(partes[1]));
-    return payload;
+    // Decodificamos sin verificar (cliente). Normalizamos claim 'sub' -> 'id'
+    // para mantener compatibilidad con el backend que firma usando 'sub'.
+    const raw = JSON.parse(atob(partes[1])) as Record<string, unknown>;
+    const id = String(raw.sub ?? raw.id ?? '');
+    const nombre = typeof raw.nombre === 'string' ? raw.nombre : '';
+    const correo = typeof raw.correo === 'string' ? raw.correo : '';
+    const rolRaw = typeof raw.rol === 'string' ? raw.rol : undefined;
+    const rol =
+      rolRaw === 'ESTUDIANTE' || rolRaw === 'PROFESOR' || rolRaw === 'ADMIN'
+        ? rolRaw
+        : null;
+    const institucionId =
+      typeof raw.institucionId === 'string'
+        ? raw.institucionId
+        : typeof raw.institucion_id === 'string'
+        ? raw.institucion_id
+        : undefined;
+
+    if (!id || !correo || !rol) return null;
+
+    return {
+      id,
+      nombre,
+      correo,
+      rol,
+      institucionId,
+    };
   } catch {
     return null;
   }

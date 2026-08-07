@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -6,19 +7,64 @@ import {
   Query,
   UseGuards,
   Request,
+  Param,
+  ParseEnumPipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { SimulacroService } from './simulacro.service';
 import { AreaIcfes, Dificultad } from '@prisma/client';
-import { JwtGuard } from '../auth/jwt.guard';
+import { AdminGuard, JwtGuard } from '../auth/jwt.guard';
 import { PlanVigenteGuard } from '../auth/plan-vigente.guard';
 import { EmailVerificadoGuard } from '../auth/email-verificado.guard';
+import { AuthenticatedRequest } from '../auth/auth.types';
+import {
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  ValidateNested,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-interface CalificarDto {
-  area: AreaIcfes;
-  respuestas: Array<{
-    preguntaId: string;
-    respuestaId: string;
-  }>;
+class RespuestaDto {
+  @IsString()
+  @IsNotEmpty()
+  preguntaId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  respuestaId!: string;
+}
+
+class CalificarDto {
+  @IsEnum(AreaIcfes)
+  area!: AreaIcfes;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RespuestaDto)
+  respuestas!: RespuestaDto[];
+}
+
+class CalificarPersonalizadoDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RespuestaDto)
+  respuestas!: RespuestaDto[];
+}
+
+class ProgresoDto {
+  @IsString()
+  @IsNotEmpty()
+  subtemaId!: string;
+
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  porcentaje!: number;
 }
 
 @Controller('simulacros')
@@ -27,7 +73,9 @@ export class SimulacroController {
 
   // GET /simulacros/generar?area=MATEMATICAS
   @Get('generar')
-  obtenerSimulacro(@Query('area') area: AreaIcfes) {
+  obtenerSimulacro(
+    @Query('area', new ParseEnumPipe(AreaIcfes)) area: AreaIcfes,
+  ) {
     return this.simulacroService.generarSimulacro(area);
   }
 
@@ -35,11 +83,9 @@ export class SimulacroController {
   // Body: { area: "MATEMATICAS", respuestas: [{ preguntaId: "...", respuestaId: "..." }] }
   @UseGuards(JwtGuard, EmailVerificadoGuard, PlanVigenteGuard)
   @Post('calificar')
-  calificar(@Body() body: CalificarDto, @Request() req: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+  calificar(@Body() body: CalificarDto, @Request() req: AuthenticatedRequest) {
     const usuarioId = req.usuario.sub; // viene del JWT token
     return this.simulacroService.calificarSimulacro(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       usuarioId,
       body.area,
       body.respuestas,
@@ -50,21 +96,26 @@ export class SimulacroController {
   @Get('generar-personalizado')
   generarPersonalizado(
     @Query('areas') areas: string,
-    @Query('cantidad') cantidad?: string,
-    @Query('dificultad') dificultad?: Dificultad,
+    @Query('cantidad', new ParseIntPipe({ optional: true })) cantidad?: number,
+    @Query('dificultad', new ParseEnumPipe(Dificultad, { optional: true }))
+    dificultad?: Dificultad,
   ) {
     const listaAreas = (areas ?? '')
       .split(',')
       .map((a) => a.trim())
-      .filter((a): a is AreaIcfes => a.length > 0);
+      .filter((a): a is AreaIcfes =>
+        Object.values(AreaIcfes).includes(a as AreaIcfes),
+      );
 
-    const cantidadNumero = cantidad ? parseInt(cantidad, 10) : 20;
+    if (listaAreas.length === 0) {
+      throw new BadRequestException(
+        'Debes indicar al menos un área válida para generar el simulacro.',
+      );
+    }
 
     return this.simulacroService.generarSimulacroPersonalizado(
       listaAreas,
-      Number.isFinite(cantidadNumero) && cantidadNumero > 0
-        ? cantidadNumero
-        : 20,
+      cantidad && Number.isFinite(cantidad) && cantidad > 0 ? cantidad : 20,
       dificultad,
     );
   }
@@ -75,14 +126,11 @@ export class SimulacroController {
   @UseGuards(JwtGuard, EmailVerificadoGuard, PlanVigenteGuard)
   @Post('calificar-personalizado')
   calificarPersonalizado(
-    @Body()
-    body: { respuestas: Array<{ preguntaId: string; respuestaId: string }> },
-    @Request() req: any,
+    @Body() body: CalificarPersonalizadoDto,
+    @Request() req: AuthenticatedRequest,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const usuarioId = req.usuario.sub;
     return this.simulacroService.calificarSimulacroPersonalizado(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       usuarioId,
       body.respuestas,
     );
@@ -91,14 +139,14 @@ export class SimulacroController {
   // GET /simulacros/historial  ← Ruta protegida con JWT
   @UseGuards(JwtGuard)
   @Get('historial')
-  historial(@Request() req: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+  historial(@Request() req: AuthenticatedRequest) {
     const usuarioId = req.usuario.sub;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
     return this.simulacroService.obtenerHistorial(usuarioId);
   }
 
   // POST /simulacros/poblar  ← Solo para desarrollo
+  @UseGuards(JwtGuard, AdminGuard)
   @Post('poblar')
   poblarBd() {
     return this.simulacroService.poblarBaseDeDatos();
@@ -109,17 +157,22 @@ export class SimulacroController {
   obtenerTemas(@Query('area') area: AreaIcfes) {
     return this.simulacroService.obtenerTemasPorArea(area);
   }
+
+  // GET /simulacros/preguntas/:subtemaId
+  @Get('preguntas/:subtemaId')
+  obtenerPreguntasPorSubtema(@Param('subtemaId') subtemaId: string) {
+    return this.simulacroService.obtenerPreguntasPorSubtema(subtemaId);
+  }
+
   // POST /simulacros/progreso  ← Marcar tema como visto
   @UseGuards(JwtGuard, EmailVerificadoGuard, PlanVigenteGuard)
   @Post('progreso')
   actualizarProgreso(
-    @Body() body: { subtemaId: string; porcentaje: number },
-    @Request() req: any,
+    @Body() body: ProgresoDto,
+    @Request() req: AuthenticatedRequest,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const usuarioId = req.usuario.sub;
     return this.simulacroService.actualizarProgresoTema(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       usuarioId,
       body.subtemaId,
       body.porcentaje,
@@ -129,10 +182,9 @@ export class SimulacroController {
   // GET /simulacros/progreso  ← Ver progreso general
   @UseGuards(JwtGuard)
   @Get('progreso')
-  obtenerProgreso(@Request() req: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+  obtenerProgreso(@Request() req: AuthenticatedRequest) {
     const usuarioId = req.usuario.sub;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
     return this.simulacroService.obtenerProgresoGeneral(usuarioId);
   }
 }

@@ -11,7 +11,137 @@ import {
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AdminGuard } from '../auth/jwt.guard';
+import { AuthenticatedRequest } from '../auth/auth.types';
 import { AreaIcfes, Dificultad, TipoInteractivo } from '@prisma/client';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+class CambiarRolDto {
+  @IsIn(['ESTUDIANTE', 'PROFESOR', 'ADMIN'])
+  rol!: 'ESTUDIANTE' | 'PROFESOR' | 'ADMIN';
+}
+
+class CrearTemaDto {
+  @IsString()
+  @IsNotEmpty()
+  nombre!: string;
+
+  @IsEnum(AreaIcfes)
+  area!: AreaIcfes;
+}
+
+class CrearSubtemaDto {
+  @IsString()
+  @IsNotEmpty()
+  nombre!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  temaId!: string;
+}
+
+class RespuestaDto {
+  @IsString()
+  @IsNotEmpty()
+  texto!: string;
+
+  @IsBoolean()
+  esCorrecta!: boolean;
+}
+
+class CrearPreguntaDto {
+  @IsString()
+  @IsNotEmpty()
+  enunciado!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  subtemaId!: string;
+
+  @IsEnum(Dificultad)
+  dificultad!: Dificultad;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RespuestaDto)
+  respuestas!: RespuestaDto[];
+
+  @IsOptional()
+  @IsString()
+  imagenUrl?: string;
+}
+
+class CrearPreguntaAleatoriaDto {
+  @IsEnum(AreaIcfes)
+  area!: AreaIcfes;
+
+  @IsString()
+  @IsNotEmpty()
+  enunciado!: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RespuestaDto)
+  respuestas!: RespuestaDto[];
+
+  @IsOptional()
+  @IsString()
+  imagenUrl?: string;
+}
+
+class ActualizarContenidoDto {
+  @IsOptional()
+  @IsString()
+  contenido?: string;
+
+  @IsOptional()
+  @IsString()
+  videoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  imagenUrl?: string;
+}
+
+class EspacioInteractivoDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  opciones!: string[];
+
+  @IsNotEmpty()
+  correctaIndex!: number;
+}
+
+class DatosInteractivoDto {
+  @IsString()
+  @IsNotEmpty()
+  textoConEspacios!: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EspacioInteractivoDto)
+  espacios!: EspacioInteractivoDto[];
+}
+
+class ActualizarInteractivoDto {
+  @IsEnum(TipoInteractivo)
+  tipoInteractivo!: TipoInteractivo;
+
+  @ValidateNested()
+  @Type(() => DatosInteractivoDto)
+  datosInteractivo!: DatosInteractivoDto;
+}
 
 @Controller('admin')
 @UseGuards(AdminGuard)
@@ -31,17 +161,16 @@ export class AdminController {
   }
 
   @Patch('usuarios/:id/rol')
-  cambiarRol(
-    @Param('id') id: string,
-    @Body() body: { rol: 'ESTUDIANTE' | 'PROFESOR' | 'ADMIN' },
-  ) {
+  cambiarRol(@Param('id') id: string, @Body() body: CambiarRolDto) {
     return this.adminService.cambiarRol(id, body.rol);
   }
 
   @Delete('usuarios/:id')
-  eliminarUsuario(@Param('id') id: string, @Request() req: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    return this.adminService.eliminarUsuario(id, req.usuario.sub as string);
+  eliminarUsuario(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.adminService.eliminarUsuario(id, req.usuario.sub);
   }
 
   // Temas
@@ -51,7 +180,7 @@ export class AdminController {
   }
 
   @Post('temas')
-  crearTema(@Body() body: { nombre: string; area: AreaIcfes }) {
+  crearTema(@Body() body: CrearTemaDto) {
     return this.adminService.crearTema(body.nombre, body.area);
   }
 
@@ -62,7 +191,7 @@ export class AdminController {
 
   // Subtemas
   @Post('subtemas')
-  crearSubtema(@Body() body: { nombre: string; temaId: string }) {
+  crearSubtema(@Body() body: CrearSubtemaDto) {
     return this.adminService.crearSubtema(body.nombre, body.temaId);
   }
 
@@ -78,16 +207,7 @@ export class AdminController {
   }
 
   @Post('preguntas')
-  crearPregunta(
-    @Body()
-    body: {
-      enunciado: string;
-      subtemaId: string;
-      dificultad: Dificultad;
-      respuestas: { texto: string; esCorrecta: boolean }[];
-      imagenUrl?: string;
-    },
-  ) {
+  crearPregunta(@Body() body: CrearPreguntaDto) {
     return this.adminService.crearPregunta(
       body.enunciado,
       body.subtemaId,
@@ -99,15 +219,7 @@ export class AdminController {
 
   // Preguntas aleatorias: carga rápida, solo pide el área (no subtema)
   @Post('preguntas-aleatorias')
-  crearPreguntaAleatoria(
-    @Body()
-    body: {
-      area: AreaIcfes;
-      enunciado: string;
-      respuestas: { texto: string; esCorrecta: boolean }[];
-      imagenUrl?: string;
-    },
-  ) {
+  crearPreguntaAleatoria(@Body() body: CrearPreguntaAleatoriaDto) {
     return this.adminService.crearPreguntaAleatoria(
       body.area,
       body.enunciado,
@@ -124,7 +236,7 @@ export class AdminController {
   @Patch('subtemas/:id/contenido')
   actualizarContenido(
     @Param('id') id: string,
-    @Body() body: { contenido?: string; videoUrl?: string; imagenUrl?: string },
+    @Body() body: ActualizarContenidoDto,
   ) {
     return this.adminService.actualizarContenidoSubtema(
       id,
@@ -138,14 +250,7 @@ export class AdminController {
   @Patch('subtemas/:id/interactivo')
   actualizarInteractivo(
     @Param('id') id: string,
-    @Body()
-    body: {
-      tipoInteractivo: TipoInteractivo;
-      datosInteractivo: {
-        textoConEspacios: string;
-        espacios: { opciones: string[]; correctaIndex: number }[];
-      };
-    },
+    @Body() body: ActualizarInteractivoDto,
   ) {
     return this.adminService.actualizarInteractivoSubtema(
       id,

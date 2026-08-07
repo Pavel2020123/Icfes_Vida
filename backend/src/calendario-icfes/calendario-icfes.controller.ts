@@ -8,19 +8,29 @@ import {
   Param,
   Query,
   UseGuards,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import { CalendarioIcfesService } from './calendario-icfes.service';
 import { JwtGuard, AdminGuard } from '../auth/jwt.guard';
 import { CalendarioTipo } from '@prisma/client';
+import { IsDateString, IsEnum, IsInt, IsNotEmpty } from 'class-validator';
 
-interface CrearFechaDto {
-  anio: number;
-  calendario: CalendarioTipo;
-  fechaExamen: string; // ISO, ej. "2027-11-14"
+class CrearFechaDto {
+  @IsInt()
+  anio!: number;
+
+  @IsEnum(CalendarioTipo)
+  calendario!: CalendarioTipo;
+
+  @IsDateString()
+  @IsNotEmpty()
+  fechaExamen!: string; // ISO, ej. "2027-11-14"
 }
 
-interface ActualizarFechaDto {
-  fechaExamen: string;
+class ActualizarFechaDto {
+  @IsDateString()
+  @IsNotEmpty()
+  fechaExamen!: string;
 }
 
 @Controller('calendario-icfes')
@@ -30,7 +40,10 @@ export class CalendarioIcfesController {
   // Público (requiere solo login) — lo consume el countdown del estudiante.
   @Get('proxima')
   @UseGuards(JwtGuard)
-  proxima(@Query('calendario') calendario: CalendarioTipo) {
+  proxima(
+    @Query('calendario', new ParseEnumPipe(CalendarioTipo))
+    calendario: CalendarioTipo,
+  ) {
     return this.service.obtenerProximaFecha(calendario);
   }
 

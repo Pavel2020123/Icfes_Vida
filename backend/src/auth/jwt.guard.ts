@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
+import { AuthenticatedRequest, JwtPayload } from './auth.types';
 
 // ─── GUARD PARA USUARIOS LOGUEADOS ──────────────────────────
 @Injectable()
@@ -13,7 +13,7 @@ export class JwtGuard implements CanActivate {
   constructor(private jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extraerToken(request);
 
     if (!token) {
@@ -23,13 +23,8 @@ export class JwtGuard implements CanActivate {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret:
-          process.env.JWT_SECRET || 'icfes-vida-super-secreto-cambiar-en-prod',
-      });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      request['usuario'] = payload;
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
+      request.usuario = payload;
     } catch {
       throw new UnauthorizedException('Token inválido o expirado.');
     }
@@ -37,7 +32,7 @@ export class JwtGuard implements CanActivate {
     return true;
   }
 
-  private extraerToken(request: Request): string | undefined {
+  private extraerToken(request: AuthenticatedRequest): string | undefined {
     const [tipo, token] = request.headers.authorization?.split(' ') ?? [];
     return tipo === 'Bearer' ? token : undefined;
   }
@@ -49,28 +44,27 @@ export class AdminGuard implements CanActivate {
   constructor(private jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
-    const [tipo, token] = request.headers.authorization?.split(' ') ?? [];
-    const tokenLimpio = tipo === 'Bearer' ? token : undefined;
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const token = this.extraerToken(request);
 
-    if (!tokenLimpio) throw new UnauthorizedException('No hay token.');
-
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const payload = await this.jwtService.verifyAsync(tokenLimpio, {
-        secret:
-          process.env.JWT_SECRET || 'icfes-vida-super-secreto-cambiar-en-prod',
-      });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      if (payload.rol !== 'ADMIN') {
-        throw new UnauthorizedException('No tienes permiso de administrador.');
-      }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      request['usuario'] = payload;
-    } catch {
-      throw new UnauthorizedException('Token inválido o sin permiso.');
+    if (!token && !request.usuario) {
+      throw new UnauthorizedException('No hay token.');
     }
 
+    const payload = request.usuario
+      ? request.usuario
+      : await this.jwtService.verifyAsync<JwtPayload>(token);
+
+    if (payload.rol !== 'ADMIN') {
+      throw new UnauthorizedException('No tienes permiso de administrador.');
+    }
+
+    request.usuario = payload;
     return true;
+  }
+
+  private extraerToken(request: AuthenticatedRequest): string | undefined {
+    const [tipo, token] = request.headers.authorization?.split(' ') ?? [];
+    return tipo === 'Bearer' ? token : undefined;
   }
 }

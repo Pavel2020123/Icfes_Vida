@@ -1,4 +1,4 @@
-export const API_URL = 'http://localhost:3000';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 // El backend guarda los logos en disco local y los sirve como
 // '/uploads/logos/xxx.png' (ruta relativa). Esta función la convierte en
@@ -16,7 +16,7 @@ export function obtenerUrlLogo(logoUrl?: string | null): string | null {
 export async function loginUsuario(correo: string, contrasena: string) {
   const res = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: crearEncabezados(),
     body: JSON.stringify({ correo, contrasena }),
   });
   const data = await res.json();
@@ -24,22 +24,30 @@ export async function loginUsuario(correo: string, contrasena: string) {
   return data;
 }
 
-export async function registrarUsuario(nombre: string, correo: string, contrasena: string, rol: string = 'ESTUDIANTE') {
+export async function registrarUsuario(nombre: string, correo: string, contrasena: string) {
   const res = await fetch(`${API_URL}/auth/registro`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nombre, correo, contrasena, rol }),
+    headers: crearEncabezados(),
+    body: JSON.stringify({ nombre, correo, contrasena }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Error al registrarse');
   return data;
 }
 
-function crearEncabezados(): HeadersInit {
+export function obtenerEncabezadosAutenticacion(): HeadersInit {
   const token = obtenerToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function crearEncabezadosFormData(): HeadersInit {
+  return obtenerEncabezadosAutenticacion();
+}
+
+export function crearEncabezados(json = true): HeadersInit {
   return {
-    'Content-Type': 'application/json',
-    Authorization: token ? `Bearer ${token}` : '',
+    ...(json ? { 'Content-Type': 'application/json' } : {}),
+    ...obtenerEncabezadosAutenticacion(),
   };
 }
 
@@ -350,3 +358,11 @@ export async function restablecerContrasena(token: string, nuevaContrasena: stri
   if (!res.ok) throw new Error(data.message || 'No se pudo restablecer la contraseña');
   return data;
 }
+
+
+
+
+
+
+
+

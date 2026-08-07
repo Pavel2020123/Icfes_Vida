@@ -23,7 +23,6 @@ export default function RegistroPage() {
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [confirmar, setConfirmar] = useState('');
-  const [rol, setRol] = useState('ESTUDIANTE');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
@@ -48,7 +47,7 @@ export default function RegistroPage() {
 
     setCargando(true);
     try {
-      await registrarUsuario(nombre, correo, contrasena, rol);
+      await registrarUsuario(nombre, correo, contrasena);
       router.push(`/registro/confirmar?correo=${encodeURIComponent(correo)}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al registrarse');
@@ -133,36 +132,6 @@ export default function RegistroPage() {
               )}
             </div>
 
-            {/* ROL */}
-            <div>
-              <label style={labelStyle}>¿Qué eres?</label>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {[
-                  { value: 'ESTUDIANTE', label: 'Estudiante' },
-                  { value: 'PROFESOR', label: 'Profesor' },
-                ].map(opcion => (
-                  <button
-                    key={opcion.value}
-                    type="button"
-                    onClick={() => setRol(opcion.value)}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      borderRadius: 10,
-                      border: `2px solid ${rol === opcion.value ? '#146C94' : '#AFD3E2'}`,
-                      backgroundColor: rol === opcion.value ? '#D2E0FB' : '#ffffff',
-                      color: rol === opcion.value ? '#146C94' : '#4a5a6a',
-                      fontWeight: 700,
-                      fontSize: 14,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {opcion.label}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             <div>
               <label style={labelStyle}>Contraseña</label>

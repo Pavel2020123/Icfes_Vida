@@ -11,6 +11,15 @@ interface RespuestaEstudiante {
 export class SimulacroService {
   constructor(private prisma: PrismaService) {}
 
+  private mezclarPreguntas<T>(elementos: T[]): T[] {
+    const copia = [...elementos];
+    for (let i = copia.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copia[i], copia[j]] = [copia[j], copia[i]];
+    }
+    return copia;
+  }
+
   // ─── GENERAR SIMULACRO ──────────────────────────────────────
   // Genera N preguntas aleatorias de un área, SIN enviar esCorrecta al cliente
   async generarSimulacro(area: AreaIcfes, cantidad: number = 25) {
@@ -46,9 +55,7 @@ export class SimulacroService {
       );
     }
 
-    // Mezcla aleatoria (Fisher-Yates shuffle)
-    const mezcladas = [...todasLasPreguntas].sort(() => Math.random() - 0.5);
-    const seleccionadas = mezcladas.slice(0, cantidad);
+    const seleccionadas = this.mezclarPreguntas(todasLasPreguntas).slice(0, cantidad);
 
     return {
       mensaje: `Simulacro de ${area} generado con éxito`,
@@ -82,6 +89,13 @@ export class SimulacroService {
       },
     });
 
+    const preguntaCorrectaPorId = new Map(
+      preguntasConRespuestas.map((pregunta) => [
+        pregunta.id,
+        pregunta.respuestas.find((r) => r.esCorrecta === true)?.id ?? null,
+      ]),
+    );
+
     let correctas = 0;
     const detalle: Array<{
       preguntaId: string;
@@ -90,24 +104,25 @@ export class SimulacroService {
     }> = [];
 
     for (const respuestaAlumno of respuestasEstudiante) {
-      const preguntaEnBD = preguntasConRespuestas.find(
-        (p) => p.id === respuestaAlumno.preguntaId,
+      const respuestaCorrectaId = preguntaCorrectaPorId.get(
+        respuestaAlumno.preguntaId,
       );
+      if (!respuestaCorrectaId) {
+        detalle.push({
+          preguntaId: respuestaAlumno.preguntaId,
+          esCorrecto: false,
+          respuestaCorrectaId: '',
+        });
+        continue;
+      }
 
-      if (!preguntaEnBD) continue;
-
-      const respuestaCorrecta = preguntaEnBD.respuestas.find(
-        (r) => r.esCorrecta === true,
-      );
-
-      const esCorrecto = respuestaCorrecta?.id === respuestaAlumno.respuestaId;
-
+      const esCorrecto = respuestaCorrectaId === respuestaAlumno.respuestaId;
       if (esCorrecto) correctas++;
 
       detalle.push({
         preguntaId: respuestaAlumno.preguntaId,
         esCorrecto,
-        respuestaCorrectaId: respuestaCorrecta?.id ?? '',
+        respuestaCorrectaId,
       });
     }
 
@@ -198,9 +213,7 @@ export class SimulacroService {
       );
     }
 
-    // Mezcla aleatoria (Fisher-Yates shuffle)
-    const mezcladas = [...todasLasPreguntas].sort(() => Math.random() - 0.5);
-    const seleccionadas = mezcladas.slice(0, cantidad);
+    const seleccionadas = this.mezclarPreguntas(todasLasPreguntas).slice(0, cantidad);
 
     return {
       mensaje: 'Simulacro personalizado generado con éxito',
@@ -234,6 +247,17 @@ export class SimulacroService {
       },
     });
 
+    const preguntaInfoPorId = new Map(
+      preguntasConRespuestas.map((pregunta) => [
+        pregunta.id,
+        {
+          area: pregunta.subtema.tema.area,
+          respuestaCorrectaId:
+            pregunta.respuestas.find((r) => r.esCorrecta === true)?.id ?? null,
+        },
+      ]),
+    );
+
     let correctas = 0;
     const detalle: Array<{
       preguntaId: string;
@@ -243,28 +267,22 @@ export class SimulacroService {
     const porArea: Record<string, { total: number; correctas: number }> = {};
 
     for (const respuestaAlumno of respuestasEstudiante) {
-      const preguntaEnBD = preguntasConRespuestas.find(
-        (p) => p.id === respuestaAlumno.preguntaId,
-      );
+      const preguntaInfo = preguntaInfoPorId.get(respuestaAlumno.preguntaId);
+      if (!preguntaInfo) continue;
 
-      if (!preguntaEnBD) continue;
-
-      const area = preguntaEnBD.subtema.tema.area;
-      const respuestaCorrecta = preguntaEnBD.respuestas.find(
-        (r) => r.esCorrecta === true,
-      );
-      const esCorrecto = respuestaCorrecta?.id === respuestaAlumno.respuestaId;
-
+      const esCorrecto =
+        preguntaInfo.respuestaCorrectaId === respuestaAlumno.respuestaId;
       if (esCorrecto) correctas++;
 
-      if (!porArea[area]) porArea[area] = { total: 0, correctas: 0 };
-      porArea[area].total++;
-      if (esCorrecto) porArea[area].correctas++;
+      if (!porArea[preguntaInfo.area])
+        porArea[preguntaInfo.area] = { total: 0, correctas: 0 };
+      porArea[preguntaInfo.area].total++;
+      if (esCorrecto) porArea[preguntaInfo.area].correctas++;
 
       detalle.push({
         preguntaId: respuestaAlumno.preguntaId,
         esCorrecto,
-        respuestaCorrectaId: respuestaCorrecta?.id ?? '',
+        respuestaCorrectaId: preguntaInfo.respuestaCorrectaId ?? '',
       });
     }
 
@@ -282,29 +300,33 @@ export class SimulacroService {
     }> = [];
 
     if (usuarioId) {
-      for (const [area, stats] of Object.entries(porArea)) {
+      const resultados = Object.entries(porArea).map(([area, stats]) => {
         const puntajeArea =
           Math.round((stats.correctas / stats.total) * 100 * 10) / 10;
         const xpArea = Math.round(xpGanado * (stats.total / totalPreguntas));
 
-        await this.prisma.resultadoSimulacro.create({
-          data: {
-            usuarioId,
-            area: area as AreaIcfes,
-            totalPreguntas: stats.total,
-            respuestasCorrectas: stats.correctas,
-            puntaje: puntajeArea,
-            xpGanado: xpArea,
-          },
-        });
-
-        desglose.push({
-          area,
-          total: stats.total,
-          correctas: stats.correctas,
+        return {
+          usuarioId,
+          area: area as AreaIcfes,
+          totalPreguntas: stats.total,
+          respuestasCorrectas: stats.correctas,
           puntaje: puntajeArea,
-        });
+          xpGanado: xpArea,
+        };
+      });
+
+      if (resultados.length > 0) {
+        await this.prisma.resultadoSimulacro.createMany({ data: resultados });
       }
+
+      desglose.push(
+        ...resultados.map((resultado) => ({
+          area: resultado.area,
+          total: resultado.totalPreguntas,
+          correctas: resultado.respuestasCorrectas,
+          puntaje: resultado.puntaje,
+        })),
+      );
 
       // Sumar XP al usuario
       await this.prisma.usuario.update({
@@ -339,6 +361,25 @@ export class SimulacroService {
       totalSimulacros: resultados.length,
       resultados,
     };
+  }
+
+  async obtenerPreguntasPorSubtema(subtemaId: string) {
+    return this.prisma.pregunta.findMany({
+      where: { subtemaId },
+      include: {
+        respuestas: {
+          select: { id: true, texto: true },
+        },
+        subtema: {
+          include: {
+            tema: {
+              select: { nombre: true, area: true },
+            },
+          },
+        },
+      },
+      orderBy: { id: 'asc' },
+    });
   }
 
   // ─── POBLAR BD CON DATOS DE PRUEBA ─────────────────────────
@@ -427,7 +468,6 @@ export class SimulacroService {
   ) {
     const completado = porcentaje >= 100;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     await this.prisma.progresoTema.upsert({
       where: {
         usuarioId_subtemaId: { usuarioId, subtemaId },
@@ -443,7 +483,6 @@ export class SimulacroService {
   async obtenerProgresoGeneral(usuarioId: string) {
     const todoLosSubtemas = await this.prisma.subtema.count();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const progresos = await this.prisma.progresoTema.findMany({
       where: { usuarioId },
       include: {
@@ -455,9 +494,8 @@ export class SimulacroService {
       },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const temasVistos = progresos.length;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+
     const temasCompletados = progresos.filter((p) => p.completado).length;
     const porcentajeGeneral =
       todoLosSubtemas > 0
@@ -469,33 +507,30 @@ export class SimulacroService {
       string,
       { vistos: number; completados: number; total: number }
     > = {};
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+
     progresos.forEach((p) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const area = p.subtema.tema.area;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       if (!porArea[area])
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         porArea[area] = { vistos: 0, completados: 0, total: 0 };
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       porArea[area].vistos++;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       if (p.completado) porArea[area].completados++;
     });
 
     // Progreso por subtema (para el menú lateral)
     const porSubtema: Record<string, number> = {};
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+
     progresos.forEach((p) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       porSubtema[p.subtemaId] = p.porcentaje;
     });
 
     return {
       totalSubtemas: todoLosSubtemas,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       temasVistos,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       temasCompletados,
       porcentajeGeneral,
       porArea,

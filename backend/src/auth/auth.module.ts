@@ -5,15 +5,21 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
 import { MailModule } from '../mail/mail.module';
 
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  // Fail fast: no iniciar la app sin una clave JWT segura
+  throw new Error('Missing required environment variable: JWT_SECRET');
+}
+
 @Module({
   imports: [
     PrismaModule,
     MailModule,
     JwtModule.register({
       global: true, // disponible en TODO el app sin reimportarlo
-      secret:
-        process.env.JWT_SECRET || 'icfes-vida-super-secreto-cambiar-en-prod',
-      signOptions: { expiresIn: '7d' }, // token válido 7 días
+      secret: jwtSecret,
+      signOptions: { expiresIn: '7d', algorithm: 'HS256' },
+      verifyOptions: { algorithms: ['HS256'] },
     }),
   ],
   providers: [AuthService],
