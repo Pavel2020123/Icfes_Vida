@@ -13,8 +13,20 @@ export function decodificarToken(token: string | null): TokenPayload | null {
   try {
     const partes = token.split('.');
     if (partes.length !== 3) return null;
-    const payload = JSON.parse(atob(partes[1]));
-    return payload;
+    // Decodificamos sin verificar (cliente). Normalizamos claim 'sub' -> 'id'
+    // para mantener compatibilidad con el backend que firma usando 'sub'.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const raw = JSON.parse(atob(partes[1]));
+    const payload: any = {
+      id: raw.sub ?? raw.id,
+      nombre: raw.nombre,
+      correo: raw.correo,
+      rol: raw.rol,
+      institucionId: raw.institucionId ?? raw.institucion_id,
+    };
+    // Basic validation
+    if (!payload.id || !payload.correo) return null;
+    return payload as TokenPayload;
   } catch {
     return null;
   }

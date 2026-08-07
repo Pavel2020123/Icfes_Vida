@@ -1,4 +1,4 @@
-export const API_URL = 'http://localhost:3000';
+﻿export const API_URL = 'http://localhost:3000';
 
 // El backend guarda los logos en disco local y los sirve como
 // '/uploads/logos/xxx.png' (ruta relativa). Esta función la convierte en
@@ -39,7 +39,7 @@ function crearEncabezados(): HeadersInit {
   const token = obtenerToken();
   return {
     'Content-Type': 'application/json',
-    Authorization: token ? `Bearer ${token}` : '',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
