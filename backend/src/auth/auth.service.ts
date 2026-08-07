@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { BCRYPT_SALT_ROUNDS } from '../common/constants';
 import {
   calcularFechaVencimientoPrueba,
   planEstudianteVencido,
@@ -41,7 +42,10 @@ export class AuthService {
     if (usuarioExiste)
       throw new BadRequestException('El correo ya está registrado');
 
-    const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
+    const contrasenaEncriptada = await bcrypt.hash(
+      contrasena,
+      BCRYPT_SALT_ROUNDS,
+    );
 
     // La prueba gratis de 3 días YA NO arranca aquí: arranca cuando se
     // confirma el correo (verificarCorreo), para que nadie la reinicie
@@ -194,7 +198,10 @@ export class AuthService {
       );
     }
 
-    const contrasenaEncriptada = await bcrypt.hash(nuevaContrasena, 10);
+    const contrasenaEncriptada = await bcrypt.hash(
+      nuevaContrasena,
+      BCRYPT_SALT_ROUNDS,
+    );
 
     await this.prisma.usuario.update({
       where: { id: usuario.id },

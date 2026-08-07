@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { resolve, relative } from 'path';
+import { BCRYPT_SALT_ROUNDS } from '../common/constants';
 import { unlink } from 'fs/promises';
 
 @Injectable()
@@ -454,7 +455,7 @@ export class InstitucionService {
       await this.verificarCupoDisponible(institucionId, grupo.grado);
     }
 
-    const contrasenaHash = await bcrypt.hash(contrasena, 10);
+    const contrasenaHash = await bcrypt.hash(contrasena, BCRYPT_SALT_ROUNDS);
 
     return this.prisma.$transaction(async (tx) => {
       const nuevoEstudiante = await tx.usuario.create({
@@ -720,14 +721,26 @@ export class InstitucionService {
       return { creados: 0, omitidos };
     }
 
+    // Hasheamos todas las contraseñas en paralelo ANTES de abrir la
+    // transacción. Antes, bcrypt.hash (CPU-intensivo) se ejecutaba
+    // secuencialmente fila por fila DENTRO de la transacción, manteniéndola
+    // abierta todo ese tiempo — con CSVs grandes eso arriesga timeout de
+    // transacción y bloqueo de fila prolongado. Ahora la transacción solo
+    // hace los create(), que son rápidos.
+    const filasConHash = await Promise.all(
+      filasValidas.map(async (fila) => ({
+        ...fila,
+        contrasenaHash: await bcrypt.hash(fila.contrasena, BCRYPT_SALT_ROUNDS),
+      })),
+    );
+
     await this.prisma.$transaction(async (tx) => {
-      for (const fila of filasValidas) {
-        const contrasenaHash = await bcrypt.hash(fila.contrasena, 10);
+      for (const fila of filasConHash) {
         const nuevoEstudiante = await tx.usuario.create({
           data: {
             nombre: fila.nombre,
             correo: fila.correo,
-            contrasenaHash,
+            contrasenaHash: fila.contrasenaHash,
             rol: 'ESTUDIANTE',
             institucionId,
           },
@@ -741,7 +754,7 @@ export class InstitucionService {
       }
     });
 
-    return { creados: filasValidas.length, omitidos };
+    return { creados: filasConHash.length, omitidos };
   }
 
   private async verificarCupoDisponible(
@@ -1028,33 +1041,42 @@ export class InstitucionService {
     };
   }
 
-  private async generarCodigoUnico() {
+  // Genera un código aleatorio único con el prefijo dado, verificando su
+  // existencia con la función que se le pase. Un solo bucle "generar hasta
+  // que no exista" reutilizable para cualquier tabla que necesite un
+  // código único (institucion.codigoUnico, clase.codigoIngreso, etc.).
+  private async generarCodigoConPrefijo(
+    prefijo: string,
+    existeCodigo: (codigo: string) => Promise<boolean>,
+  ): Promise<string> {
     let codigo = '';
     let existe = true;
 
     while (existe) {
-      codigo = `INST-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      existe =
-        (await this.prisma.institucion.findUnique({
-          where: { codigoUnico: codigo },
-        })) !== null;
+      codigo = `${prefijo}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      existe = await existeCodigo(codigo);
     }
 
     return codigo;
   }
 
-  private async generarCodigoIngreso() {
-    let codigo = '';
-    let existe = true;
+  private async generarCodigoUnico() {
+    return this.generarCodigoConPrefijo(
+      'INST',
+      async (codigo) =>
+        (await this.prisma.institucion.findUnique({
+          where: { codigoUnico: codigo },
+        })) !== null,
+    );
+  }
 
-    while (existe) {
-      codigo = `GRUPO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      existe =
+  private async generarCodigoIngreso() {
+    return this.generarCodigoConPrefijo(
+      'GRUPO',
+      async (codigo) =>
         (await this.prisma.clase.findUnique({
           where: { codigoIngreso: codigo },
-        })) !== null;
-    }
-
-    return codigo;
+        })) !== null,
+    );
   }
 }
