@@ -16,6 +16,10 @@ import {
 import { AuthenticatedRequest } from '../auth/auth.types';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InstitucionService } from './institucion.service';
+import { GrupoService } from './grupo.service';
+import { EstudianteService } from './estudiante.service';
+import { EstudianteImportService } from './estudiante-import.service';
+import { ArchivoAlmacenamientoService } from './archivo-almacenamiento.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { logoMulterOptions } from './logo-upload.config';
 import { csvMulterOptions } from './csv-upload.config';
@@ -128,7 +132,13 @@ class UnirseClaseDto {
 @Controller('instituciones')
 @UseGuards(JwtGuard)
 export class InstitucionController {
-  constructor(private readonly institucionService: InstitucionService) {}
+  constructor(
+    private readonly institucionService: InstitucionService,
+    private readonly grupoService: GrupoService,
+    private readonly estudianteService: EstudianteService,
+    private readonly estudianteImportService: EstudianteImportService,
+    private readonly archivoAlmacenamientoService: ArchivoAlmacenamientoService,
+  ) {}
 
   @Get('me')
   obtenerMiInstitucion(@Request() req: AuthenticatedRequest) {
@@ -140,10 +150,7 @@ export class InstitucionController {
     @Body() body: UnirseClaseDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.institucionService.unirseAClase(
-      req.usuario.sub,
-      body.codigoIngreso,
-    );
+    return this.grupoService.unirseAClase(req.usuario.sub, body.codigoIngreso);
   }
 
   @Post()
@@ -194,7 +201,7 @@ export class InstitucionController {
       );
     }
 
-    return this.institucionService.subirLogoDeMiInstitucion(
+    return this.archivoAlmacenamientoService.subirLogoDeMiInstitucion(
       req.usuario.sub,
       archivo,
     );
@@ -202,12 +209,14 @@ export class InstitucionController {
 
   @Delete('me/logo')
   eliminarLogo(@Request() req: AuthenticatedRequest) {
-    return this.institucionService.eliminarLogoDeMiInstitucion(req.usuario.sub);
+    return this.archivoAlmacenamientoService.eliminarLogoDeMiInstitucion(
+      req.usuario.sub,
+    );
   }
 
   @Get('me/estudiantes')
   obtenerEstudiantes(@Request() req: AuthenticatedRequest) {
-    return this.institucionService.obtenerEstudiantesDeMiInstitucion(
+    return this.estudianteService.obtenerEstudiantesDeMiInstitucion(
       req.usuario.sub,
     );
   }
@@ -224,7 +233,7 @@ export class InstitucionController {
     @Body() body: CrearEstudianteDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.institucionService.crearEstudianteEnMiInstitucion(
+    return this.estudianteService.crearEstudianteEnMiInstitucion(
       req.usuario.sub,
       body.nombre,
       body.correo,
@@ -238,7 +247,7 @@ export class InstitucionController {
     @Body() body: AgregarEstudianteExistenteDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.institucionService.agregarEstudianteExistenteAMiInstitucion(
+    return this.estudianteService.agregarEstudianteExistenteAMiInstitucion(
       req.usuario.sub,
       body.correo,
       body.claseId,
@@ -257,7 +266,7 @@ export class InstitucionController {
       throw new BadRequestException('Debes seleccionar un archivo CSV.');
     }
 
-    return this.institucionService.importarEstudiantesCsv(
+    return this.estudianteImportService.importarEstudiantesCsv(
       req.usuario.sub,
       archivo,
       claseId || undefined,
@@ -266,9 +275,7 @@ export class InstitucionController {
 
   @Get('me/grupos')
   obtenerGrupos(@Request() req: AuthenticatedRequest) {
-    return this.institucionService.obtenerGruposDeMiInstitucion(
-      req.usuario.sub,
-    );
+    return this.grupoService.obtenerGruposDeMiInstitucion(req.usuario.sub);
   }
 
   @Post('me/grupos')
@@ -276,7 +283,7 @@ export class InstitucionController {
     @Body() body: CrearGrupoDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.institucionService.crearGrupoEnMiInstitucion(
+    return this.grupoService.crearGrupoEnMiInstitucion(
       req.usuario.sub,
       body.nombre,
       body.grado,
@@ -289,16 +296,12 @@ export class InstitucionController {
     @Body() body: ActualizarGrupoDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.institucionService.actualizarGrupo(
-      req.usuario.sub,
-      id,
-      body.nombre,
-    );
+    return this.grupoService.actualizarGrupo(req.usuario.sub, id, body.nombre);
   }
 
   @Delete('me/grupos/:id')
   eliminarGrupo(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    return this.institucionService.eliminarGrupo(req.usuario.sub, id);
+    return this.grupoService.eliminarGrupo(req.usuario.sub, id);
   }
 
   @Post('me/grupos/:id/estudiantes')
@@ -307,7 +310,7 @@ export class InstitucionController {
     @Body() body: AgregarEstudianteAGrupoDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.institucionService.agregarEstudianteAGrupo(
+    return this.grupoService.agregarEstudianteAGrupo(
       req.usuario.sub,
       id,
       body.estudianteId,
@@ -320,7 +323,7 @@ export class InstitucionController {
     @Param('estudianteId') estudianteId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.institucionService.quitarEstudianteDeGrupo(
+    return this.grupoService.quitarEstudianteDeGrupo(
       req.usuario.sub,
       id,
       estudianteId,
