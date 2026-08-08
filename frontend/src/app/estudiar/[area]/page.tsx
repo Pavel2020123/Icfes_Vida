@@ -2,7 +2,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerToken, API_URL, esRespuestaPlanVencido } from '../../../lib/api';
+import {
+  obtenerToken,
+  esRespuestaPlanVencido,
+  obtenerTemasPorArea,
+  obtenerPreguntasDeSubtema,
+  calificarSimulacroDeArea,
+  marcarProgresoSubtema,
+} from '../../../lib/api';
 import LectorContenido from '../../../components/LectorContenido';
 
 const AREA_NOMBRES: Record<string, string> = {
@@ -278,8 +285,7 @@ export default function AreaPage() {
       return;
     }
 
-    fetch(`${API_URL}/simulacros/temas?area=${area}`)
-      .then(r => r.json())
+    obtenerTemasPorArea(area as string)
       .then(data => {
         setTemas(data.temas ?? []);
         if (data.temas?.length > 0) {
@@ -300,11 +306,7 @@ export default function AreaPage() {
     setRespuestasEstudiante({});
     setResultado(null);
     try {
-      const token = obtenerToken();
-      const res = await fetch(`${API_URL}/admin/preguntas/${subtemaId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const data = await obtenerPreguntasDeSubtema(subtemaId);
       const mezcladas = [...(data ?? [])].sort(() => Math.random() - 0.5).slice(0, 5);
       setPreguntas(mezcladas);
     } catch { }
@@ -326,27 +328,15 @@ export default function AreaPage() {
     if (!subtemaActivo) return;
     setEnviando(true);
     try {
-      const token = obtenerToken();
       const respuestasArray = Object.entries(respuestasEstudiante).map(([preguntaId, respuestaId]) => ({
         preguntaId,
         respuestaId,
       }));
 
-      const res = await fetch(`${API_URL}/simulacros/calificar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          area,
-          respuestas: respuestasArray,
-        }),
-      });
-      const data = await res.json();
+      const { ok, status, data } = await calificarSimulacroDeArea(area as string, respuestasArray);
 
-      if (!res.ok) {
-        if (esRespuestaPlanVencido(res.status, data)) {
+      if (!ok) {
+        if (esRespuestaPlanVencido(status, data)) {
           router.push('/planes?vencido=1');
           return;
         }
@@ -360,17 +350,7 @@ export default function AreaPage() {
       setResultado({ correctas, total });
 
       const porcentaje = Math.round((correctas / total) * 100);
-      await fetch(`${API_URL}/simulacros/progreso`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          subtemaId: subtemaActivo.id,
-          porcentaje,
-        }),
-      });
+      await marcarProgresoSubtema(subtemaActivo.id, porcentaje);
     } catch { }
     setEnviando(false);
   };

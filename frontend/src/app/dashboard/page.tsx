@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerToken, API_URL, obtenerPerfilCompleto } from '../../lib/api';
+import {
+  obtenerToken,
+  obtenerPerfilCompleto,
+  obtenerHistorialSimulacros,
+  obtenerProgresoSimulacros,
+} from '../../lib/api';
 import { RolUsuario } from '../../lib/auth';
 import MenuLateral from '../../components/MenuLateral';
 import MuroDePago from '../../components/MuroDePago';
@@ -83,12 +88,8 @@ export default function DashboardPage() {
     }
 
     Promise.all([
-      fetch(`${API_URL}/simulacros/historial`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()),
-      fetch(`${API_URL}/simulacros/progreso`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then(r => r.json()),
+      obtenerHistorialSimulacros(),
+      obtenerProgresoSimulacros(),
       obtenerPerfilCompleto().catch(() => null),
     ])
       .then(([historialData, progresoData, perfil]) => {

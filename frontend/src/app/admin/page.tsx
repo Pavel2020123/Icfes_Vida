@@ -2,7 +2,28 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { obtenerToken, API_URL } from '../../lib/api';
+import {
+  obtenerToken,
+  obtenerEstadisticasAdmin,
+  obtenerTemasAdmin,
+  obtenerUsuariosAdmin,
+  crearTemaAdmin,
+  eliminarTemaAdmin,
+  crearSubtemaAdmin,
+  eliminarSubtemaAdmin,
+  actualizarContenidoSubtemaAdmin,
+  actualizarInteractivoSubtemaAdmin,
+  obtenerPreguntasAdmin,
+  eliminarPreguntaAdmin,
+  crearPreguntaAdmin,
+  crearPreguntaAleatoriaAdmin,
+  cambiarRolUsuarioAdmin,
+  eliminarUsuarioAdmin,
+  obtenerCalendarioIcfesAdmin,
+  crearFechaCalendarioIcfesAdmin,
+  actualizarFechaCalendarioIcfesAdmin,
+  eliminarFechaCalendarioIcfesAdmin,
+} from '../../lib/api';
 import EditorBloquesContenido from '../../components/EditorBloquesContenido';
 import ProtectedRoute from '../../components/ProtectedRoute';
 
@@ -104,11 +125,7 @@ function ContenidoEditor({ temas, getHeaders, mostrarMensaje, inputStyle, btnSty
   const guardar = async () => {
     if (!subtemaId) { mostrarMensaje('Selecciona un subtema'); return; }
     setGuardando(true);
-    await fetch(`${API_URL}/admin/subtemas/${subtemaId}/contenido`, {
-      method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify({ contenido, videoUrl, imagenUrl }),
-    });
+    await actualizarContenidoSubtemaAdmin(subtemaId, contenido, videoUrl, imagenUrl);
     mostrarMensaje('Contenido guardado');
     setGuardando(false);
   };
@@ -218,14 +235,7 @@ function InteractivoEditor({ temas, getHeaders, mostrarMensaje, inputStyle, btnS
     if (espacios.some(e => e.opciones.some(o => !o.trim()))) { mostrarMensaje('Completa todas las opciones de cada espacio'); return; }
 
     setGuardando(true);
-    await fetch(`${API_URL}/admin/subtemas/${subtemaId}/interactivo`, {
-      method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        tipoInteractivo: 'CLOZE',
-        datosInteractivo: { textoConEspacios, espacios },
-      }),
-    });
+    await actualizarInteractivoSubtemaAdmin(subtemaId, { textoConEspacios, espacios });
     mostrarMensaje('Ejercicio interactivo guardado');
     setGuardando(false);
   };
@@ -313,8 +323,7 @@ function CalendarioEditor({ getHeaders, mostrarMensaje, inputStyle, btnStyle }: 
   const cargar = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/calendario-icfes/admin`, { headers: getHeaders() });
-      setFechas(await res.json());
+      setFechas(await obtenerCalendarioIcfesAdmin());
     } catch {}
     setCargando(false);
   };
@@ -324,14 +333,10 @@ function CalendarioEditor({ getHeaders, mostrarMensaje, inputStyle, btnStyle }: 
 
   const crear = async () => {
     if (!nueva.fechaExamen) { mostrarMensaje('Elige una fecha de examen'); return; }
-    const res = await fetch(`${API_URL}/calendario-icfes/admin`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(nueva),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      mostrarMensaje(err?.message || 'No se pudo guardar la fecha');
+    try {
+      await crearFechaCalendarioIcfesAdmin(nueva);
+    } catch (err) {
+      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo guardar la fecha');
       return;
     }
     mostrarMensaje('Fecha de examen guardada');
@@ -340,18 +345,14 @@ function CalendarioEditor({ getHeaders, mostrarMensaje, inputStyle, btnStyle }: 
   };
 
   const actualizar = async (id: string, fechaExamen: string) => {
-    await fetch(`${API_URL}/calendario-icfes/admin/${id}`, {
-      method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify({ fechaExamen }),
-    });
+    await actualizarFechaCalendarioIcfesAdmin(id, fechaExamen);
     mostrarMensaje('Fecha actualizada');
     cargar();
   };
 
   const eliminar = async (id: string) => {
     if (!confirm('¿Eliminar esta fecha de examen?')) return;
-    await fetch(`${API_URL}/calendario-icfes/admin/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await eliminarFechaCalendarioIcfesAdmin(id);
     mostrarMensaje('Fecha eliminada');
     cargar();
   };
@@ -513,22 +514,17 @@ export default function AdminPage() {
       return;
     }
 
-    const headers = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    };
-
     const cargar = async () => {
       setCargando(true);
       try {
-        const [statsRes, temasRes, usuariosRes] = await Promise.all([
-          fetch(`${API_URL}/admin/estadisticas`, { headers }),
-          fetch(`${API_URL}/admin/temas`, { headers }),
-          fetch(`${API_URL}/admin/usuarios`, { headers }),
+        const [statsData, temasData, usuariosData] = await Promise.all([
+          obtenerEstadisticasAdmin(),
+          obtenerTemasAdmin(),
+          obtenerUsuariosAdmin(),
         ]);
-        setStats(await statsRes.json());
-        setTemas(await temasRes.json());
-        setUsuarios(await usuariosRes.json());
+        setStats(statsData);
+        setTemas(temasData);
+        setUsuarios(usuariosData);
       } catch {
       }
       setCargando(false);
@@ -545,14 +541,14 @@ export default function AdminPage() {
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      const [statsRes, temasRes, usuariosRes] = await Promise.all([
-        fetch(`${API_URL}/admin/estadisticas`, { headers: getHeaders() }),
-        fetch(`${API_URL}/admin/temas`, { headers: getHeaders() }),
-        fetch(`${API_URL}/admin/usuarios`, { headers: getHeaders() }),
+      const [statsData, temasData, usuariosData] = await Promise.all([
+        obtenerEstadisticasAdmin(),
+        obtenerTemasAdmin(),
+        obtenerUsuariosAdmin(),
       ]);
-      setStats(await statsRes.json());
-      setTemas(await temasRes.json());
-      setUsuarios(await usuariosRes.json());
+      setStats(statsData);
+      setTemas(temasData);
+      setUsuarios(usuariosData);
     } catch {
     }
     setCargando(false);

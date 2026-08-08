@@ -13,28 +13,6 @@ export function obtenerUrlLogo(logoUrl?: string | null): string | null {
   return `${API_URL}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`;
 }
 
-export async function loginUsuario(correo: string, contrasena: string) {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: crearEncabezados(),
-    body: JSON.stringify({ correo, contrasena }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error al iniciar sesión');
-  return data;
-}
-
-export async function registrarUsuario(nombre: string, correo: string, contrasena: string) {
-  const res = await fetch(`${API_URL}/auth/registro`, {
-    method: 'POST',
-    headers: crearEncabezados(),
-    body: JSON.stringify({ nombre, correo, contrasena }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error al registrarse');
-  return data;
-}
-
 export function obtenerEncabezadosAutenticacion(): HeadersInit {
   const token = obtenerToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -51,13 +29,55 @@ export function crearEncabezados(json = true): HeadersInit {
   };
 }
 
-export async function obtenerMiInstitucion() {
-  const res = await fetch(`${API_URL}/instituciones/me`, {
-    headers: crearEncabezados(),
-  });
+// Helper central: unifica el patrón fetch → parse JSON → if (!res.ok) throw
+// que antes se repetía en cada función de este archivo (~30 veces). Recibe
+// una ruta relativa (se le antepone API_URL), las opciones normales de
+// fetch, y un mensaje de error por defecto para cuando el backend no manda
+// uno propio en el body. No cambia ningún mensaje de error existente.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function apiFetch<T = any>(
+  ruta: string,
+  opciones: RequestInit = {},
+  mensajeErrorPorDefecto = 'Ocurrió un error inesperado',
+): Promise<T> {
+  const res = await fetch(`${API_URL}${ruta}`, opciones);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error obteniendo la institución');
+  if (!res.ok) {
+    throw new Error(data.message || mensajeErrorPorDefecto);
+  }
   return data;
+}
+
+export async function loginUsuario(correo: string, contrasena: string) {
+  return apiFetch(
+    '/auth/login',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ correo, contrasena }),
+    },
+    'Error al iniciar sesión',
+  );
+}
+
+export async function registrarUsuario(nombre: string, correo: string, contrasena: string) {
+  return apiFetch(
+    '/auth/registro',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ nombre, correo, contrasena }),
+    },
+    'Error al registrarse',
+  );
+}
+
+export async function obtenerMiInstitucion() {
+  return apiFetch(
+    '/instituciones/me',
+    { headers: crearEncabezados() },
+    'Error obteniendo la institución',
+  );
 }
 
 export async function crearInstitucion(
@@ -67,143 +87,154 @@ export async function crearInstitucion(
   colorPrimario?: string,
   colorSecundario?: string,
 ) {
-  const res = await fetch(`${API_URL}/instituciones`, {
-    method: 'POST',
-    headers: crearEncabezados(),
-    body: JSON.stringify({ nombre, mensajeBienvenida, logoUrl, colorPrimario, colorSecundario }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error creando la institución');
-  return data;
+  return apiFetch(
+    '/instituciones',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ nombre, mensajeBienvenida, logoUrl, colorPrimario, colorSecundario }),
+    },
+    'Error creando la institución',
+  );
 }
 
 export async function obtenerEstudiantesInstitucion() {
-  const res = await fetch(`${API_URL}/instituciones/me/estudiantes`, {
-    headers: crearEncabezados(),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error obteniendo los estudiantes');
-  return data;
+  return apiFetch(
+    '/instituciones/me/estudiantes',
+    { headers: crearEncabezados() },
+    'Error obteniendo los estudiantes',
+  );
 }
 
 export async function obtenerAnaliticasInstitucion() {
-  const res = await fetch(`${API_URL}/instituciones/me/analiticas`, {
-    headers: crearEncabezados(),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error obteniendo las analíticas');
-  return data;
+  return apiFetch(
+    '/instituciones/me/analiticas',
+    { headers: crearEncabezados() },
+    'Error obteniendo las analíticas',
+  );
 }
 
 export async function crearEstudianteInstitucion(nombre: string, correo: string, contrasena: string, claseId?: string) {
-  const res = await fetch(`${API_URL}/instituciones/me/estudiantes`, {
-    method: 'POST',
-    headers: crearEncabezados(),
-    body: JSON.stringify({ nombre, correo, contrasena, claseId: claseId || undefined }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error creando el estudiante');
-  return data;
+  return apiFetch(
+    '/instituciones/me/estudiantes',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ nombre, correo, contrasena, claseId: claseId || undefined }),
+    },
+    'Error creando el estudiante',
+  );
 }
 
 export async function agregarEstudianteExistenteInstitucion(correo: string, claseId?: string) {
-  const res = await fetch(`${API_URL}/instituciones/me/estudiantes/agregar`, {
-    method: 'POST',
-    headers: crearEncabezados(),
-    body: JSON.stringify({ correo, claseId: claseId || undefined }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error agregando el estudiante');
-  return data;
+  return apiFetch(
+    '/instituciones/me/estudiantes/agregar',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ correo, claseId: claseId || undefined }),
+    },
+    'Error agregando el estudiante',
+  );
 }
 
+// Multipart/form-data: NO usamos crearEncabezados() porque fijar
+// 'Content-Type': 'application/json' rompería el boundary del form-data.
+// Dejamos que el navegador ponga el Content-Type correcto solo y mandamos
+// únicamente el header de Authorization.
 export async function importarEstudiantesCsvInstitucion(archivo: File, claseId?: string) {
   const formData = new FormData();
   formData.append('archivo', archivo);
   if (claseId) formData.append('claseId', claseId);
 
   const token = obtenerToken();
-  const res = await fetch(`${API_URL}/instituciones/me/estudiantes/importar-csv`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    body: formData,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error importando el archivo CSV');
-  return data;
+  return apiFetch(
+    '/instituciones/me/estudiantes/importar-csv',
+    {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    },
+    'Error importando el archivo CSV',
+  );
 }
 
 export async function agregarEstudianteAGrupo(claseId: string, estudianteId: string) {
-  const res = await fetch(`${API_URL}/instituciones/me/grupos/${claseId}/estudiantes`, {
-    method: 'POST',
-    headers: crearEncabezados(),
-    body: JSON.stringify({ estudianteId }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error agregando el estudiante al grupo');
-  return data;
+  return apiFetch(
+    `/instituciones/me/grupos/${claseId}/estudiantes`,
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ estudianteId }),
+    },
+    'Error agregando el estudiante al grupo',
+  );
 }
 
 export async function quitarEstudianteDeGrupo(claseId: string, estudianteId: string) {
-  const res = await fetch(`${API_URL}/instituciones/me/grupos/${claseId}/estudiantes/${estudianteId}`, {
-    method: 'DELETE',
-    headers: crearEncabezados(),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error quitando el estudiante del grupo');
-  return data;
+  return apiFetch(
+    `/instituciones/me/grupos/${claseId}/estudiantes/${estudianteId}`,
+    {
+      method: 'DELETE',
+      headers: crearEncabezados(),
+    },
+    'Error quitando el estudiante del grupo',
+  );
 }
 
 export async function obtenerGruposInstitucion() {
-  const res = await fetch(`${API_URL}/instituciones/me/grupos`, {
-    headers: crearEncabezados(),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error obteniendo los grupos');
-  return data;
+  return apiFetch(
+    '/instituciones/me/grupos',
+    { headers: crearEncabezados() },
+    'Error obteniendo los grupos',
+  );
 }
 
 export async function crearGrupoInstitucion(nombre: string, grado: 'DECIMO' | 'ONCE') {
-  const res = await fetch(`${API_URL}/instituciones/me/grupos`, {
-    method: 'POST',
-    headers: crearEncabezados(),
-    body: JSON.stringify({ nombre, grado }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error creando el grupo');
-  return data;
+  return apiFetch(
+    '/instituciones/me/grupos',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ nombre, grado }),
+    },
+    'Error creando el grupo',
+  );
 }
 
 export async function actualizarGrupoInstitucion(claseId: string, nombre: string) {
-  const res = await fetch(`${API_URL}/instituciones/me/grupos/${claseId}`, {
-    method: 'PATCH',
-    headers: crearEncabezados(),
-    body: JSON.stringify({ nombre }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error actualizando el grupo');
-  return data;
+  return apiFetch(
+    `/instituciones/me/grupos/${claseId}`,
+    {
+      method: 'PATCH',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ nombre }),
+    },
+    'Error actualizando el grupo',
+  );
 }
 
 export async function eliminarGrupoInstitucion(claseId: string) {
-  const res = await fetch(`${API_URL}/instituciones/me/grupos/${claseId}`, {
-    method: 'DELETE',
-    headers: crearEncabezados(),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error eliminando el grupo');
-  return data;
+  return apiFetch(
+    `/instituciones/me/grupos/${claseId}`,
+    {
+      method: 'DELETE',
+      headers: crearEncabezados(),
+    },
+    'Error eliminando el grupo',
+  );
 }
 
 export async function unirseAClase(codigoIngreso: string) {
-  const res = await fetch(`${API_URL}/instituciones/unirse`, {
-    method: 'POST',
-    headers: crearEncabezados(),
-    body: JSON.stringify({ codigoIngreso }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error al unirse a la clase');
-  return data;
+  return apiFetch(
+    '/instituciones/unirse',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ codigoIngreso }),
+    },
+    'Error al unirse a la clase',
+  );
 }
 
 export async function actualizarInstitucion(
@@ -213,25 +244,21 @@ export async function actualizarInstitucion(
   colorPrimario?: string,
   colorSecundario?: string,
 ) {
-  const res = await fetch(`${API_URL}/instituciones/me`, {
-    method: 'PATCH',
-    headers: crearEncabezados(),
-    body: JSON.stringify({
-      nombre,
-      mensajeBienvenida,
-      logoUrl,
-      colorPrimario,
-      colorSecundario,
-    }),
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || 'Error actualizando la institución');
-  }
-
-  return data;
+  return apiFetch(
+    '/instituciones/me',
+    {
+      method: 'PATCH',
+      headers: crearEncabezados(),
+      body: JSON.stringify({
+        nombre,
+        mensajeBienvenida,
+        logoUrl,
+        colorPrimario,
+        colorSecundario,
+      }),
+    },
+    'Error actualizando la institución',
+  );
 }
 
 // Sube (o reemplaza) el logo real de la institución. Se envía como
@@ -245,34 +272,37 @@ export async function subirLogoInstitucion(archivo: File) {
   formData.append('logo', archivo);
 
   const token = obtenerToken();
-  const res = await fetch(`${API_URL}/instituciones/me/logo`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    body: formData,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error subiendo el logo');
-  return data;
+  return apiFetch(
+    '/instituciones/me/logo',
+    {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    },
+    'Error subiendo el logo',
+  );
 }
 
 export async function eliminarLogoInstitucion() {
-  const res = await fetch(`${API_URL}/instituciones/me/logo`, {
-    method: 'DELETE',
-    headers: crearEncabezados(),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error eliminando el logo');
-  return data;
+  return apiFetch(
+    '/instituciones/me/logo',
+    {
+      method: 'DELETE',
+      headers: crearEncabezados(),
+    },
+    'Error eliminando el logo',
+  );
 }
 
 export async function eliminarInstitucion() {
-  const res = await fetch(`${API_URL}/instituciones/me`, {
-    method: 'DELETE',
-    headers: crearEncabezados(),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error eliminando la institución');
-  return data;
+  return apiFetch(
+    '/instituciones/me',
+    {
+      method: 'DELETE',
+      headers: crearEncabezados(),
+    },
+    'Error eliminando la institución',
+  );
 }
 
 export function guardarToken(token: string) {
@@ -287,18 +317,84 @@ export function cerrarSesion() {
   localStorage.removeItem('saberplus_token');
 }
 
-// ─── MURO DE PAGO (punto 5) ──────────────────────────────────
-export async function obtenerPerfilCompleto() {
-  const res = await fetch(`${API_URL}/auth/perfil`, {
+export async function obtenerHistorialSimulacros() {
+  return apiFetch(
+    '/simulacros/historial',
+    { headers: crearEncabezados() },
+    'Error obteniendo el historial de simulacros',
+  );
+}
+
+export async function obtenerProgresoSimulacros() {
+  return apiFetch(
+    '/simulacros/progreso',
+    { headers: crearEncabezados() },
+    'Error obteniendo el progreso',
+  );
+}
+
+export async function obtenerTemasPorArea(area: string) {
+  return apiFetch(
+    `/simulacros/temas?area=${area}`,
+    {},
+    'Error obteniendo los temas',
+  );
+}
+
+export async function obtenerPreguntasDeSubtema(subtemaId: string) {
+  return apiFetch(
+    `/admin/preguntas/${subtemaId}`,
+    { headers: crearEncabezados() },
+    'Error obteniendo las preguntas',
+  );
+}
+
+export async function marcarProgresoSubtema(subtemaId: string, porcentaje: number) {
+  return apiFetch(
+    '/simulacros/progreso',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ subtemaId, porcentaje }),
+    },
+    'Error guardando el progreso',
+  );
+}
+
+// Caso especial: necesitamos inspeccionar status+data de una respuesta 403
+// SIN que se lance una excepción (para distinguir "plan vencido" de un
+// error genérico). Por eso NO usa apiFetch aquí, a diferencia del resto de
+// funciones de este archivo.
+export async function calificarSimulacroDeArea(
+  area: string,
+  respuestas: { preguntaId: string; respuestaId: string }[],
+) {
+  const res = await fetch(`${API_URL}/simulacros/calificar`, {
+    method: 'POST',
     headers: crearEncabezados(),
+    body: JSON.stringify({ area, respuestas }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error obteniendo el perfil');
-  return data;
+  return { ok: res.ok, status: res.status, data };
+}
+
+// ─── MURO DE PAGO (punto 5) ──────────────────────────────────
+export async function obtenerPerfilCompleto() {
+  return apiFetch(
+    '/auth/perfil',
+    { headers: crearEncabezados() },
+    'Error obteniendo el perfil',
+  );
 }
 
 // El backend responde 403 con { codigo: 'PLAN_VENCIDO', mensaje } cuando la
 // prueba gratis de 3 días de un estudiante individual ya terminó.
+// NOTA: esta función se usa junto a llamadas fetch hechas a mano en
+// simulacro/page.tsx, simulacro-personalizado/page.tsx y
+// estudiar/[area]/page.tsx, que necesitan inspeccionar status+data de una
+// respuesta 403 SIN que se lance una excepción. Por eso no pasa por
+// apiFetch (que siempre lanza en !res.ok) — queda pendiente para cuando
+// migremos esas páginas a la capa de datos.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function esRespuestaPlanVencido(status: number, data: any): boolean {
   return status === 403 && data?.codigo === 'PLAN_VENCIDO';
@@ -308,29 +404,33 @@ export function esRespuestaPlanVencido(status: number, data: any): boolean {
 export async function verificarCorreo(token: string) {
   // El "token" viene siempre de la URL que el usuario abre desde su
   // correo (?token=xxxx), nunca hay que escribirlo ni guardarlo a mano.
-  const res = await fetch(`${API_URL}/auth/verificar-correo`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'No se pudo confirmar el correo');
-  return data;
+  return apiFetch(
+    '/auth/verificar-correo',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    },
+    'No se pudo confirmar el correo',
+  );
 }
 
 export async function reenviarVerificacionCorreo(correo: string) {
-  const res = await fetch(`${API_URL}/auth/reenviar-verificacion`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ correo }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'No se pudo reenviar el correo');
-  return data;
+  return apiFetch(
+    '/auth/reenviar-verificacion',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correo }),
+    },
+    'No se pudo reenviar el correo',
+  );
 }
 
 // El backend responde 403 con { codigo: 'CORREO_NO_VERIFICADO', mensaje }
 // cuando un estudiante individual intenta estudiar sin confirmar su correo.
+// Ver la nota en esRespuestaPlanVencido: mismo motivo para no pasar por
+// apiFetch.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function esRespuestaCorreoNoVerificado(status: number, data: any): boolean {
   return status === 403 && data?.codigo === 'CORREO_NO_VERIFICADO';
@@ -338,31 +438,185 @@ export function esRespuestaCorreoNoVerificado(status: number, data: any): boolea
 
 // ─── RECUPERACIÓN DE CONTRASEÑA (punto 8) ────────────────────
 export async function solicitarRecuperacionContrasena(correo: string) {
-  const res = await fetch(`${API_URL}/auth/solicitar-recuperacion`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ correo }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'No se pudo enviar el correo de recuperación');
-  return data;
+  return apiFetch(
+    '/auth/solicitar-recuperacion',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correo }),
+    },
+    'No se pudo enviar el correo de recuperación',
+  );
 }
 
 export async function restablecerContrasena(token: string, nuevaContrasena: string) {
-  const res = await fetch(`${API_URL}/auth/restablecer-contrasena`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, nuevaContrasena }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'No se pudo restablecer la contraseña');
-  return data;
+  return apiFetch(
+    '/auth/restablecer-contrasena',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, nuevaContrasena }),
+    },
+    'No se pudo restablecer la contraseña',
+  );
 }
 
+// ─── PANEL DE ADMINISTRACIÓN ──────────────────────────────────
+export async function obtenerEstadisticasAdmin() {
+  return apiFetch('/admin/estadisticas', { headers: crearEncabezados() }, 'Error obteniendo estadísticas');
+}
 
+export async function obtenerTemasAdmin() {
+  return apiFetch('/admin/temas', { headers: crearEncabezados() }, 'Error obteniendo los temas');
+}
 
+export async function obtenerUsuariosAdmin() {
+  return apiFetch('/admin/usuarios', { headers: crearEncabezados() }, 'Error obteniendo los usuarios');
+}
 
+export async function crearTemaAdmin(nombre: string, area: string) {
+  return apiFetch(
+    '/admin/temas',
+    { method: 'POST', headers: crearEncabezados(), body: JSON.stringify({ nombre, area }) },
+    'Error creando el tema',
+  );
+}
 
+export async function eliminarTemaAdmin(id: string) {
+  return apiFetch(`/admin/temas/${id}`, { method: 'DELETE', headers: crearEncabezados() }, 'Error eliminando el tema');
+}
 
+export async function crearSubtemaAdmin(nombre: string, temaId: string) {
+  return apiFetch(
+    '/admin/subtemas',
+    { method: 'POST', headers: crearEncabezados(), body: JSON.stringify({ nombre, temaId }) },
+    'Error creando el subtema',
+  );
+}
 
+export async function eliminarSubtemaAdmin(id: string) {
+  return apiFetch(`/admin/subtemas/${id}`, { method: 'DELETE', headers: crearEncabezados() }, 'Error eliminando el subtema');
+}
 
+export async function actualizarContenidoSubtemaAdmin(
+  subtemaId: string,
+  contenido: string,
+  videoUrl: string,
+  imagenUrl: string,
+) {
+  return apiFetch(
+    `/admin/subtemas/${subtemaId}/contenido`,
+    {
+      method: 'PATCH',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ contenido, videoUrl, imagenUrl }),
+    },
+    'Error guardando el contenido',
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function actualizarInteractivoSubtemaAdmin(subtemaId: string, datosInteractivo: any) {
+  return apiFetch(
+    `/admin/subtemas/${subtemaId}/interactivo`,
+    {
+      method: 'PATCH',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ tipoInteractivo: 'CLOZE', datosInteractivo }),
+    },
+    'Error guardando el ejercicio interactivo',
+  );
+}
+
+export async function obtenerPreguntasAdmin(subtemaId: string) {
+  return apiFetch(`/admin/preguntas/${subtemaId}`, { headers: crearEncabezados() }, 'Error obteniendo las preguntas');
+}
+
+export async function eliminarPreguntaAdmin(id: string) {
+  return apiFetch(`/admin/preguntas/${id}`, { method: 'DELETE', headers: crearEncabezados() }, 'Error eliminando la pregunta');
+}
+
+interface RespuestaPreguntaAdmin {
+  texto: string;
+  esCorrecta: boolean;
+}
+
+export async function crearPreguntaAdmin(
+  enunciado: string,
+  subtemaId: string,
+  dificultad: string,
+  imagenUrl: string | null,
+  respuestas: RespuestaPreguntaAdmin[],
+) {
+  return apiFetch(
+    '/admin/preguntas',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ enunciado, subtemaId, dificultad, imagenUrl, respuestas }),
+    },
+    'Error creando la pregunta',
+  );
+}
+
+export async function crearPreguntaAleatoriaAdmin(
+  area: string,
+  enunciado: string,
+  imagenUrl: string | null,
+  respuestas: RespuestaPreguntaAdmin[],
+) {
+  return apiFetch(
+    '/admin/preguntas-aleatorias',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ area, enunciado, imagenUrl, respuestas }),
+    },
+    'Error agregando la pregunta al banco',
+  );
+}
+
+export async function cambiarRolUsuarioAdmin(usuarioId: string, rol: string) {
+  return apiFetch(
+    `/admin/usuarios/${usuarioId}/rol`,
+    { method: 'PATCH', headers: crearEncabezados(), body: JSON.stringify({ rol }) },
+    'Error actualizando el rol',
+  );
+}
+
+export async function eliminarUsuarioAdmin(usuarioId: string) {
+  return apiFetch(`/admin/usuarios/${usuarioId}`, { method: 'DELETE', headers: crearEncabezados() }, 'No se pudo eliminar el usuario');
+}
+
+// ─── CALENDARIO ICFES (admin) ─────────────────────────────────
+export async function obtenerCalendarioIcfesAdmin() {
+  return apiFetch('/calendario-icfes/admin', { headers: crearEncabezados() }, 'Error obteniendo el calendario');
+}
+
+export async function crearFechaCalendarioIcfesAdmin(datos: {
+  anio: number;
+  calendario: string;
+  fechaExamen: string;
+}) {
+  return apiFetch(
+    '/calendario-icfes/admin',
+    { method: 'POST', headers: crearEncabezados(), body: JSON.stringify(datos) },
+    'No se pudo guardar la fecha',
+  );
+}
+
+export async function actualizarFechaCalendarioIcfesAdmin(id: string, fechaExamen: string) {
+  return apiFetch(
+    `/calendario-icfes/admin/${id}`,
+    { method: 'PATCH', headers: crearEncabezados(), body: JSON.stringify({ fechaExamen }) },
+    'No se pudo actualizar la fecha',
+  );
+}
+
+export async function eliminarFechaCalendarioIcfesAdmin(id: string) {
+  return apiFetch(
+    `/calendario-icfes/admin/${id}`,
+    { method: 'DELETE', headers: crearEncabezados() },
+    'No se pudo eliminar la fecha',
+  );
+}
