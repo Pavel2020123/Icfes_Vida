@@ -562,16 +562,14 @@ export default function AdminPage() {
   // ─── LISTAR / ELIMINAR PREGUNTAS ────────────────────────────
   const cargarPreguntasDeSubtema = async (subtemaId: string) => {
     if (!subtemaId) { setPreguntasSubtema([]); return; }
-    const res = await fetch(`${API_URL}/admin/preguntas/${subtemaId}`, { headers: getHeaders() });
-    setPreguntasSubtema(await res.json());
+    setPreguntasSubtema(await obtenerPreguntasAdmin(subtemaId));
   };
 
   const cargarPreguntasDelBanco = async (area: string) => {
     const temaBanco = temas.find(t => t.nombre === 'Banco General' && t.area === area);
     const subtemaBanco = temaBanco?.subtemas[0];
     if (!subtemaBanco) { setPreguntasBanco([]); return; }
-    const res = await fetch(`${API_URL}/admin/preguntas/${subtemaBanco.id}`, { headers: getHeaders() });
-    setPreguntasBanco(await res.json());
+    setPreguntasBanco(await obtenerPreguntasAdmin(subtemaBanco.id));
   };
 
   useEffect(() => {
@@ -588,7 +586,7 @@ export default function AdminPage() {
 
   const eliminarPreguntaSubtema = async (id: string) => {
     if (!confirm('¿Eliminar esta pregunta?')) return;
-    await fetch(`${API_URL}/admin/preguntas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await eliminarPreguntaAdmin(id);
     mostrarMensaje('Pregunta eliminada');
     cargarPreguntasDeSubtema(subtemaSeleccionado);
     cargarDatos();
@@ -596,7 +594,7 @@ export default function AdminPage() {
 
   const eliminarPreguntaBanco = async (id: string) => {
     if (!confirm('¿Eliminar esta pregunta?')) return;
-    await fetch(`${API_URL}/admin/preguntas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await eliminarPreguntaAdmin(id);
     mostrarMensaje('Pregunta eliminada');
     cargarPreguntasDelBanco(nuevaPreguntaAleatoria.area);
     cargarDatos();
@@ -604,11 +602,7 @@ export default function AdminPage() {
 
   const crearTema = async () => {
     if (!nuevoTema.nombre) return;
-    await fetch(`${API_URL}/admin/temas`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({ nombre: nuevoTema.nombre, area: nuevoTema.area }),
-    });
+    await crearTemaAdmin(nuevoTema.nombre, nuevoTema.area);
     setNuevoTema({ nombre: '', area: 'MATEMATICAS' });
     mostrarMensaje('Tema creado');
     cargarDatos();
@@ -616,11 +610,7 @@ export default function AdminPage() {
 
   const crearSubtema = async () => {
     if (!nuevoSubtema.nombre || !nuevoSubtema.temaId) return;
-    await fetch(`${API_URL}/admin/subtemas`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(nuevoSubtema),
-    });
+    await crearSubtemaAdmin(nuevoSubtema.nombre, nuevoSubtema.temaId);
     setNuevoSubtema({ nombre: '', temaId: '' });
     mostrarMensaje('Subtema creado');
     cargarDatos();
@@ -628,14 +618,14 @@ export default function AdminPage() {
 
   const eliminarTema = async (id: string) => {
     if (!confirm('¿Eliminar este tema y todos sus subtemas y preguntas?')) return;
-    await fetch(`${API_URL}/admin/temas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await eliminarTemaAdmin(id);
     mostrarMensaje('Tema eliminado');
     cargarDatos();
   };
 
   const eliminarSubtema = async (id: string) => {
     if (!confirm('¿Eliminar este subtema y sus preguntas?')) return;
-    await fetch(`${API_URL}/admin/subtemas/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await eliminarSubtemaAdmin(id);
     mostrarMensaje('Subtema eliminado');
     cargarDatos();
   };
@@ -655,17 +645,13 @@ export default function AdminPage() {
       return;
     }
 
-    await fetch(`${API_URL}/admin/preguntas`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        enunciado: nuevaPregunta.enunciado,
-        subtemaId: subtemaSeleccionado,
-        dificultad: nuevaPregunta.dificultad,
-        imagenUrl: nuevaPregunta.imagenes || null,
-        respuestas: nuevaPregunta.respuestas,
-      }),
-    });
+    await crearPreguntaAdmin(
+      nuevaPregunta.enunciado,
+      subtemaSeleccionado,
+      nuevaPregunta.dificultad,
+      nuevaPregunta.imagenes || null,
+      nuevaPregunta.respuestas,
+    );
 
     setNuevaPregunta({
       enunciado: '',
@@ -697,16 +683,12 @@ export default function AdminPage() {
       return;
     }
 
-    await fetch(`${API_URL}/admin/preguntas-aleatorias`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        area: nuevaPreguntaAleatoria.area,
-        enunciado: nuevaPreguntaAleatoria.enunciado,
-        imagenUrl: nuevaPreguntaAleatoria.imagenes || null,
-        respuestas: nuevaPreguntaAleatoria.respuestas,
-      }),
-    });
+    await crearPreguntaAleatoriaAdmin(
+      nuevaPreguntaAleatoria.area,
+      nuevaPreguntaAleatoria.enunciado,
+      nuevaPreguntaAleatoria.imagenes || null,
+      nuevaPreguntaAleatoria.respuestas,
+    );
 
     setNuevaPreguntaAleatoria({
       area: nuevaPreguntaAleatoria.area,
@@ -724,11 +706,7 @@ export default function AdminPage() {
   };
 
   const cambiarRol = async (usuarioId: string, rol: string) => {
-    await fetch(`${API_URL}/admin/usuarios/${usuarioId}/rol`, {
-      method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify({ rol }),
-    });
+    await cambiarRolUsuarioAdmin(usuarioId, rol);
     mostrarMensaje('Rol actualizado');
     cargarDatos();
   };
@@ -737,13 +715,10 @@ export default function AdminPage() {
     if (!confirm(`¿Eliminar la cuenta de ${nombreUsuario}? Esta acción no se puede deshacer.`)) {
       return;
     }
-    const res = await fetch(`${API_URL}/admin/usuarios/${usuarioId}`, {
-      method: 'DELETE',
-      headers: getHeaders(),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      mostrarMensaje(data.message || 'No se pudo eliminar el usuario');
+    try {
+      await eliminarUsuarioAdmin(usuarioId);
+    } catch (err) {
+      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo eliminar el usuario');
       return;
     }
     mostrarMensaje('Usuario eliminado');
