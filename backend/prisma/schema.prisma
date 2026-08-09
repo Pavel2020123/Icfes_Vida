@@ -49,61 +49,101 @@ model ClaseEstudiante {
 }
 
 model Institucion {
-  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre           String    @db.VarChar(255)
-  codigoUnico      String    @unique @db.VarChar(50)
-  planActual       String?   @default("GRATIS") @db.VarChar(50)
-  logoUrl          String?   @db.VarChar(255)
-  colorPrimario    String?   @db.VarChar(20)
-  colorSecundario  String?   @db.VarChar(20)
-  mensajeBienvenida String?  @db.Text
-  imagenPortada    String?   @db.VarChar(255)
-  limiteGrado10    Int?
-  limiteGrado11    Int?
+  id                   String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre               String          @db.VarChar(255)
+  codigoUnico          String          @unique @db.VarChar(50)
+  planActual           String?         @default("GRATIS") @db.VarChar(50)
+  logoUrl              String?         @db.VarChar(255)
+  colorPrimario        String?         @db.VarChar(20)
+  colorSecundario      String?         @db.VarChar(20)
+  mensajeBienvenida    String?         @db.Text
+  imagenPortada        String?         @db.VarChar(255)
+  limiteGrado10        Int?
+  limiteGrado11        Int?
   // Calendario ICFES que rige a este colegio (define contra qué fecha
   // de examen se calcula la vigencia del plan institucional). Punto 6.
-  calendarioIcfes  CalendarioTipo? @default(A)
-  fechaVencimientoPlan DateTime? @db.Timestamp(6)
-  Clase            Clase[]
-  Usuario          Usuario[]
+  calendarioIcfes      CalendarioTipo? @default(A)
+  fechaVencimientoPlan DateTime?       @db.Timestamp(6)
+  Clase                Clase[]
+  Usuario              Usuario[]
 }
 
 model Usuario {
-  id              String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre          String              @db.VarChar(255)
-  correo          String              @unique @db.VarChar(255)
-  contrasenaHash  String
-  rol             RolUsuario?         @default(ESTUDIANTE)
-  xpTotal         Int?                @default(0)
-  fechaCreacion   DateTime?           @default(now()) @db.Timestamp(6)
-  fechaVencimientoPlan DateTime?      @db.Timestamp(6)
+  id                      String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre                  String               @db.VarChar(255)
+  correo                  String               @unique @db.VarChar(255)
+  contrasenaHash          String
+  rol                     RolUsuario?          @default(ESTUDIANTE)
+  xpTotal                 Int?                 @default(0)
+  fechaCreacion           DateTime?            @default(now()) @db.Timestamp(6)
+  fechaVencimientoPlan    DateTime?            @db.Timestamp(6)
   // Calendario ICFES del estudiante individual (A o B). Solo aplica
   // cuando no pertenece a institución; si pertenece, hereda el de su
   // colegio. Punto 6.
-  calendarioIcfes CalendarioTipo?     @default(A)
+  calendarioIcfes         CalendarioTipo?      @default(A)
   // Verificación de correo (punto 7): evita que alguien reinicie la
   // prueba gratis de 3 días registrándose con correos falsos.
-  correoVerificado        Boolean?  @default(false)
-  tokenVerificacion       String?   @unique @db.VarChar(255)
-  tokenVerificacionExpira DateTime? @db.Timestamp(6)
+  correoVerificado        Boolean?             @default(false)
+  tokenVerificacion       String?              @unique @db.VarChar(255)
+  tokenVerificacionExpira DateTime?            @db.Timestamp(6)
   // Recuperación de contraseña (punto 8): token de un solo uso y vida
   // corta para que quien olvidó su contraseña elija una nueva sin
   // necesitar acceso previo a la cuenta.
-  tokenRecuperacion       String?   @unique @db.VarChar(255)
-  tokenRecuperacionExpira DateTime? @db.Timestamp(6)
-  institucionId   String?             @db.Uuid
-  fotoPerfil      String?
-  descripcion     String?
-  ClaseEstudiante ClaseEstudiante[]
-  Institucion     Institucion?        @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
-  resultados      ResultadoSimulacro[]
-  progresotemas   ProgresoTema[]
+  tokenRecuperacion       String?              @unique @db.VarChar(255)
+  tokenRecuperacionExpira DateTime?            @db.Timestamp(6)
+  institucionId           String?              @db.Uuid
+  fotoPerfil              String?
+  descripcion             String?
+  // Grado del estudiante individual (punto 9): sólo se usa para calcular
+  // el precio en la pasarela de pago (Individual: $25.000 g10 / $35.000
+  // g11, ver tabla de precios del roadmap). Los estudiantes de una
+  // institución heredan el grado de su Clase y no necesitan este campo.
+  grado                   Grado?
+  ClaseEstudiante         ClaseEstudiante[]
+  Institucion             Institucion?         @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
+  resultados              ResultadoSimulacro[]
+  progresotemas           ProgresoTema[]
+  PagoOrden               PagoOrden[]
 }
 
 enum RolUsuario {
   ESTUDIANTE
   PROFESOR
   ADMIN
+}
+
+// --- MÓDULO: PASARELA DE PAGO (ePayco) — Punto 9 ---
+
+enum EstadoPago {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  PENDIENTE_BANCO
+  FALLIDA
+}
+
+// Una orden por cada intento de pago del muro de pago del estudiante
+// individual. Se crea en PENDIENTE antes de mandar al estudiante a
+// ePayco, y el webhook de confirmación la actualiza según el resultado
+// real de la transacción. La factura (`factura`) es el identificador
+// que viaja a ePayco como x_id_invoice y vuelve en el webhook, así que
+// es la llave para encontrar la orden de vuelta sin depender de sesión.
+model PagoOrden {
+  id                 String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  factura            String     @unique @db.VarChar(50)
+  usuarioId          String     @db.Uuid
+  Usuario            Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pagoorden_usuario")
+  grado              Grado
+  monto              Int
+  moneda             String     @default("COP") @db.VarChar(10)
+  estado             EstadoPago @default(PENDIENTE)
+  refPayco           String?    @db.VarChar(50)
+  transaccionId      String?    @db.VarChar(100)
+  motivoRespuesta    String?    @db.Text
+  fechaCreacion      DateTime   @default(now()) @db.Timestamp(6)
+  fechaActualizacion DateTime   @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([usuarioId])
 }
 
 // --- MÓDULO: BANCO INTELIGENTE DE PREGUNTAS ---
@@ -148,14 +188,14 @@ model Subtema {
 }
 
 model Pregunta {
-  id                     String     @id @default(uuid())
-  enunciado              String     @db.Text
+  id                     String      @id @default(uuid())
+  enunciado              String      @db.Text
   imagenUrl              String?
-  dificultad             Dificultad @default(MEDIO)
-  porcentajeAciertos     Float      @default(0.0)
-  tiempoPromedioSegundos Int        @default(0)
+  dificultad             Dificultad  @default(MEDIO)
+  porcentajeAciertos     Float       @default(0.0)
+  tiempoPromedioSegundos Int         @default(0)
   subtemaId              String
-  subtema                Subtema    @relation(fields: [subtemaId], references: [id])
+  subtema                Subtema     @relation(fields: [subtemaId], references: [id])
   respuestas             Respuesta[]
 }
 
@@ -170,27 +210,27 @@ model Respuesta {
 // --- MÓDULO: RESULTADOS DE SIMULACROS ---
 
 model ResultadoSimulacro {
-  id              String    @id @default(uuid())
-  usuarioId       String    @db.Uuid
-  usuario         Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  area            AreaIcfes
-  totalPreguntas  Int
+  id                  String    @id @default(uuid())
+  usuarioId           String    @db.Uuid
+  usuario             Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  area                AreaIcfes
+  totalPreguntas      Int
   respuestasCorrectas Int
-  puntaje         Float     // Porcentaje 0-100
-  xpGanado        Int       @default(0)
-  fechaRealizado  DateTime  @default(now())
+  puntaje             Float // Porcentaje 0-100
+  xpGanado            Int       @default(0)
+  fechaRealizado      DateTime  @default(now())
 }
 
 model ProgresoTema {
-  id          String   @id @default(uuid())
-  usuarioId   String   @db.Uuid
-  subtemaId   String
-  completado  Boolean  @default(false)
-  porcentaje  Int      @default(0)
-  fechaVisto  DateTime @default(now())
-  
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  subtema     Subtema  @relation(fields: [subtemaId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  usuarioId  String   @db.Uuid
+  subtemaId  String
+  completado Boolean  @default(false)
+  porcentaje Int      @default(0)
+  fechaVisto DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  subtema Subtema @relation(fields: [subtemaId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, subtemaId])
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import BotonPagoEpayco from './BotonPagoEpayco';
 
 export default function MuroDePago() {
   return (
@@ -26,23 +27,29 @@ export default function MuroDePago() {
         <h1 style={{ fontSize: 22, fontWeight: 800, color: '#146C94', margin: '0 0 12px' }}>
           Tu prueba gratis de 3 días terminó
         </h1>
-        <p style={{ fontSize: 15, color: '#555', lineHeight: 1.5, margin: '0 0 28px' }}>
-          Activa un plan para seguir practicando, viendo tus temas y presentando simulacros.
+        <p style={{ fontSize: 15, color: '#555', lineHeight: 1.5, margin: '0 0 24px' }}>
+          Activa tu plan según tu grado para seguir practicando, viendo tus temas y presentando simulacros.
         </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+          <BotonPagoEpayco grado="ONCE" etiqueta="Activar Grado 11" precio="$35.000" destacado />
+          <BotonPagoEpayco grado="DECIMO" etiqueta="Activar Grado 10" precio="$25.000" />
+        </div>
+
+        <p style={{ fontSize: 12, color: '#999', margin: '0 0 8px' }}>
+          Vas a pagar en la página segura de ePayco y volverás aquí automáticamente.
+        </p>
+
         <Link
           href="/planes"
           style={{
-            display: 'inline-block',
-            backgroundColor: 'var(--color-primario, #146C94)',
-            color: '#ffffff',
-            fontWeight: 700,
-            fontSize: 15,
-            padding: '12px 28px',
-            borderRadius: 10,
-            textDecoration: 'none',
+            fontSize: 13,
+            color: 'var(--color-primario, #146C94)',
+            fontWeight: 600,
+            textDecoration: 'underline',
           }}
         >
-          Ver planes
+          Ver todos los planes
         </Link>
       </div>
     </div>

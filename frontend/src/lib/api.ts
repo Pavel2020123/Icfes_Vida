@@ -620,3 +620,41 @@ export async function eliminarFechaCalendarioIcfesAdmin(id: string) {
     'No se pudo eliminar la fecha',
   );
 }
+
+// ─── PAGOS (ePayco) — punto 9: muro de pago del estudiante individual ───
+export interface DatosCheckoutEpayco {
+  factura: string;
+  publicKey: string;
+  test: boolean;
+  amount: number;
+  currency: string;
+  country: string;
+  name: string;
+  description: string;
+  email: string;
+  nombre: string;
+}
+
+export async function crearOrdenPagoIndividual(grado: 'DECIMO' | 'ONCE') {
+  return apiFetch<DatosCheckoutEpayco>(
+    '/pagos/crear-orden',
+    { method: 'POST', headers: crearEncabezados(), body: JSON.stringify({ grado }) },
+    'No se pudo iniciar el pago',
+  );
+}
+
+export interface EstadoOrdenPago {
+  factura: string;
+  estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'PENDIENTE_BANCO' | 'FALLIDA';
+  monto: number;
+  grado: 'DECIMO' | 'ONCE';
+  fechaActualizacion: string;
+}
+
+export async function obtenerEstadoOrdenPago(factura: string) {
+  return apiFetch<EstadoOrdenPago>(
+    `/pagos/estado/${factura}`,
+    { headers: crearEncabezados() },
+    'No se pudo consultar el estado del pago',
+  );
+}
