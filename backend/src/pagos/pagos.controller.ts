@@ -11,7 +11,6 @@ import {
 import { IsIn } from 'class-validator';
 import { PagosService } from './pagos.service';
 import { JwtGuard } from '../auth/jwt.guard';
-import { EmailVerificadoGuard } from '../auth/email-verificado.guard';
 import { AuthenticatedRequest } from '../auth/auth.types';
 
 class CrearOrdenDto {
@@ -23,9 +22,11 @@ class CrearOrdenDto {
 export class PagosController {
   constructor(private readonly pagosService: PagosService) {}
 
-  // El estudiante debe tener el correo verificado antes de poder pagar
-  // (mismo requisito que para estudiar, ver EmailVerificadoGuard).
-  @UseGuards(JwtGuard, EmailVerificadoGuard)
+  // Sin EmailVerificadoGuard a propósito: la verificación de correo
+  // existe para no dejar reiniciar la prueba GRATIS con correos falsos
+  // (punto 7), no para bloquear a alguien que ya va a pagar de verdad.
+  // Solo necesitamos que tenga sesión (JwtGuard).
+  @UseGuards(JwtGuard)
   @Post('crear-orden')
   crearOrden(
     @Body() body: CrearOrdenDto,
