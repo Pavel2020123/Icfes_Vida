@@ -658,3 +658,28 @@ export async function obtenerEstadoOrdenPago(factura: string) {
     'No se pudo consultar el estado del pago',
   );
 }
+
+// ─── PUNTO 11 DEL ROADMAP: formulario "Hablar con ventas" ───────
+export interface DatosLeadVentas {
+  nombreColegio: string;
+  nombreContacto: string;
+  correo: string;
+  telefono?: string;
+  ciudad?: string;
+  linea: 'ONCE' | 'BACHILLERATO';
+  plan: 'Básico' | 'Plus' | 'Colegio';
+  numeroEstudiantesAprox?: number;
+  mensaje?: string;
+}
+
+export async function crearLeadVentas(datos: DatosLeadVentas) {
+  return apiFetch<{ ok: boolean; id: string }>(
+    '/ventas/contacto',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify(datos),
+    },
+    'No se pudo enviar tu solicitud. Intenta de nuevo.',
+  );
+}

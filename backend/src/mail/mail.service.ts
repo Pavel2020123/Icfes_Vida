@@ -71,4 +71,52 @@ export class MailService {
       );
     }
   }
+
+  // Punto 11 del roadmap: aviso interno cuando un director de colegio
+  // llena el formulario "Hablar con ventas". No es correo transaccional
+  // para el lead — el lead no recibe nada, solo el equipo de ventas.
+  async enviarNotificacionNuevoLead(lead: {
+    id: string;
+    nombreColegio: string;
+    nombreContacto: string;
+    correo: string;
+    telefono?: string | null;
+    ciudad?: string | null;
+    linea: string;
+    plan: string;
+    numeroEstudiantesAprox?: number | null;
+    mensaje?: string | null;
+  }) {
+    const correoDestino =
+      process.env.VENTAS_NOTIFICACION_CORREO || 'ventas@icfesvida.com';
+
+    try {
+      await this.transporter.sendMail({
+        from: process.env.MAIL_FROM || '"ICFES Vida" <no-reply@icfesvida.com>',
+        to: correoDestino,
+        subject: `Nuevo lead: ${lead.nombreColegio} — ${lead.linea} ${lead.plan}`,
+        html: `
+          <p>Nuevo colegio interesado en un plan institucional.</p>
+          <ul>
+            <li><strong>Colegio:</strong> ${lead.nombreColegio}</li>
+            <li><strong>Contacto:</strong> ${lead.nombreContacto}</li>
+            <li><strong>Correo:</strong> ${lead.correo}</li>
+            <li><strong>Teléfono:</strong> ${lead.telefono || '—'}</li>
+            <li><strong>Ciudad:</strong> ${lead.ciudad || '—'}</li>
+            <li><strong>Línea / plan:</strong> ${lead.linea} ${lead.plan}</li>
+            <li><strong>Estudiantes aprox.:</strong> ${lead.numeroEstudiantesAprox ?? '—'}</li>
+            <li><strong>Mensaje:</strong> ${lead.mensaje || '—'}</li>
+          </ul>
+          <p>ID del lead: ${lead.id}</p>
+        `,
+      });
+    } catch (error) {
+      // No tumbamos la creación del lead si el correo de aviso falla:
+      // el admin igual puede verlo en /ventas/admin.
+      this.logger.error(
+        `No se pudo enviar el aviso de nuevo lead (${lead.id})`,
+        error as Error,
+      );
+    }
+  }
 }

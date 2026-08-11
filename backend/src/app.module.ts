@@ -7,6 +7,7 @@ import { AdminModule } from './admin/admin.module';
 import { InstitucionModule } from './institucion/institucion.module';
 import { CalendarioIcfesModule } from './calendario-icfes/calendario-icfes.module';
 import { PagosModule } from './pagos/pagos.module';
+import { VentasModule } from './ventas/ventas.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PagosModule } from './pagos/pagos.module';
     InstitucionModule,
     CalendarioIcfesModule,
     PagosModule,
+    VentasModule,
   ],
   controllers: [AppController],
 })

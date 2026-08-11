@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Logotipo from '../../components/Logotipo';
 import BotonPagoEpayco from '../../components/BotonPagoEpayco';
+import FormularioVentas from '../../components/FormularioVentas';
 
 // ─── PUNTO 10 DEL ROADMAP ───────────────────────────────────────
 // Página de planes rediseñada con los nombres/precios OFICIALES de
@@ -15,11 +16,9 @@ import BotonPagoEpayco from '../../components/BotonPagoEpayco';
 //  2) Institución (colegio) → NO hay autoregistro (ver "Flujo de
 //     cotización" del roadmap): el director habla con ventas, el
 //     trato se cierra por fuera, y luego el admin crea la cuenta
-//     manualmente (punto 12). El CTA "Hablar con ventas" de abajo es
-//     un mailto temporal — el formulario real que capture el lead es
-//     el punto 11, todavía pendiente.
-
-const CORREO_VENTAS = 'ventas@icfesvida.com';
+//     manualmente (punto 12). El CTA "Hablar con ventas" abre el
+//     formulario del punto 11, que guarda el lead en la base de
+//     datos (antes era un mailto temporal).
 
 type Audiencia = 'estudiante' | 'colegio';
 type Linea = 'once' | 'bachillerato';
@@ -54,18 +53,12 @@ const PLANES_BACHILLERATO: PlanInstitucional[] = [
   { nombre: 'Colegio', cupos: 'Sin límite de cupos', precio: 'Cotización directa', cotizacionDirecta: true, destacado: false },
 ];
 
-function enlaceVentas(linea: Linea, plan: string): string {
-  const nombreLinea = linea === 'once' ? 'Once' : 'Bachillerato';
-  const asunto = encodeURIComponent(`Cotización plan ${nombreLinea} ${plan} — ICFES Vida`);
-  const cuerpo = encodeURIComponent(
-    `Hola,\n\nMi institución está interesada en el plan ${nombreLinea} ${plan}.\n\nNombre del colegio:\nNúmero aproximado de estudiantes:\nCiudad:\n\nGracias.`,
-  );
-  return `mailto:${CORREO_VENTAS}?subject=${asunto}&body=${cuerpo}`;
-}
-
 export default function PlanesPage() {
   const [audiencia, setAudiencia] = useState<Audiencia>('estudiante');
   const [linea, setLinea] = useState<Linea>('once');
+  const [planVentasSeleccionado, setPlanVentasSeleccionado] = useState<
+    PlanInstitucional['nombre'] | null
+  >(null);
 
   const planesInstitucionales = linea === 'once' ? PLANES_ONCE : PLANES_BACHILLERATO;
   const audienciaIndex = Object.keys(AUDIENCIA_LABELS).indexOf(audiencia);
@@ -265,23 +258,25 @@ export default function PlanesPage() {
                     {plan.precio}
                   </span>
                 </div>
-                
-                <a
-                  href={enlaceVentas(linea, plan.nombre)}
+
+                <button
+                  onClick={() => setPlanVentasSeleccionado(plan.nombre)}
                   style={{
                     display: 'block',
+                    width: '100%',
                     textAlign: 'center',
                     backgroundColor: plan.destacado ? '#8DD8FF' : '#146C94',
                     color: plan.destacado ? '#1a2a3a' : '#ffffff',
                     padding: '13px',
                     borderRadius: 10,
-                    textDecoration: 'none',
+                    border: 'none',
                     fontWeight: 700,
                     fontSize: 15,
+                    cursor: 'pointer',
                   }}
                 >
                   Hablar con ventas
-                </a>
+                </button>
               </div>
             ))}
           </div>
@@ -302,6 +297,15 @@ export default function PlanesPage() {
           © 2026 SaberPlus. Todos los derechos reservados.
         </p>
       </footer>
+
+      {/* ─── PUNTO 11: formulario "Hablar con ventas" ─────────── */}
+      <FormularioVentas
+        abierto={planVentasSeleccionado !== null}
+        onCerrar={() => setPlanVentasSeleccionado(null)}
+        linea={linea === 'once' ? 'ONCE' : 'BACHILLERATO'}
+        lineaEtiqueta={linea === 'once' ? 'Once' : 'Bachillerato'}
+        plan={planVentasSeleccionado ?? 'Básico'}
+      />
     </div>
   );
 }
