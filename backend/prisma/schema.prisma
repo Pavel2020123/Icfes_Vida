@@ -112,6 +112,30 @@ enum RolUsuario {
   ADMIN
 }
 
+// --- MÓDULO: LEADS DE VENTAS ---
+
+enum LineaInteres {
+  ONCE
+  BACHILLERATO
+}
+
+model LeadVentas {
+  id                      String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombreColegio           String       @db.VarChar(255)
+  nombreContacto          String       @db.VarChar(255)
+  correo                  String       @db.VarChar(255)
+  telefono                String?      @db.VarChar(50)
+  ciudad                  String?      @db.VarChar(100)
+  linea                   LineaInteres
+  plan                    String       @db.VarChar(50)
+  numeroEstudiantesAprox  Int?
+  mensaje                 String?      @db.Text
+  atendido                Boolean      @default(false)
+  fechaCreacion           DateTime     @default(now()) @db.Timestamp(6)
+
+  @@index([atendido, fechaCreacion])
+}
+
 // --- MÓDULO: PASARELA DE PAGO (ePayco) — Punto 9 ---
 
 enum EstadoPago {
