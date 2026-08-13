@@ -683,3 +683,14 @@ export async function crearLeadVentas(datos: DatosLeadVentas) {
     'No se pudo enviar tu solicitud. Intenta de nuevo.',
   );
 }
+
+export async function obtenerLeadsVentasAdmin() {
+  return apiFetch('/ventas/admin', { headers: crearEncabezados() }, 'No se pudieron cargar las solicitudes de ventas');
+}
+
+export async function crearInstitucionDesdeLeadAdmin(datos: {
+  leadId: string; contrasenaTemporal: string; planActual?: string;
+  limiteGrado10?: number; limiteGrado11?: number; calendarioIcfes?: 'A' | 'B'; fechaVencimientoPlan?: string;
+}) {
+  return apiFetch('/admin/instituciones-desde-lead', { method: 'POST', headers: crearEncabezados(), body: JSON.stringify(datos) }, 'No se pudo crear la institución');
+}

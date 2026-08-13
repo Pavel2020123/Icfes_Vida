@@ -12,15 +12,23 @@ import {
 import { AdminService } from './admin.service';
 import { AdminGuard } from '../auth/jwt.guard';
 import { AuthenticatedRequest } from '../auth/auth.types';
-import { AreaIcfes, Dificultad, TipoInteractivo } from '@prisma/client';
+import {
+  AreaIcfes,
+  CalendarioTipo,
+  Dificultad,
+  TipoInteractivo,
+} from '@prisma/client';
 import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsIn,
   IsNotEmpty,
   IsOptional,
+  IsInt,
+  Min,
   IsString,
   ValidateNested,
 } from 'class-validator';
@@ -143,6 +151,40 @@ class ActualizarInteractivoDto {
   datosInteractivo!: DatosInteractivoDto;
 }
 
+// Punto 12: el administrador convierte un lead ya negociado en una
+// institución operativa y crea su primer responsable (PROFESOR).
+class CrearInstitucionDesdeLeadDto {
+  @IsString()
+  @IsNotEmpty()
+  leadId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  contrasenaTemporal!: string;
+
+  @IsOptional()
+  @IsString()
+  planActual?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  limiteGrado10?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  limiteGrado11?: number;
+
+  @IsOptional()
+  @IsEnum(CalendarioTipo)
+  calendarioIcfes?: CalendarioTipo;
+
+  @IsOptional()
+  @IsDateString()
+  fechaVencimientoPlan?: string;
+}
+
 @Controller('admin')
 @UseGuards(AdminGuard)
 export class AdminController {
@@ -171,6 +213,16 @@ export class AdminController {
     @Request() req: AuthenticatedRequest,
   ) {
     return this.adminService.eliminarUsuario(id, req.usuario.sub);
+  }
+
+  @Post('instituciones-desde-lead')
+  crearInstitucionDesdeLead(@Body() body: CrearInstitucionDesdeLeadDto) {
+    return this.adminService.crearInstitucionDesdeLead({
+      ...body,
+      fechaVencimientoPlan: body.fechaVencimientoPlan
+        ? new Date(body.fechaVencimientoPlan)
+        : undefined,
+    });
   }
 
   // Temas

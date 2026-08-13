@@ -2,10 +2,14 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AreaIcfes,
+  CalendarioTipo,
   Dificultad,
   RolUsuario,
   TipoInteractivo,
 } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { BCRYPT_SALT_ROUNDS } from '../common/constants';
+import { generarCodigoConPrefijo } from '../institucion/utils/generar-codigo.util';
 
 @Injectable()
 export class AdminService {
@@ -44,6 +48,84 @@ export class AdminService {
       where: { id: usuarioId },
       select: { id: true, nombre: true, correo: true },
     });
+  }
+
+  async crearInstitucionDesdeLead(datos: {
+    leadId: string;
+    contrasenaTemporal: string;
+    planActual?: string;
+    limiteGrado10?: number;
+    limiteGrado11?: number;
+    calendarioIcfes?: CalendarioTipo;
+    fechaVencimientoPlan?: Date;
+  }) {
+    if (datos.contrasenaTemporal.length < 8) {
+      throw new BadRequestException(
+        'La contraseña temporal debe tener al menos 8 caracteres.',
+      );
+    }
+
+    const lead = await this.prisma.leadVentas.findUnique({
+      where: { id: datos.leadId },
+    });
+    if (!lead) throw new BadRequestException('El lead no existe.');
+    if (lead.atendido) {
+      throw new BadRequestException('Este lead ya fue convertido o marcado como atendido.');
+    }
+
+    const usuarioExistente = await this.prisma.usuario.findUnique({
+      where: { correo: lead.correo },
+      select: { id: true },
+    });
+    if (usuarioExistente) {
+      throw new BadRequestException(
+        'El correo del contacto ya tiene una cuenta. Usa un correo distinto antes de crear la institución.',
+      );
+    }
+
+    const contrasenaHash = await bcrypt.hash(
+      datos.contrasenaTemporal,
+      BCRYPT_SALT_ROUNDS,
+    );
+    const codigoUnico = await generarCodigoConPrefijo('INST', async (codigo) =>
+      (await this.prisma.institucion.findUnique({ where: { codigoUnico: codigo } })) !== null,
+    );
+
+    const resultado = await this.prisma.$transaction(async (tx) => {
+      const institucion = await tx.institucion.create({
+        data: {
+          nombre: lead.nombreColegio,
+          codigoUnico,
+          planActual: datos.planActual || lead.plan,
+          limiteGrado10: datos.limiteGrado10,
+          limiteGrado11: datos.limiteGrado11,
+          calendarioIcfes: datos.calendarioIcfes ?? 'A',
+          fechaVencimientoPlan: datos.fechaVencimientoPlan,
+        },
+      });
+      const responsable = await tx.usuario.create({
+        data: {
+          nombre: lead.nombreContacto,
+          correo: lead.correo,
+          contrasenaHash,
+          rol: 'PROFESOR',
+          correoVerificado: true,
+          institucionId: institucion.id,
+        },
+        select: { id: true, nombre: true, correo: true },
+      });
+      await tx.leadVentas.update({
+        where: { id: lead.id },
+        data: { atendido: true },
+      });
+      return { institucion, responsable };
+    });
+
+    return {
+      mensaje: 'Institución creada y lead marcado como atendido.',
+      institucion: resultado.institucion,
+      responsable: resultado.responsable,
+    };
   }
 
   // ─── TEMAS ───────────────────────────────────────────────────

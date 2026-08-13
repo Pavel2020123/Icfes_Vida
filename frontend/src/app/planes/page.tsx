@@ -296,6 +296,10 @@ export default function PlanesPage() {
         <p style={{ color: '#AFD3E2', fontSize: 13 }}>
           © 2026 SaberPlus. Todos los derechos reservados.
         </p>
+        <div style={{ marginTop: 12 }}>
+          <Link href="/terminos" style={{ color: '#ffffff', fontSize: 13, marginRight: 18 }}>Términos y condiciones</Link>
+          <Link href="/privacidad" style={{ color: '#ffffff', fontSize: 13 }}>Política de privacidad</Link>
+        </div>
       </footer>
 
       {/* ─── PUNTO 11: formulario "Hablar con ventas" ─────────── */}

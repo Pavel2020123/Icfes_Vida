@@ -528,6 +528,10 @@ export default function LandingPage() {
           Saber<span style={{ color: '#ffffff' }}>Plus</span>
         </p>
         <p style={{ color: '#AFD3E2', fontSize: 14 }}>© 2026 SaberPlus. Todos los derechos reservados.</p>
+        <div style={{ marginTop: 12 }}>
+          <Link href="/terminos" style={{ color: '#ffffff', fontSize: 14, marginRight: 18 }}>Términos y condiciones</Link>
+          <Link href="/privacidad" style={{ color: '#ffffff', fontSize: 14 }}>Política de privacidad</Link>
+        </div>
       </footer>
     </div>
   );

@@ -59,7 +59,17 @@ export interface PreguntaAdmin {
   respuestas: RespuestaAdmin[];
 }
 
-export type Pestana = 'stats' | 'temas' | 'preguntas' | 'aleatorias' | 'usuarios' | 'contenido' | 'interactivo' | 'calendario';
+export type Pestana = 'stats' | 'temas' | 'preguntas' | 'aleatorias' | 'usuarios' | 'contenido' | 'interactivo' | 'calendario' | 'ventas';
+
+export interface LeadVentasAdmin {
+  id: string;
+  nombreColegio: string;
+  nombreContacto: string;
+  correo: string;
+  linea: 'ONCE' | 'BACHILLERATO';
+  plan: string;
+  atendido: boolean;
+}
 
 export interface FechaIcfes {
   id: string;
