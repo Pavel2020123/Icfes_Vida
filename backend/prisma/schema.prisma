@@ -94,10 +94,10 @@ model Usuario {
   institucionId           String?              @db.Uuid
   fotoPerfil              String?
   descripcion             String?
-  // Grado del estudiante individual (punto 9): sólo se usa para calcular
-  // el precio en la pasarela de pago (Individual: $25.000 g10 / $35.000
-  // g11, ver tabla de precios del roadmap). Los estudiantes de una
-  // institución heredan el grado de su Clase y no necesitan este campo.
+   // Grado del estudiante individual: se usa para mostrar en el perfil
+ // y para el plan de pago. Precios actuales: $12.900 mensual,
+ // $49.900 temporada B, $79.900 temporada A. Los estudiantes de una
+ // institución heredan el grado de su Clase y no necesitan este campo.
   grado                   Grado?
   ClaseEstudiante         ClaseEstudiante[]
   Institucion             Institucion?         @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
@@ -136,7 +136,7 @@ model LeadVentas {
   @@index([atendido, fechaCreacion])
 }
 
-// --- MÓDULO: PASARELA DE PAGO (ePayco) — Punto 9 ---
+// --- MÓDULO: PASARELA DE PAGO (Wompi) ---
 
 enum EstadoPago {
   PENDIENTE
@@ -152,22 +152,29 @@ enum EstadoPago {
 // real de la transacción. La factura (`factura`) es el identificador
 // que viaja a ePayco como x_id_invoice y vuelve en el webhook, así que
 // es la llave para encontrar la orden de vuelta sin depender de sesión.
-model PagoOrden {
-  id                 String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  factura            String     @unique @db.VarChar(50)
-  usuarioId          String     @db.Uuid
-  Usuario            Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pagoorden_usuario")
-  grado              Grado
-  monto              Int
-  moneda             String     @default("COP") @db.VarChar(10)
-  estado             EstadoPago @default(PENDIENTE)
-  refPayco           String?    @db.VarChar(50)
-  transaccionId      String?    @db.VarChar(100)
-  motivoRespuesta    String?    @db.Text
-  fechaCreacion      DateTime   @default(now()) @db.Timestamp(6)
-  fechaActualizacion DateTime   @default(now()) @updatedAt @db.Timestamp(6)
+enum TipoPlan {
+ MENSUAL
+ TEMPORADA_A
+ TEMPORADA_B
+}
 
-  @@index([usuarioId])
+model PagoOrden {
+ id String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+ factura String @unique @db.VarChar(50)
+ usuarioId String @db.Uuid
+ Usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pagoorden_usuario")
+ grado Grado
+ tipoPlan TipoPlan @default(MENSUAL)
+ monto Int
+ moneda String @default("COP") @db.VarChar(10)
+ estado EstadoPago @default(PENDIENTE)
+ refPayco String? @db.VarChar(50)
+ transaccionId String? @db.VarChar(100)
+ motivoRespuesta String? @db.Text
+ fechaCreacion DateTime @default(now()) @db.Timestamp(6)
+ fechaActualizacion DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+ @@index([usuarioId])
 }
 
 // --- MÓDULO: BANCO INTELIGENTE DE PREGUNTAS ---

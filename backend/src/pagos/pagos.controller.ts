@@ -16,6 +16,9 @@ import { AuthenticatedRequest } from '../auth/auth.types';
 class CrearOrdenDto {
   @IsIn(['DECIMO', 'ONCE'])
   grado!: 'DECIMO' | 'ONCE';
+
+  @IsIn(['MENSUAL', 'TEMPORADA_A', 'TEMPORADA_B'])
+  tipoPlan!: 'MENSUAL' | 'TEMPORADA_A' | 'TEMPORADA_B';
 }
 
 @Controller('pagos')
@@ -32,12 +35,16 @@ export class PagosController {
     @Body() body: CrearOrdenDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.pagosService.crearOrden(req.usuario.sub, body.grado);
+    return this.pagosService.crearOrden(
+      req.usuario.sub,
+      body.grado,
+      body.tipoPlan,
+    );
   }
 
-  // ─── WEBHOOK PÚBLICO: lo invoca ePayco servidor a servidor ────
-  // Sin JwtGuard a propósito: ePayco no manda nuestro token, manda su
-  // propia firma (x_signature), que es lo que valida PagosService.
+  // ─── WEBHOOK PÚBLICO: lo invoca Wompi servidor a servidor ─────
+  // Sin JwtGuard a propósito: Wompi no manda nuestro token, manda su
+  // propia firma (signature), que es lo que valida PagosService.
   @Post('confirmacion')
   @HttpCode(200)
   confirmacion(@Body() body: Record<string, string>) {

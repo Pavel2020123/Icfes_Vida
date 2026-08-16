@@ -63,6 +63,7 @@ const FadeInSection = ({ children, delay = '0s' }: { children: React.ReactNode, 
     if (domRef.current) {
       observer.observe(domRef.current);
     }
+
     return () => observer.disconnect();
   }, []);
 
@@ -99,12 +100,12 @@ export default function LandingPage() {
     const targetPosition = target.getBoundingClientRect().top + window.scrollY;
     const startPosition = window.scrollY;
     const distance = targetPosition - startPosition;
-    
-    // ⏱️ Duración en milisegundos (1500 = 1.5 segundos). Súbelo si lo quieres más lento.
-    const duration = 1500; 
+
+    // Duración en milisegundos
+    const duration = 1500;
     let start: number | null = null;
 
-    // Fórmula matemática para aceleración y desaceleración suave (Atenuación)
+    // Fórmula matemática para aceleración y desaceleración suave
     const ease = (t: number, b: number, c: number, d: number) => {
       t /= d / 2;
       if (t < 1) return (c / 2) * t * t + b;
@@ -166,49 +167,51 @@ export default function LandingPage() {
             Saber<span style={{ color: '#8DD8FF' }}>Plus</span>
           </span>
 
-              {/* BOTONES */}
-            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-              <Link
-                href="/planes"
-                style={{
-                  color: '#ffffff',
-                  textDecoration: 'none',
-                  fontSize: 16,
-                  fontWeight: 500,
-                  padding: '8px 12px',
-                }}
-              >
-                Planes
-              </Link>
-              <Link
-                href="/login"
-                style={{
-                  color: '#ffffff',
-                  textDecoration: 'none',
-                  fontSize: 16,
-                  fontWeight: 500,
-                  padding: '8px 12px',
-                }}
-              >
-                Iniciar sesión
-              </Link>
-              <Link
-                href="/registro"
-                style={{
-                  backgroundColor: '#8DD8FF',
-                  color: '#1a2a3a',
-                  padding: '10px 24px',
-                  borderRadius: 8,
-                  textDecoration: 'none',
-                  fontSize: 16,
-                  fontWeight: 700,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  transition: 'transform 0.2s',
-                }}
-              >
-                Empezar gratis
-              </Link>
-            </div>
+          {/* BOTONES */}
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <Link
+              href="/planes"
+              style={{
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontSize: 16,
+                fontWeight: 500,
+                padding: '8px 12px',
+              }}
+            >
+              Planes
+            </Link>
+
+            <Link
+              href="/login"
+              style={{
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontSize: 16,
+                fontWeight: 500,
+                padding: '8px 12px',
+              }}
+            >
+              Iniciar sesión
+            </Link>
+
+            <Link
+              href="/registro"
+              style={{
+                backgroundColor: '#8DD8FF',
+                color: '#1a2a3a',
+                padding: '10px 24px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                fontSize: 16,
+                fontWeight: 700,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'transform 0.2s',
+              }}
+            >
+              Empezar gratis
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -234,6 +237,7 @@ export default function LandingPage() {
             >
               Preparación para el Saber 11
             </p>
+
             <h1
               style={{
                 fontSize: 'clamp(40px, 7vw, 72px)',
@@ -247,6 +251,7 @@ export default function LandingPage() {
               Sube tu puntaje ICFES.<br />
               <span style={{ color: '#8DD8FF' }}>Pregunta por pregunta.</span>
             </h1>
+
             <p
               style={{
                 fontSize: 20,
@@ -335,6 +340,7 @@ export default function LandingPage() {
               <h3 style={{ fontSize: 26, fontWeight: 800, color: '#146C94', marginBottom: 28 }}>
                 {info.titulo}
               </h3>
+
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {info.puntos.map((punto, i) => (
                   <li
@@ -392,6 +398,7 @@ export default function LandingPage() {
             >
               Simple y efectivo
             </p>
+
             <h2 style={{ fontSize: 36, fontWeight: 800, textAlign: 'center', marginBottom: 64, color: '#1a2a3a' }}>
               Tres pasos para mejorar tu puntaje
             </h2>
@@ -421,10 +428,14 @@ export default function LandingPage() {
                   >
                     {paso.numero}
                   </span>
+
                   <h3 style={{ fontSize: 22, fontWeight: 700, marginBottom: 12, color: '#146C94' }}>
                     {paso.titulo}
                   </h3>
-                  <p style={{ fontSize: 16, color: '#4a5a6a', lineHeight: 1.7 }}>{paso.texto}</p>
+
+                  <p style={{ fontSize: 16, color: '#4a5a6a', lineHeight: 1.7 }}>
+                    {paso.texto}
+                  </p>
                 </div>
               </FadeInSection>
             ))}
@@ -449,6 +460,7 @@ export default function LandingPage() {
             >
               Contenido completo
             </p>
+
             <h2 style={{ fontSize: 36, fontWeight: 800, textAlign: 'center', marginBottom: 64, color: '#1a2a3a' }}>
               Las 5 áreas del ICFES
             </h2>
@@ -478,11 +490,241 @@ export default function LandingPage() {
                   <h3 style={{ fontSize: 18, fontWeight: 700, color: '#146C94', marginBottom: 12 }}>
                     {area.nombre}
                   </h3>
-                  <p style={{ fontSize: 15, color: '#4a5a6a', lineHeight: 1.6 }}>{area.descripcion}</p>
+
+                  <p style={{ fontSize: 15, color: '#4a5a6a', lineHeight: 1.6 }}>
+                    {area.descripcion}
+                  </p>
                 </div>
               </FadeInSection>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* PRECIOS */}
+      <section id="precios" style={{ padding: '80px 24px', backgroundColor: '#F6F1F1' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, color: '#1a2a3a', marginBottom: 8 }}>
+            Planes que sí puedes pagar
+          </h2>
+
+          <p style={{ color: '#666', marginBottom: 48 }}>
+            Menos de $500 pesos al día. Sin letra pequeña.
+          </p>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gap: 24,
+            }}
+          >
+            {/* Gratis */}
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 16,
+                padding: 32,
+                border: '2px solid #AFD3E2',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#146c94', marginBottom: 8 }}>
+                PRUEBA GRATIS
+              </div>
+
+              <div style={{ fontSize: 40, fontWeight: 800, color: '#1a2a3a' }}>
+                $0
+              </div>
+
+              <div style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>
+                3 días
+              </div>
+
+              <ul
+                style={{
+                  listStyle: 'none',
+                  padding: 0,
+                  margin: 0,
+                  fontSize: 14,
+                  color: '#444',
+                  lineHeight: 2,
+                }}
+              >
+                <li>Simulacros ilimitados</li>
+                <li>Teoría completa</li>
+                <li>Progreso en tiempo real</li>
+              </ul>
+
+              <Link
+                href="/registro"
+                style={{
+                  display: 'block',
+                  marginTop: 24,
+                  padding: '14px 0',
+                  borderRadius: 12,
+                  background: '#fff',
+                  color: '#146c94',
+                  border: '2px solid #146c94',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Probar gratis
+              </Link>
+            </div>
+
+            {/* Mensual */}
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 16,
+                padding: 32,
+                border: '2px solid #146c94',
+                textAlign: 'left',
+                position: 'relative',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -12,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: '#146c94',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: '6px 16px',
+                  borderRadius: 20,
+                }}
+              >
+                MÁS POPULAR
+              </span>
+
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#146c94', marginBottom: 8 }}>
+                MENSUAL
+              </div>
+
+              <div style={{ fontSize: 40, fontWeight: 800, color: '#1a2a3a' }}>
+                $12.900
+              </div>
+
+              <div style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>
+                /mes
+              </div>
+
+              <ul
+                style={{
+                  listStyle: 'none',
+                  padding: 0,
+                  margin: 0,
+                  fontSize: 14,
+                  color: '#444',
+                  lineHeight: 2,
+                }}
+              >
+                <li>Todo ilimitado</li>
+                <li>Cancela cuando quieras</li>
+                <li>Soporte por chat</li>
+              </ul>
+
+              <Link
+                href="/registro"
+                style={{
+                  display: 'block',
+                  marginTop: 24,
+                  padding: '14px 0',
+                  borderRadius: 12,
+                  background: '#146c94',
+                  color: '#fff',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Suscribirme
+              </Link>
+            </div>
+
+            {/* Temporada */}
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 16,
+                padding: 32,
+                border: '2px solid #AFD3E2',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#146c94', marginBottom: 8 }}>
+                TEMPORADA
+              </div>
+
+              <div style={{ fontSize: 40, fontWeight: 800, color: '#1a2a3a' }}>
+                $49.900
+              </div>
+
+              <div style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>
+                Calendario B
+              </div>
+
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#1a2a3a' }}>
+                $79.900
+              </div>
+
+              <div style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>
+                Calendario A
+              </div>
+
+              <ul
+                style={{
+                  listStyle: 'none',
+                  padding: 0,
+                  margin: 0,
+                  fontSize: 14,
+                  color: '#444',
+                  lineHeight: 2,
+                }}
+              >
+                <li>Pago único</li>
+                <li>Hasta el día del examen</li>
+                <li>Máximo ahorro</li>
+              </ul>
+
+              <Link
+                href="/registro"
+                style={{
+                  display: 'block',
+                  marginTop: 24,
+                  padding: '14px 0',
+                  borderRadius: 12,
+                  background: '#fff',
+                  color: '#146c94',
+                  border: '2px solid #146c94',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Ver temporadas
+              </Link>
+            </div>
+          </div>
+
+          <p style={{ marginTop: 32, fontSize: 13, color: '#888' }}>
+            ¿Eres colegio? Planes institucionales desde $2.900 por estudiante/mes.{' '}
+            <Link
+              href="/contacto"
+              style={{
+                color: '#146c94',
+                textDecoration: 'underline',
+              }}
+            >
+              Contáctanos
+            </Link>
+          </p>
         </div>
       </section>
 
@@ -498,9 +740,11 @@ export default function LandingPage() {
           <h2 style={{ fontSize: 40, fontWeight: 900, color: '#ffffff', marginBottom: 16 }}>
             Tu puntaje no mejora solo.
           </h2>
+
           <p style={{ fontSize: 20, color: '#D2E0FB', marginBottom: 48 }}>
             Empieza hoy. Gratis. Sin excusas.
           </p>
+
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link
               href="/registro"
@@ -527,10 +771,32 @@ export default function LandingPage() {
         <p style={{ color: '#8DD8FF', fontWeight: 800, fontSize: 20, marginBottom: 8 }}>
           Saber<span style={{ color: '#ffffff' }}>Plus</span>
         </p>
-        <p style={{ color: '#AFD3E2', fontSize: 14 }}>© 2026 SaberPlus. Todos los derechos reservados.</p>
+
+        <p style={{ color: '#AFD3E2', fontSize: 14 }}>
+          © 2026 SaberPlus. Todos los derechos reservados.
+        </p>
+
         <div style={{ marginTop: 12 }}>
-          <Link href="/terminos" style={{ color: '#ffffff', fontSize: 14, marginRight: 18 }}>Términos y condiciones</Link>
-          <Link href="/privacidad" style={{ color: '#ffffff', fontSize: 14 }}>Política de privacidad</Link>
+          <Link
+            href="/terminos"
+            style={{
+              color: '#ffffff',
+              fontSize: 14,
+              marginRight: 18,
+            }}
+          >
+            Términos y condiciones
+          </Link>
+
+          <Link
+            href="/privacidad"
+            style={{
+              color: '#ffffff',
+              fontSize: 14,
+            }}
+          >
+            Política de privacidad
+          </Link>
         </div>
       </footer>
     </div>

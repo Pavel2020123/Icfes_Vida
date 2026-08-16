@@ -40,7 +40,7 @@ export class PlanVigenteGuard implements CanActivate {
       throw new ForbiddenException({
         codigo: 'PLAN_VENCIDO',
         mensaje:
-          'Tu prueba gratuita de 3 días terminó. Activa tu plan para seguir estudiando.',
+          'Tu prueba gratuita de 3 días terminó. Activa tu plan por solo $12.900/mes y sigue preparándote para el ICFES.',
       });
     }
 

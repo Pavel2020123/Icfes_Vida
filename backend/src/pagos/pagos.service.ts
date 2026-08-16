@@ -7,14 +7,15 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { Grado } from '@prisma/client';
+import { Grado, TipoPlan } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CalendarioIcfesService } from '../calendario-icfes/calendario-icfes.service';
 import {
   PRECIO_INDIVIDUAL_COP,
-  estadoDesdeRespuestaEpayco,
-  firmaEpaycoValida,
-} from './epayco.util';
+  PRECIO_TEMPORADA_COP,
+  estadoDesdeRespuestaWompi,
+  firmaWompiValida,
+} from './wompi.util';
 
 // Fallback si todavía no se ha cargado la fecha oficial del ICFES para
 // el calendario del estudiante (punto 6). No debería pasar en
@@ -24,16 +25,15 @@ import {
 // que el admin lo revise.
 const DIAS_VIGENCIA_RESPALDO = 365;
 
-interface DatosWebhookEpayco {
-  x_ref_payco?: string;
+interface DatosWebhookWompi {
   ref_payco?: string;
+  transaction_id?: string;
   x_id_invoice?: string;
-  x_transaction_id?: string;
-  x_amount?: string;
-  x_currency_code?: string;
-  x_response?: string;
-  x_response_reason_text?: string;
-  x_signature?: string;
+  amount?: string;
+  currency?: string;
+  status?: string;
+  response_reason_text?: string;
+  signature?: string;
   [clave: string]: unknown;
 }
 
@@ -46,16 +46,19 @@ export class PagosService {
     private calendarioIcfesService: CalendarioIcfesService,
   ) {}
 
-  // ─── CREAR ORDEN (antes de mandar al estudiante a ePayco) ────
-  async crearOrden(usuarioId: string, grado: Grado) {
-    const publicKey = process.env.EPAYCO_PUBLIC_KEY;
+  // ─── CREAR ORDEN ──────────────────────────────────────────────
+  async crearOrden(
+    usuarioId: string,
+    grado: Grado,
+    tipoPlan: TipoPlan = 'MENSUAL',
+  ) {
+    const publicKey = process.env.WOMPI_PUBLIC_KEY;
+
     if (!publicKey) {
-      // No tumbamos el resto de la app por esto (a diferencia de
-      // JWT_SECRET): solo este flujo queda inhabilitado hasta que se
-      // configuren las llaves de ePayco.
       this.logger.error(
-        'EPAYCO_PUBLIC_KEY no está configurada. No se puede crear la orden de pago.',
+        'WOMPI_PUBLIC_KEY no está configurada. No se puede crear la orden de pago.',
       );
+
       throw new ServiceUnavailableException(
         'La pasarela de pago no está disponible en este momento. Intenta más tarde.',
       );
@@ -90,7 +93,20 @@ export class PagosService {
       );
     }
 
-    const monto = PRECIO_INDIVIDUAL_COP[grado];
+    let monto: number;
+    let nombrePlan: string;
+
+    if (tipoPlan === 'TEMPORADA_A') {
+      monto = PRECIO_TEMPORADA_COP.TEMPORADA_A;
+      nombrePlan = 'Temporada Calendario A';
+    } else if (tipoPlan === 'TEMPORADA_B') {
+      monto = PRECIO_TEMPORADA_COP.TEMPORADA_B;
+      nombrePlan = 'Temporada Calendario B';
+    } else {
+      monto = PRECIO_INDIVIDUAL_COP[grado];
+      nombrePlan = 'Plan Mensual';
+    }
+
     const factura = this.generarFactura();
 
     await this.prisma.$transaction([
@@ -99,14 +115,15 @@ export class PagosService {
           factura,
           usuarioId: usuario.id,
           grado,
+          tipoPlan,
           monto,
           moneda: 'COP',
           estado: 'PENDIENTE',
         },
       }),
       // Guardamos el grado ya desde aquí para que quede consistente en
-      // el perfil, aunque el plan solo se active cuando ePayco confirme
-      // el pago (ver confirmarPago).
+      // el perfil, aunque el plan solo se active cuando Wompi confirme
+      // el pago.
       this.prisma.usuario.update({
         where: { id: usuario.id },
         data: { grado },
@@ -118,61 +135,60 @@ export class PagosService {
     return {
       factura,
       publicKey,
-      test: process.env.EPAYCO_TEST_MODE !== 'false',
+      test: process.env.WOMPI_TEST_MODE !== 'false',
       amount: monto,
-      currency: 'cop',
+      currency: 'COP',
       country: 'co',
-      name: `Plan individual ICFES Vida — Grado ${nombreGrado}`,
-      description: `Acceso a la plataforma ICFES Vida para grado ${nombreGrado}`,
+      name: `SaberPlus — ${nombrePlan}`,
+      description: `Acceso ilimitado a SaberPlus. ${nombrePlan} — ${nombreGrado}`,
       email: usuario.correo,
       nombre: usuario.nombre,
+      redirectUrl: `${process.env.FRONTEND_URL}/pagos/respuesta`,
+      tipoPlan,
     };
   }
 
-  // ─── WEBHOOK DE CONFIRMACIÓN (servidor a servidor) ───────────
-  // IMPORTANTE: siempre responder 2xx cuando ya se pudo leer y
-  // procesar la notificación (aunque el pago haya sido rechazado), o
-  // ePayco seguirá reintentando. Solo se lanza error cuando la firma
-  // no es válida: ahí SÍ queremos que quede registrado como sospechoso.
-  async confirmarPago(datos: DatosWebhookEpayco) {
-    const custId = process.env.EPAYCO_CUSTOMER_ID;
-    const pKey = process.env.EPAYCO_P_KEY;
+  // ─── WEBHOOK DE CONFIRMACIÓN ─────────────────────────────────
+  async confirmarPago(datos: DatosWebhookWompi) {
+    const eventKey = process.env.WOMPI_EVENT_KEY;
 
-    if (!custId || !pKey) {
+    if (!eventKey) {
       this.logger.error(
-        'EPAYCO_CUSTOMER_ID / EPAYCO_P_KEY no configuradas. No se puede validar el webhook de ePayco.',
+        'WOMPI_EVENT_KEY no configurada. No se puede validar el webhook de Wompi.',
       );
+
       throw new ServiceUnavailableException('Pasarela de pago no configurada.');
     }
 
-    const xRefPayco = datos.x_ref_payco ?? datos.ref_payco ?? '';
-    const xTransactionId = datos.x_transaction_id ?? '';
-    const xAmount = datos.x_amount ?? '';
-    const xCurrencyCode = datos.x_currency_code ?? '';
-    const xSignature = datos.x_signature ?? '';
+    const refPayco = datos.ref_payco ?? '';
+    const transactionId = datos.transaction_id ?? '';
+    const amount = datos.amount ?? '';
+    const currency = datos.currency ?? '';
+    const signature = datos.signature ?? '';
     const factura = datos.x_id_invoice;
 
-    if (!factura || !xTransactionId || !xSignature) {
-      this.logger.warn('Webhook de ePayco con datos incompletos.');
+    if (!factura || !transactionId || !signature) {
+      this.logger.warn('Webhook de Wompi con datos incompletos.');
+
       throw new BadRequestException('Datos de la notificación incompletos.');
     }
 
-    const firmaValida = firmaEpaycoValida(
+    const firmaValida = firmaWompiValida(
       {
-        x_ref_payco: xRefPayco,
-        x_transaction_id: xTransactionId,
-        x_amount: xAmount,
-        x_currency_code: xCurrencyCode,
-        x_signature: xSignature,
+        ref_payco: refPayco,
+        transaction_id: transactionId,
+        amount,
+        currency,
+        signature,
       },
-      custId,
-      pKey,
+      eventKey,
     );
 
     if (!firmaValida) {
       this.logger.error(
-        `Firma inválida en webhook de ePayco para la factura ${factura}. Posible intento de fraude.`,
+        `Firma inválida en webhook de Wompi para la factura ${factura}. Posible intento de fraude.`,
       );
+
       throw new ForbiddenException('Firma inválida.');
     }
 
@@ -181,29 +197,31 @@ export class PagosService {
     });
 
     if (!orden) {
-      // No hay nada que actualizar. Registramos y respondemos OK para
-      // que ePayco no siga reintentando una factura que no es nuestra.
       this.logger.warn(
-        `Webhook de ePayco para una factura que no existe: ${factura}`,
+        `Webhook de Wompi para una factura que no existe: ${factura}`,
       );
-      return { mensaje: 'Factura no encontrada, notificación ignorada.' };
+
+      return {
+        mensaje: 'Factura no encontrada, notificación ignorada.',
+      };
     }
 
-    // Idempotencia: si ya procesamos esta misma transacción aprobada,
-    // no la volvemos a aplicar (ePayco puede reintentar el webhook).
-    if (orden.estado === 'APROBADA' && orden.transaccionId === xTransactionId) {
-      return { mensaje: 'Transacción ya procesada.' };
+    // Idempotencia
+    if (orden.estado === 'APROBADA' && orden.transaccionId === transactionId) {
+      return {
+        mensaje: 'Transacción ya procesada.',
+      };
     }
 
-    const nuevoEstado = estadoDesdeRespuestaEpayco(datos.x_response ?? '');
+    const nuevoEstado = estadoDesdeRespuestaWompi(datos.status ?? '');
 
     await this.prisma.pagoOrden.update({
       where: { id: orden.id },
       data: {
         estado: nuevoEstado,
-        refPayco: xRefPayco || null,
-        transaccionId: xTransactionId,
-        motivoRespuesta: datos.x_response_reason_text ?? null,
+        refPayco: refPayco || null,
+        transaccionId: transactionId,
+        motivoRespuesta: datos.response_reason_text ?? null,
       },
     });
 
@@ -211,7 +229,9 @@ export class PagosService {
       await this.activarPlanPagado(orden.usuarioId, orden.grado);
     }
 
-    return { mensaje: 'Notificación procesada.' };
+    return {
+      mensaje: 'Notificación procesada.',
+    };
   }
 
   // ─── ACTIVAR EL PLAN TRAS UN PAGO APROBADO ───────────────────
@@ -220,9 +240,11 @@ export class PagosService {
       where: { id: usuarioId },
       select: { calendarioIcfes: true },
     });
+
     if (!usuario) return;
 
     const calendario = usuario.calendarioIcfes ?? 'A';
+
     let vigencia =
       await this.calendarioIcfesService.calcularVigencia(calendario);
 
@@ -232,17 +254,21 @@ export class PagosService {
           `Usando ${DIAS_VIGENCIA_RESPALDO} días de respaldo para el usuario ${usuarioId}. ` +
           'Carga las fechas oficiales en /calendario-icfes cuanto antes.',
       );
+
       vigencia = new Date();
       vigencia.setDate(vigencia.getDate() + DIAS_VIGENCIA_RESPALDO);
     }
 
     await this.prisma.usuario.update({
       where: { id: usuarioId },
-      data: { fechaVencimientoPlan: vigencia, grado },
+      data: {
+        fechaVencimientoPlan: vigencia,
+        grado,
+      },
     });
   }
 
-  // ─── CONSULTA DE ESTADO (para la página de respuesta) ────────
+  // ─── CONSULTA DE ESTADO ─────────────────────────────────────
   async obtenerEstadoOrden(usuarioId: string, factura: string) {
     const orden = await this.prisma.pagoOrden.findUnique({
       where: { factura },
