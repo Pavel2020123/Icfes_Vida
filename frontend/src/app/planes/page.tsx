@@ -36,9 +36,10 @@ const LINEA_LABELS: Record<Linea, string> = {
 interface PlanInstitucional {
   nombre: 'Básico' | 'Plus' | 'Colegio';
   cupos: string;
-  precio: string; // Once: precio único. Bachillerato: "$21.000 (g10) / $30.000 (g11)"
   cotizacionDirecta: boolean;
   destacado: boolean;
+  precio?: string;
+  preciosPorGrado?: { grado: string; valor: string }[];
 }
 
 const PLANES_ONCE: PlanInstitucional[] = [
@@ -48,17 +49,16 @@ const PLANES_ONCE: PlanInstitucional[] = [
 ];
 
 const PLANES_BACHILLERATO: PlanInstitucional[] = [
-  { nombre: 'Básico', cupos: '15 cupos grado 10 + 15 cupos grado 11', precio: '$21.000 (g10) / $30.000 (g11)', cotizacionDirecta: false, destacado: false },
-  { nombre: 'Plus', cupos: '50 cupos grado 10 + 50 cupos grado 11', precio: '$19.000 (g10) / $28.000 (g11)', cotizacionDirecta: false, destacado: true },
+  { nombre: 'Básico', cupos: '15 cupos grado 10 + 15 cupos grado 11', preciosPorGrado: [{ grado: 'Grado 10', valor: '$21.000' }, { grado: 'Grado 11', valor: '$30.000' }], cotizacionDirecta: false, destacado: false },
+  { nombre: 'Plus', cupos: '50 cupos grado 10 + 50 cupos grado 11', preciosPorGrado: [{ grado: 'Grado 10', valor: '$19.000' }, { grado: 'Grado 11', valor: '$28.000' }], cotizacionDirecta: false, destacado: true },
   { nombre: 'Colegio', cupos: 'Sin límite de cupos', precio: 'Cotización directa', cotizacionDirecta: true, destacado: false },
 ];
 
 export default function PlanesPage() {
   const [audiencia, setAudiencia] = useState<Audiencia>('estudiante');
   const [linea, setLinea] = useState<Linea>('once');
-  const [planVentasSeleccionado, setPlanVentasSeleccionado] = useState<
-    PlanInstitucional['nombre'] | null
-  >(null);
+  const [planSeleccionado, setPlanSeleccionado] = useState<PlanInstitucional['nombre']>('Plus');
+  const [formularioVentasAbierto, setFormularioVentasAbierto] = useState(false);
 
   const planesInstitucionales = linea === 'once' ? PLANES_ONCE : PLANES_BACHILLERATO;
   const audienciaIndex = Object.keys(AUDIENCIA_LABELS).indexOf(audiencia);
@@ -76,7 +76,7 @@ export default function PlanesPage() {
             <Link href="/login" style={{ color: '#ffffff', textDecoration: 'none', fontSize: 16, fontWeight: 500, padding: '8px 12px' }}>
               Iniciar sesión
             </Link>
-            <Link href="/registro" style={{ backgroundColor: '#8DD8FF', color: '#1a2a3a', padding: '10px 24px', borderRadius: 8, textDecoration: 'none', fontSize: 16, fontWeight: 700, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <Link href="/registro" className="btn-cta" style={{ backgroundColor: '#8DD8FF', color: '#1a2a3a', padding: '10px 24px', borderRadius: 8, textDecoration: 'none', fontSize: 16, fontWeight: 700, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'inline-block' }}>
               Empezar gratis
             </Link>
           </div>
@@ -157,24 +157,35 @@ export default function PlanesPage() {
               </div>
               <Link
                 href="/registro"
+                className="btn-cta"
                 style={{ display: 'block', textAlign: 'center', backgroundColor: '#146C94', color: '#ffffff', padding: '13px', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}
               >
                 Registrarme gratis
               </Link>
             </div>
 
-            {/* Grado 11 (destacado) */}
-            <div style={{ backgroundColor: '#146C94', borderRadius: 20, padding: '36px 28px', boxShadow: '0 12px 32px rgba(20,108,148,0.30)', position: 'relative' }}>
+            {/* Grado 11 (destacado) — mismo fondo blanco que las otras dos;
+                se diferencia con una franja de color arriba, un borde
+                marcado y la insignia "Más popular", no con un relleno
+                oscuro completo. */}
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: 20,
+              padding: '40px 28px 36px',
+              border: '1.5px solid #146C94',
+              boxShadow: 'inset 0 4px 0 0 #146C94, 0 12px 28px rgba(20,108,148,0.18)',
+              position: 'relative',
+            }}>
               <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', backgroundColor: '#8DD8FF', color: '#1a2a3a', fontSize: 12, fontWeight: 800, padding: '5px 18px', borderRadius: 20, whiteSpace: 'nowrap' }}>
                 Más popular
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#ffffff', marginBottom: 6 }}>Grado 11</h2>
-              <p style={{ fontSize: 13, color: '#D2E0FB', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a2a3a', marginBottom: 6 }}>Grado 11</h2>
+              <p style={{ fontSize: 13, color: '#4a5a6a', marginBottom: 20 }}>
                 Todo lo que necesitas para presentar el ICFES.
               </p>
               <div style={{ marginBottom: 24 }}>
-                <span style={{ fontSize: 36, fontWeight: 900, color: '#8DD8FF' }}>$35.000</span>
-                <span style={{ fontSize: 13, color: '#D2E0FB', display: 'block', marginTop: 4 }}>hasta 1-2 días antes de tu examen</span>
+                <span style={{ fontSize: 36, fontWeight: 900, color: '#146C94' }}>$35.000</span>
+                <span style={{ fontSize: 13, color: '#8a9aaa', display: 'block', marginTop: 4 }}>hasta 1-2 días antes de tu examen</span>
               </div>
               <BotonPagoEpayco grado="ONCE" etiqueta="Comprar" precio="$35.000" destacado />
             </div>
@@ -229,59 +240,134 @@ export default function PlanesPage() {
             ))}
           </div>
 
-          <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24, alignItems: 'start' }}>
-            {planesInstitucionales.map((plan) => (
-              <div
-                key={plan.nombre}
-                style={{
-                  backgroundColor: plan.destacado ? '#146C94' : '#ffffff',
-                  borderRadius: 20,
-                  padding: '36px 28px',
-                  border: plan.destacado ? 'none' : '1px solid #AFD3E2',
-                  boxShadow: plan.destacado ? '0 12px 32px rgba(20,108,148,0.30)' : '0 2px 12px rgba(0,0,0,0.06)',
-                  position: 'relative',
-                }}
-              >
-                {plan.destacado && (
-                  <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', backgroundColor: '#8DD8FF', color: '#1a2a3a', fontSize: 12, fontWeight: 800, padding: '5px 18px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-                    Más popular
-                  </div>
-                )}
-                <h2 style={{ fontSize: 24, fontWeight: 800, color: plan.destacado ? '#ffffff' : '#1a2a3a', marginBottom: 6 }}>
-                  {linea === 'once' ? 'Once' : 'Bachillerato'} {plan.nombre}
-                </h2>
-                <p style={{ fontSize: 13, color: plan.destacado ? '#D2E0FB' : '#4a5a6a', marginBottom: 20 }}>
-                  {plan.cupos}
-                </p>
-                <div style={{ marginBottom: 24 }}>
-                  <span style={{ fontSize: plan.cotizacionDirecta ? 22 : 28, fontWeight: 900, color: plan.destacado ? '#8DD8FF' : '#146C94' }}>
-                    {plan.precio}
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => setPlanVentasSeleccionado(plan.nombre)}
+          <div role="radiogroup" aria-label="Elegir plan" style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24, alignItems: 'start' }}>
+            {planesInstitucionales.map((plan) => {
+              const seleccionado = plan.nombre === planSeleccionado;
+              return (
+                <div
+                  key={plan.nombre}
+                  role="radio"
+                  aria-checked={seleccionado}
+                  tabIndex={0}
+                  onClick={() => setPlanSeleccionado(plan.nombre)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setPlanSeleccionado(plan.nombre);
+                    }
+                  }}
+                  className="plan-card"
                   style={{
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'center',
-                    backgroundColor: plan.destacado ? '#8DD8FF' : '#146C94',
-                    color: plan.destacado ? '#1a2a3a' : '#ffffff',
-                    padding: '13px',
-                    borderRadius: 10,
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: 15,
-                    cursor: 'pointer',
+                    backgroundColor: plan.destacado ? '#146C94' : '#ffffff',
+                    borderRadius: 20,
+                    padding: '36px 28px',
+                    border: seleccionado
+                      ? '2.5px solid #19A7CE'
+                      : plan.destacado
+                      ? 'none'
+                      : '1px solid #AFD3E2',
+                    boxShadow: seleccionado
+                      ? '0 12px 32px rgba(25,167,206,0.35)'
+                      : plan.destacado
+                      ? '0 12px 32px rgba(20,108,148,0.30)'
+                      : '0 2px 12px rgba(0,0,0,0.06)',
+                    position: 'relative',
+                    outline: 'none',
                   }}
                 >
-                  Hablar con ventas
-                </button>
-              </div>
-            ))}
+                  {plan.destacado && (
+                    <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', backgroundColor: '#8DD8FF', color: '#1a2a3a', fontSize: 12, fontWeight: 800, padding: '5px 18px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                      Más popular
+                    </div>
+                  )}
+
+                  {/* Indicador de selección: funciona igual sobre fondo blanco u oscuro */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 16,
+                    right: 16,
+                    width: 22,
+                    height: 22,
+                    borderRadius: '50%',
+                    border: `2px solid ${seleccionado ? '#19A7CE' : (plan.destacado ? 'rgba(255,255,255,0.5)' : '#AFD3E2')}`,
+                    backgroundColor: seleccionado ? '#19A7CE' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.18s ease',
+                  }}>
+                    {seleccionado && (
+                      <span style={{ color: '#ffffff', fontSize: 13, fontWeight: 900, lineHeight: 1 }}>✓</span>
+                    )}
+                  </div>
+
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: plan.destacado ? '#ffffff' : '#1a2a3a', marginBottom: 6, paddingRight: 24 }}>
+                    {linea === 'once' ? 'Once' : 'Bachillerato'} {plan.nombre}
+                  </h2>
+                  <p style={{ fontSize: 13, color: plan.destacado ? '#D2E0FB' : '#4a5a6a', marginBottom: 20 }}>
+                    {plan.cupos}
+                  </p>
+                  <div>
+                  {plan.preciosPorGrado ? (
+                    <div style={{ display: 'flex', gap: 28 }}>
+                      {plan.preciosPorGrado.map((pg) => (
+                        <div key={pg.grado}>
+                          <span style={{
+                            display: 'block',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: 0.6,
+                            textTransform: 'uppercase',
+                            color: plan.destacado ? '#D2E0FB' : '#8a9aaa',
+                            marginBottom: 4,
+                          }}>
+                            {pg.grado}
+                          </span>
+                          <span style={{ fontSize: 24, fontWeight: 900, color: plan.destacado ? '#8DD8FF' : '#146C94' }}>
+                            {pg.valor}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: plan.cotizacionDirecta ? 22 : 28, fontWeight: 900, color: plan.destacado ? '#8DD8FF' : '#146C94' }}>
+                      {plan.precio}
+                    </span>
+                  )}
+                </div>
+                </div>
+              );
+            })}
           </div>
 
-          <p style={{ textAlign: 'center', fontSize: 13, color: '#8a9aaa', marginTop: 32, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
+          {/* ─── Un solo CTA para los 3 planes ───────────────────── */}
+          <div style={{ textAlign: 'center', marginTop: 36 }}>
+            <p style={{ fontSize: 14, color: '#4a5a6a', marginBottom: 16 }}>
+              Plan seleccionado:{' '}
+              <strong style={{ color: '#146C94' }}>
+                {linea === 'once' ? 'Once' : 'Bachillerato'} {planSeleccionado}
+              </strong>
+            </p>
+            <button
+              onClick={() => setFormularioVentasAbierto(true)}
+              className="btn-cta"
+              style={{
+                backgroundColor: '#146C94',
+                color: '#ffffff',
+                padding: '15px 40px',
+                borderRadius: 10,
+                border: 'none',
+                fontWeight: 700,
+                fontSize: 16,
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(20,108,148,0.25)',
+              }}
+            >
+              Hablar con ventas
+            </button>
+          </div>
+
+          <p style={{ textAlign: 'center', fontSize: 13, color: '#8a9aaa', marginTop: 24, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
             El plan de colegio no es autoregistro: escríbenos, acordamos los detalles y nosotros creamos la cuenta
             de tu institución lista para usar.
           </p>
@@ -304,11 +390,11 @@ export default function PlanesPage() {
 
       {/* ─── PUNTO 11: formulario "Hablar con ventas" ─────────── */}
       <FormularioVentas
-        abierto={planVentasSeleccionado !== null}
-        onCerrar={() => setPlanVentasSeleccionado(null)}
+        abierto={formularioVentasAbierto}
+        onCerrar={() => setFormularioVentasAbierto(false)}
         linea={linea === 'once' ? 'ONCE' : 'BACHILLERATO'}
         lineaEtiqueta={linea === 'once' ? 'Once' : 'Bachillerato'}
-        plan={planVentasSeleccionado ?? 'Básico'}
+        plan={planSeleccionado}
       />
     </div>
   );

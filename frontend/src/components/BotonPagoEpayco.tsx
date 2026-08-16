@@ -42,15 +42,19 @@ function cargarScriptEpayco(): Promise<void> {
       const existente = document.querySelector(
         `script[src="${EPAYCO_SCRIPT_SRC}"]`,
       );
+
       if (existente) {
         existente.addEventListener('load', () => resolve());
         return;
       }
+
       const script = document.createElement('script');
       script.src = EPAYCO_SCRIPT_SRC;
       script.async = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('No se pudo cargar ePayco'));
+      script.onerror = () =>
+        reject(new Error('No se pudo cargar ePayco'));
+
       document.body.appendChild(script);
     });
   }
@@ -65,12 +69,28 @@ function validarFormularioRapido(
   confirmar: string,
 ): string | null {
   if (!nombre.trim()) return 'Escribe tu nombre.';
+
   // Misma regla que /registro, para no tener dos políticas distintas.
-  if (!correo.endsWith('@gmail.com')) return 'Por ahora solo aceptamos correos @gmail.com.';
-  if (contrasena.length < 8) return 'La contraseña debe tener mínimo 8 caracteres.';
-  if (!/[A-Z]/.test(contrasena)) return 'Debe tener al menos una mayúscula.';
-  if (!/[0-9]/.test(contrasena)) return 'Debe tener al menos un número.';
-  if (contrasena !== confirmar) return 'Las contraseñas no coinciden.';
+  if (!correo.endsWith('@gmail.com')) {
+    return 'Por ahora solo aceptamos correos @gmail.com.';
+  }
+
+  if (contrasena.length < 8) {
+    return 'La contraseña debe tener mínimo 8 caracteres.';
+  }
+
+  if (!/[A-Z]/.test(contrasena)) {
+    return 'Debe tener al menos una mayúscula.';
+  }
+
+  if (!/[0-9]/.test(contrasena)) {
+    return 'Debe tener al menos un número.';
+  }
+
+  if (contrasena !== confirmar) {
+    return 'Las contraseñas no coinciden.';
+  }
+
   return null;
 }
 
@@ -81,6 +101,7 @@ function validarFormularioRapido(
 // 'individual': ya hay sesión de un estudiante individual → paga directo.
 // 'institucional': el estudiante pertenece a un colegio → su acceso lo
 //   gestiona la institución, no tiene sentido que pague aquí.
+
 type Sesion = 'anonimo' | 'individual' | 'institucional';
 
 interface BotonPagoEpaycoProps {
@@ -96,6 +117,11 @@ export default function BotonPagoEpayco({
   precio,
   destacado = false,
 }: BotonPagoEpaycoProps) {
+  // "destacado" ya no cambia el color del botón (ahora todos son iguales).
+  // Se deja el prop para no romper a quienes ya lo pasan (planes/page.tsx,
+  // MuroDePago.tsx), por si más adelante se vuelve a usar para otra cosa.
+  void destacado;
+
   // Por defecto 'anonimo' para que el primer render en servidor y en
   // cliente coincida (sin esto, React se queja de hidratación). Si
   // resulta que sí hay sesión, lo actualizamos justo después de montar.
@@ -111,12 +137,14 @@ export default function BotonPagoEpayco({
   useEffect(() => {
     const rol = obtenerRol();
     const institucionId = obtenerInstitucionId();
+
     const nuevaSesion: Sesion =
       rol === 'ESTUDIANTE' && institucionId
         ? 'institucional'
         : rol
-        ? 'individual'
-        : 'anonimo';
+          ? 'individual'
+          : 'anonimo';
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSesion(nuevaSesion);
   }, []);
@@ -148,9 +176,11 @@ export default function BotonPagoEpayco({
       amount: String(datos.amount),
       country: datos.country,
       lang: 'es',
-      // "true" = checkout estándar con redirección (el estudiante sale
-      // de la página, paga, y vuelve).
+
+      // "true" = checkout estándar con redirección
+      // (el estudiante sale de la página, paga, y vuelve).
       external: 'true',
+
       response: responseUrl,
       confirmation: `${API_URL}/pagos/confirmacion`,
       name_billing: datos.nombre,
@@ -169,26 +199,43 @@ export default function BotonPagoEpayco({
     }
 
     setCargando(true);
+
     try {
       if (sesion === 'anonimo') {
-        const errorValidacion = validarFormularioRapido(nombre, correo, contrasena, confirmar);
+        const errorValidacion = validarFormularioRapido(
+          nombre,
+          correo,
+          contrasena,
+          confirmar,
+        );
+
         if (errorValidacion) {
           setError(errorValidacion);
           setCargando(false);
           return;
         }
+
         // Crea la cuenta y entra directo, SIN esperar a confirmar el
         // correo — esa espera es para la prueba gratis (punto 7), no
         // para alguien que ya va a pagar con su plata.
         await registrarUsuario(nombre, correo, contrasena);
-        const { accessToken } = await loginUsuario(correo, contrasena);
+
+        const { accessToken } = await loginUsuario(
+          correo,
+          contrasena,
+        );
+
         guardarToken(accessToken);
         setSesion('individual');
       }
 
       await irAEpayco();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo continuar. Intenta de nuevo.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo continuar. Intenta de nuevo.',
+      );
     } finally {
       setCargando(false);
     }
@@ -196,7 +243,14 @@ export default function BotonPagoEpayco({
 
   if (sesion === 'institucional') {
     return (
-      <p style={{ fontSize: 13, color: '#8a9aaa', textAlign: 'center', margin: 0 }}>
+      <p
+        style={{
+          fontSize: 13,
+          color: '#8a9aaa',
+          textAlign: 'center',
+          margin: 0,
+        }}
+      >
         Tu colegio ya te dio acceso — no necesitas comprar esto.
       </p>
     );
@@ -215,9 +269,22 @@ export default function BotonPagoEpayco({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+      }}
+    >
       {sesion === 'anonimo' && mostrarFormulario && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 4 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            marginBottom: 4,
+          }}
+        >
           <input
             type="text"
             placeholder="Tu nombre"
@@ -225,6 +292,7 @@ export default function BotonPagoEpayco({
             onChange={(e) => setNombre(e.target.value)}
             style={inputStyle}
           />
+
           <input
             type="email"
             placeholder="tucorreo@gmail.com"
@@ -232,6 +300,7 @@ export default function BotonPagoEpayco({
             onChange={(e) => setCorreo(e.target.value)}
             style={inputStyle}
           />
+
           <input
             type="password"
             placeholder="Contraseña (mín. 8, 1 mayúscula, 1 número)"
@@ -239,6 +308,7 @@ export default function BotonPagoEpayco({
             onChange={(e) => setContrasena(e.target.value)}
             style={inputStyle}
           />
+
           <input
             type="password"
             placeholder="Repite la contraseña"
@@ -252,14 +322,18 @@ export default function BotonPagoEpayco({
       <button
         onClick={manejarClick}
         disabled={cargando}
+        className="btn-cta"
         style={{
-          backgroundColor: destacado ? 'var(--color-primario, #146C94)' : '#ffffff',
-          color: destacado ? '#ffffff' : 'var(--color-primario, #146C94)',
-          border: destacado ? 'none' : '1.5px solid var(--color-primario, #146C94)',
+          // Un solo color para todos los botones de "Comprar",
+          // sin importar si la tarjeta es la destacada.
+          backgroundColor: 'var(--color-primario, #146C94)',
+          color: '#ffffff',
+          border: 'none',
           borderRadius: 10,
           padding: '12px 24px',
           fontSize: 15,
           fontWeight: 700,
+          width: '100%',
           cursor: cargando ? 'default' : 'pointer',
           opacity: cargando ? 0.7 : 1,
         }}
@@ -267,20 +341,42 @@ export default function BotonPagoEpayco({
         {cargando
           ? 'Un momento...'
           : sesion === 'anonimo' && mostrarFormulario
-          ? `Crear cuenta y pagar · ${precio}`
-          : `${etiqueta} · ${precio}`}
+            ? `Crear cuenta y pagar · ${precio}`
+            : `${etiqueta} · ${precio}`}
       </button>
 
       {sesion === 'anonimo' && mostrarFormulario && (
-        <p style={{ fontSize: 12, color: '#8a9aaa', textAlign: 'center', margin: 0 }}>
+        <p
+          style={{
+            fontSize: 12,
+            color: '#8a9aaa',
+            textAlign: 'center',
+            margin: 0,
+          }}
+        >
           ¿Ya tienes cuenta?{' '}
-          <Link href="/login" style={{ color: 'var(--color-primario, #146C94)', fontWeight: 600 }}>
+          <Link
+            href="/login"
+            style={{
+              color: 'var(--color-primario, #146C94)',
+              fontWeight: 600,
+            }}
+          >
             Inicia sesión
           </Link>
         </p>
       )}
 
-      {error && <span style={{ fontSize: 13, color: '#c0392b' }}>{error}</span>}
+      {error && (
+        <span
+          style={{
+            fontSize: 13,
+            color: '#c0392b',
+          }}
+        >
+          {error}
+        </span>
+      )}
     </div>
   );
 }
