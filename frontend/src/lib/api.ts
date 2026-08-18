@@ -461,6 +461,21 @@ export async function restablecerContrasena(token: string, nuevaContrasena: stri
   );
 }
 
+// El backend responde con { usuario: { debeCambiarContrasena: true } } en el
+// login cuando un admin creó la cuenta con contraseña temporal (punto 12).
+// Este endpoint es el que apaga esa bandera.
+export async function cambiarContrasenaInicial(nuevaContrasena: string) {
+  return apiFetch(
+    '/auth/cambiar-contrasena-inicial',
+    {
+      method: 'PATCH',
+      headers: crearEncabezados(),
+      body: JSON.stringify({ nuevaContrasena }),
+    },
+    'No se pudo actualizar la contraseña',
+  );
+}
+
 // ─── PANEL DE ADMINISTRACIÓN ──────────────────────────────────
 export async function obtenerEstadisticasAdmin() {
   return apiFetch('/admin/estadisticas', { headers: crearEncabezados() }, 'Error obteniendo estadísticas');

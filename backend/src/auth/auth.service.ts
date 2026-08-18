@@ -255,6 +255,7 @@ export class AuthService {
         rol: usuario.rol,
         xpTotal: usuario.xpTotal,
         institucionId: usuario.institucionId,
+        debeCambiarContrasena: usuario.debeCambiarContrasena,
       },
     };
   }
@@ -274,6 +275,7 @@ export class AuthService {
         institucionId: true,
         fechaVencimientoPlan: true,
         correoVerificado: true,
+        debeCambiarContrasena: true,
       },
     });
 
@@ -310,5 +312,26 @@ export class AuthService {
       },
     });
     return { mensaje: 'Perfil actualizado', usuario };
+  }
+
+  // ─── CAMBIO DE CONTRASEÑA OBLIGATORIO (punto 12) ─────────────
+  // No pide la contraseña actual: el usuario ya se autenticó con el
+  // JWT (con la temporal que le dio el admin), y eso ya prueba que la
+  // conoce. Solo apaga la bandera para que no lo vuelva a interrumpir.
+  async cambiarContrasenaInicial(usuarioId: string, nuevaContrasena: string) {
+    const contrasenaEncriptada = await bcrypt.hash(
+      nuevaContrasena,
+      BCRYPT_SALT_ROUNDS,
+    );
+
+    await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: {
+        contrasenaHash: contrasenaEncriptada,
+        debeCambiarContrasena: false,
+      },
+    });
+
+    return { mensaje: 'Contraseña actualizada.' };
   }
 }

@@ -70,7 +70,9 @@ export class AdminService {
     });
     if (!lead) throw new BadRequestException('El lead no existe.');
     if (lead.atendido) {
-      throw new BadRequestException('Este lead ya fue convertido o marcado como atendido.');
+      throw new BadRequestException(
+        'Este lead ya fue convertido o marcado como atendido.',
+      );
     }
 
     const usuarioExistente = await this.prisma.usuario.findUnique({
@@ -87,8 +89,12 @@ export class AdminService {
       datos.contrasenaTemporal,
       BCRYPT_SALT_ROUNDS,
     );
-    const codigoUnico = await generarCodigoConPrefijo('INST', async (codigo) =>
-      (await this.prisma.institucion.findUnique({ where: { codigoUnico: codigo } })) !== null,
+    const codigoUnico = await generarCodigoConPrefijo(
+      'INST',
+      async (codigo) =>
+        (await this.prisma.institucion.findUnique({
+          where: { codigoUnico: codigo },
+        })) !== null,
     );
 
     const resultado = await this.prisma.$transaction(async (tx) => {
@@ -111,6 +117,7 @@ export class AdminService {
           rol: 'PROFESOR',
           correoVerificado: true,
           institucionId: institucion.id,
+          debeCambiarContrasena: true,
         },
         select: { id: true, nombre: true, correo: true },
       });

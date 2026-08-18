@@ -1,35 +1,48 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { loginUsuario, guardarToken } from '../../lib/api';
-import { useBranding } from '../../context/ThemeContext';
+import { cambiarContrasenaInicial } from '../../lib/api';
+import { decodificarToken, obtenerRol } from '../../lib/auth';
 import Logotipo from '../../components/Logotipo';
 
-export default function LoginPage() {
+// Punto 12 del roadmap: cuando el admin crea la institución/profesor
+// desde el panel, la cuenta queda con debeCambiarContrasena=true y el
+// login redirige aquí en lugar de al dashboard. Una vez que cambian la
+// contraseña, el backend apaga la bandera y ya no vuelven a pasar por
+// esta pantalla.
+export default function CambiarContrasenaInicialPage() {
   const router = useRouter();
-  const { refrescarBranding } = useBranding();
-  const [correo, setCorreo] = useState('');
-  const [contrasena, setContrasena] = useState('');
+  const [nuevaContrasena, setNuevaContrasena] = useState('');
+  const [confirmar, setConfirmar] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCargando(true);
     setError('');
+
+    if (nuevaContrasena.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (nuevaContrasena !== confirmar) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+
+    setCargando(true);
     try {
-      const data = await loginUsuario(correo, contrasena);
-      guardarToken(data.accessToken);
-      await refrescarBranding();
-      if (data.usuario?.debeCambiarContrasena) {
-        router.push('/cambiar-contrasena-inicial');
-        return;
-      }
-      router.push(data.usuario?.rol === 'ADMIN' ? '/admin' : '/dashboard');
+      await cambiarContrasenaInicial(nuevaContrasena);
+      const token =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('saberplus_token')
+          : null;
+      const payload = decodificarToken(token);
+      const rol = payload?.rol ?? obtenerRol();
+      router.push(rol === 'ADMIN' ? '/admin' : '/dashboard');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión');
+      setError(err instanceof Error ? err.message : 'Error al actualizar la contraseña');
     } finally {
       setCargando(false);
     }
@@ -46,14 +59,10 @@ export default function LoginPage() {
     }}>
       <div style={{ width: '100%', maxWidth: 440 }}>
 
-        {/* Logo */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <Logotipo size={38} colorTexto="#1a2a3a" colorAcento="#19A7CE" />
-          </Link>
+          <Logotipo size={38} colorTexto="#1a2a3a" colorAcento="#19A7CE" />
         </div>
 
-        {/* Card */}
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: 20,
@@ -61,9 +70,13 @@ export default function LoginPage() {
           boxShadow: '0 4px 24px rgba(20,108,148,0.10)',
           border: '1px solid #AFD3E2',
         }}>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1a2a3a', marginBottom: 28 }}>
-            Iniciar sesión
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1a2a3a', marginBottom: 12 }}>
+            Elige tu nueva contraseña
           </h1>
+          <p style={{ fontSize: 14, color: '#4a5a6a', marginBottom: 28 }}>
+            Tu cuenta se creó con una contraseña temporal. Por seguridad, elige
+            una propia antes de continuar.
+          </p>
 
           {error && (
             <div style={{
@@ -82,13 +95,13 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
               <label style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', display: 'block', marginBottom: 8 }}>
-                Correo electrónico
+                Nueva contraseña
               </label>
               <input
-                type="email"
-                value={correo}
-                onChange={e => setCorreo(e.target.value)}
-                placeholder="tu@correo.com"
+                type="password"
+                value={nuevaContrasena}
+                onChange={e => setNuevaContrasena(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
                 required
                 style={{
                   width: '100%',
@@ -106,13 +119,13 @@ export default function LoginPage() {
 
             <div>
               <label style={{ fontSize: 14, fontWeight: 600, color: '#1a2a3a', display: 'block', marginBottom: 8 }}>
-                Contraseña
+                Confirmar contraseña
               </label>
               <input
                 type="password"
-                value={contrasena}
-                onChange={e => setContrasena(e.target.value)}
-                placeholder="Tu contraseña"
+                value={confirmar}
+                onChange={e => setConfirmar(e.target.value)}
+                placeholder="Repite la contraseña"
                 required
                 style={{
                   width: '100%',
@@ -126,11 +139,6 @@ export default function LoginPage() {
                   boxSizing: 'border-box',
                 }}
               />
-              <div style={{ textAlign: 'right', marginTop: 8 }}>
-                <Link href="/recuperar-contrasena" style={{ fontSize: 13, color: '#146C94', textDecoration: 'none', fontWeight: 600 }}>
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </div>
             </div>
 
             <button
@@ -149,16 +157,9 @@ export default function LoginPage() {
                 transition: 'background-color 0.2s',
               }}
             >
-              {cargando ? 'Entrando...' : 'Entrar'}
+              {cargando ? 'Guardando...' : 'Guardar y continuar'}
             </button>
           </form>
-
-          <p style={{ textAlign: 'center', marginTop: 28, fontSize: 14, color: '#4a5a6a' }}>
-            ¿No tienes cuenta?{' '}
-            <Link href="/registro" style={{ color: '#146C94', fontWeight: 700, textDecoration: 'none' }}>
-              Regístrate gratis
-            </Link>
-          </p>
         </div>
       </div>
     </div>

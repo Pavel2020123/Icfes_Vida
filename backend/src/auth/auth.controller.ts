@@ -76,6 +76,12 @@ class RestablecerContrasenaDto {
   nuevaContrasena!: string;
 }
 
+class CambiarContrasenaInicialDto {
+  @IsString()
+  @MinLength(6)
+  nuevaContrasena!: string;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -133,6 +139,18 @@ export class AuthController {
       req.usuario.sub,
       body.descripcion,
       body.fotoPerfil,
+    );
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('cambiar-contrasena-inicial')
+  cambiarContrasenaInicial(
+    @Body() body: CambiarContrasenaInicialDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.authService.cambiarContrasenaInicial(
+      req.usuario.sub,
+      body.nuevaContrasena,
     );
   }
 }

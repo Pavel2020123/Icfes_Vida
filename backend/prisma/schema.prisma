@@ -73,6 +73,11 @@ model Usuario {
   nombre                  String               @db.VarChar(255)
   correo                  String               @unique @db.VarChar(255)
   contrasenaHash          String
+  // Cuando el admin crea la cuenta manualmente con una contraseña
+  // temporal (punto 12: institución vía panel de admin), esta bandera
+  // queda en true para forzar que la cambie en su primer login. Se
+  // apaga sola cuando el usuario la cambia por una propia.
+  debeCambiarContrasena   Boolean?             @default(false)
   rol                     RolUsuario?          @default(ESTUDIANTE)
   xpTotal                 Int?                 @default(0)
   fechaCreacion           DateTime?            @default(now()) @db.Timestamp(6)
