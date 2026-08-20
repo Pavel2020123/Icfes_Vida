@@ -37,6 +37,11 @@ class ActualizarFechaDto {
 export class CalendarioIcfesController {
   constructor(private readonly service: CalendarioIcfesService) {}
 
+  @Get('activo')
+  async activo() {
+    return { calendario: await this.service.obtenerCalendarioActivo() };
+  }
+
   // Público (requiere solo login) — lo consume el countdown del estudiante.
   @Get('proxima')
   @UseGuards(JwtGuard)
@@ -68,6 +73,12 @@ export class CalendarioIcfesController {
   @UseGuards(AdminGuard)
   actualizar(@Param('id') id: string, @Body() body: ActualizarFechaDto) {
     return this.service.actualizar(id, new Date(body.fechaExamen));
+  }
+
+  @Patch('admin/:id/activar')
+  @UseGuards(AdminGuard)
+  activar(@Param('id') id: string) {
+    return this.service.activar(id);
   }
 
   @Delete('admin/:id')

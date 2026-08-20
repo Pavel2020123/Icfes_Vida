@@ -1,58 +1,77 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
   Body,
+  Controller,
+  Delete,
+  Get,
   Param,
+  Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { CuponesService } from './cupones.service';
-import { JwtGuard, AdminGuard } from '../auth/jwt.guard';
 import { TipoPlan } from '@prisma/client';
 import {
   IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
+import { AdminGuard, JwtGuard } from '../auth/jwt.guard';
+import { CuponesService } from './cupones.service';
 
 class ValidarCuponQueryDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(50)
+  @Matches(/^[A-Za-z0-9_-]+$/)
   codigo!: string;
 
   @IsEnum(TipoPlan)
   tipoPlan!: TipoPlan;
 }
 
+class PromocionActivaQueryDto {
+  @IsEnum(TipoPlan)
+  tipoPlan!: TipoPlan;
+}
+
 class CrearCuponDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  codigo!: string;
+  @MaxLength(50)
+  @Matches(/^[A-Za-z0-9_-]+$/)
+  codigo?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  titulo?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  esAutomatica?: boolean;
 
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(99)
   porcentajeDescuento!: number;
 
-  // Si no se manda, el cupón aplica a cualquier tipoPlan.
   @IsOptional()
-  @IsEnum(TipoPlan)
+  @IsIn(['MENSUAL'])
   tipoPlan?: TipoPlan;
 
   @IsDateString()
   @IsNotEmpty()
   fechaExpiracion!: string;
 
-  // Si no se manda, el cupón no tiene límite de usos.
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -65,16 +84,24 @@ class ActualizarCuponDto {
   activo?: boolean;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  titulo?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(99)
   porcentajeDescuento?: number;
+
+  @IsOptional()
+  @IsIn(['MENSUAL'])
+  tipoPlan?: TipoPlan | null;
 
   @IsOptional()
   @IsDateString()
   fechaExpiracion?: string;
 
-  // null explícito = quitar el límite de usos.
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -85,15 +112,21 @@ class ActualizarCuponDto {
 export class CuponesController {
   constructor(private readonly cuponesService: CuponesService) {}
 
-  // Lo usa el checkout del estudiante para mostrar "cupón válido: -34%"
-  // antes de crear la orden. No consume el cupo (eso pasa al pagar).
+  @Get('promocion-activa')
+  async promocionActiva(@Query() query: PromocionActivaQueryDto) {
+    return {
+      promocion: await this.cuponesService.obtenerPromocionActiva(
+        query.tipoPlan,
+      ),
+    };
+  }
+
   @Get('validar')
   @UseGuards(JwtGuard)
   validar(@Query() query: ValidarCuponQueryDto) {
     return this.cuponesService.validar(query.codigo, query.tipoPlan);
   }
 
-  // ─── ADMIN ──────────────────────────────────────────────────
   @Get('admin')
   @UseGuards(AdminGuard)
   listar() {

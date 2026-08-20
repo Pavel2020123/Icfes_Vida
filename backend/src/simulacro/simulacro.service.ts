@@ -7,6 +7,30 @@ interface RespuestaEstudiante {
   respuestaId: string;
 }
 
+interface PreguntaCalificable {
+  id: string;
+  enunciado: string;
+  imagenUrl: string | null;
+  explicacion: string | null;
+  respuestas: {
+    id: string;
+    texto: string;
+    explicacion: string | null;
+    esCorrecta: boolean;
+  }[];
+}
+
+export interface DetalleRevision {
+  preguntaId: string;
+  enunciado: string;
+  imagenUrl: string | null;
+  esCorrecto: boolean;
+  respuestaSeleccionadaId: string;
+  respuestaCorrectaId: string;
+  explicacion: string | null;
+  respuestas: PreguntaCalificable['respuestas'];
+}
+
 @Injectable()
 export class SimulacroService {
   constructor(private prisma: PrismaService) {}
@@ -20,6 +44,27 @@ export class SimulacroService {
     return copia;
   }
 
+  private construirDetalleRevision(
+    pregunta: PreguntaCalificable | undefined,
+    respuestaSeleccionadaId: string,
+  ): DetalleRevision {
+    const respuestaCorrectaId =
+      pregunta?.respuestas.find((respuesta) => respuesta.esCorrecta)?.id ?? '';
+
+    return {
+      preguntaId: pregunta?.id ?? '',
+      enunciado: pregunta?.enunciado ?? 'Pregunta no disponible',
+      imagenUrl: pregunta?.imagenUrl ?? null,
+      esCorrecto:
+        respuestaCorrectaId !== '' &&
+        respuestaCorrectaId === respuestaSeleccionadaId,
+      respuestaSeleccionadaId,
+      respuestaCorrectaId,
+      explicacion: pregunta?.explicacion ?? null,
+      respuestas: pregunta?.respuestas ?? [],
+    };
+  }
+
   // ─── GENERAR SIMULACRO ──────────────────────────────────────
   // Genera N preguntas aleatorias de un área, SIN enviar esCorrecta al cliente
   async generarSimulacro(area: AreaIcfes, cantidad: number = 25) {
@@ -31,7 +76,11 @@ export class SimulacroService {
           },
         },
       },
-      include: {
+      select: {
+        id: true,
+        enunciado: true,
+        imagenUrl: true,
+        dificultad: true,
         respuestas: {
           select: {
             id: true,
@@ -40,7 +89,8 @@ export class SimulacroService {
           },
         },
         subtema: {
-          include: {
+          select: {
+            nombre: true,
             tema: {
               select: { nombre: true, area: true },
             },
@@ -55,7 +105,10 @@ export class SimulacroService {
       );
     }
 
-    const seleccionadas = this.mezclarPreguntas(todasLasPreguntas).slice(0, cantidad);
+    const seleccionadas = this.mezclarPreguntas(todasLasPreguntas).slice(
+      0,
+      cantidad,
+    );
 
     return {
       mensaje: `Simulacro de ${area} generado con éxito`,
@@ -82,48 +135,38 @@ export class SimulacroService {
     // Traemos las preguntas con sus respuestas CORRECTAS desde la BD (nunca salieron al cliente)
     const preguntasConRespuestas = await this.prisma.pregunta.findMany({
       where: { id: { in: preguntaIds } },
-      include: {
+      select: {
+        id: true,
+        enunciado: true,
+        imagenUrl: true,
+        explicacion: true,
         respuestas: {
-          select: { id: true, esCorrecta: true },
+          select: {
+            id: true,
+            texto: true,
+            explicacion: true,
+            esCorrecta: true,
+          },
         },
       },
     });
 
-    const preguntaCorrectaPorId = new Map(
-      preguntasConRespuestas.map((pregunta) => [
-        pregunta.id,
-        pregunta.respuestas.find((r) => r.esCorrecta === true)?.id ?? null,
-      ]),
+    const preguntaPorId = new Map(
+      preguntasConRespuestas.map((pregunta) => [pregunta.id, pregunta]),
     );
 
     let correctas = 0;
-    const detalle: Array<{
-      preguntaId: string;
-      esCorrecto: boolean;
-      respuestaCorrectaId: string;
-    }> = [];
+    const detalle: DetalleRevision[] = [];
 
     for (const respuestaAlumno of respuestasEstudiante) {
-      const respuestaCorrectaId = preguntaCorrectaPorId.get(
-        respuestaAlumno.preguntaId,
+      const revision = this.construirDetalleRevision(
+        preguntaPorId.get(respuestaAlumno.preguntaId),
+        respuestaAlumno.respuestaId,
       );
-      if (!respuestaCorrectaId) {
-        detalle.push({
-          preguntaId: respuestaAlumno.preguntaId,
-          esCorrecto: false,
-          respuestaCorrectaId: '',
-        });
-        continue;
-      }
-
-      const esCorrecto = respuestaCorrectaId === respuestaAlumno.respuestaId;
-      if (esCorrecto) correctas++;
-
-      detalle.push({
-        preguntaId: respuestaAlumno.preguntaId,
-        esCorrecto,
-        respuestaCorrectaId,
-      });
+      if (!revision.preguntaId)
+        revision.preguntaId = respuestaAlumno.preguntaId;
+      if (revision.esCorrecto) correctas++;
+      detalle.push(revision);
     }
 
     const totalPreguntas = respuestasEstudiante.length;
@@ -189,7 +232,11 @@ export class SimulacroService {
         },
         ...(dificultad ? { dificultad } : {}),
       },
-      include: {
+      select: {
+        id: true,
+        enunciado: true,
+        imagenUrl: true,
+        dificultad: true,
         respuestas: {
           select: {
             id: true,
@@ -198,7 +245,8 @@ export class SimulacroService {
           },
         },
         subtema: {
-          include: {
+          select: {
+            nombre: true,
             tema: {
               select: { nombre: true, area: true },
             },
@@ -213,7 +261,10 @@ export class SimulacroService {
       );
     }
 
-    const seleccionadas = this.mezclarPreguntas(todasLasPreguntas).slice(0, cantidad);
+    const seleccionadas = this.mezclarPreguntas(todasLasPreguntas).slice(
+      0,
+      cantidad,
+    );
 
     return {
       mensaje: 'Simulacro personalizado generado con éxito',
@@ -241,9 +292,20 @@ export class SimulacroService {
 
     const preguntasConRespuestas = await this.prisma.pregunta.findMany({
       where: { id: { in: preguntaIds } },
-      include: {
-        respuestas: { select: { id: true, esCorrecta: true } },
-        subtema: { include: { tema: { select: { area: true } } } },
+      select: {
+        id: true,
+        enunciado: true,
+        imagenUrl: true,
+        explicacion: true,
+        respuestas: {
+          select: {
+            id: true,
+            texto: true,
+            explicacion: true,
+            esCorrecta: true,
+          },
+        },
+        subtema: { select: { tema: { select: { area: true } } } },
       },
     });
 
@@ -252,38 +314,31 @@ export class SimulacroService {
         pregunta.id,
         {
           area: pregunta.subtema.tema.area,
-          respuestaCorrectaId:
-            pregunta.respuestas.find((r) => r.esCorrecta === true)?.id ?? null,
+          pregunta,
         },
       ]),
     );
 
     let correctas = 0;
-    const detalle: Array<{
-      preguntaId: string;
-      esCorrecto: boolean;
-      respuestaCorrectaId: string;
-    }> = [];
+    const detalle: DetalleRevision[] = [];
     const porArea: Record<string, { total: number; correctas: number }> = {};
 
     for (const respuestaAlumno of respuestasEstudiante) {
       const preguntaInfo = preguntaInfoPorId.get(respuestaAlumno.preguntaId);
       if (!preguntaInfo) continue;
 
-      const esCorrecto =
-        preguntaInfo.respuestaCorrectaId === respuestaAlumno.respuestaId;
-      if (esCorrecto) correctas++;
+      const revision = this.construirDetalleRevision(
+        preguntaInfo.pregunta,
+        respuestaAlumno.respuestaId,
+      );
+      if (revision.esCorrecto) correctas++;
 
       if (!porArea[preguntaInfo.area])
         porArea[preguntaInfo.area] = { total: 0, correctas: 0 };
       porArea[preguntaInfo.area].total++;
-      if (esCorrecto) porArea[preguntaInfo.area].correctas++;
+      if (revision.esCorrecto) porArea[preguntaInfo.area].correctas++;
 
-      detalle.push({
-        preguntaId: respuestaAlumno.preguntaId,
-        esCorrecto,
-        respuestaCorrectaId: preguntaInfo.respuestaCorrectaId ?? '',
-      });
+      detalle.push(revision);
     }
 
     const totalPreguntas = respuestasEstudiante.length;
@@ -366,12 +421,17 @@ export class SimulacroService {
   async obtenerPreguntasPorSubtema(subtemaId: string) {
     return this.prisma.pregunta.findMany({
       where: { subtemaId },
-      include: {
+      select: {
+        id: true,
+        enunciado: true,
+        imagenUrl: true,
+        dificultad: true,
         respuestas: {
           select: { id: true, texto: true },
         },
         subtema: {
-          include: {
+          select: {
+            nombre: true,
             tema: {
               select: { nombre: true, area: true },
             },

@@ -49,17 +49,19 @@ export interface RespuestaAdmin {
   id: string;
   texto: string;
   esCorrecta: boolean;
+  explicacion: string | null;
 }
 
 export interface PreguntaAdmin {
   id: string;
   enunciado: string;
+  explicacion: string | null;
   imagenUrl: string | null;
   dificultad: string;
   respuestas: RespuestaAdmin[];
 }
 
-export type Pestana = 'stats' | 'temas' | 'preguntas' | 'aleatorias' | 'usuarios' | 'contenido' | 'interactivo' | 'calendario' | 'ventas';
+export type Pestana = 'stats' | 'temas' | 'preguntas' | 'aleatorias' | 'usuarios' | 'contenido' | 'interactivo' | 'calendario' | 'ventas' | 'cupones';
 
 export interface LeadVentasAdmin {
   id: string;
@@ -76,4 +78,5 @@ export interface FechaIcfes {
   anio: number;
   calendario: 'A' | 'B';
   fechaExamen: string;
+  activo: boolean;
 }

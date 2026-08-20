@@ -6,10 +6,6 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CalendarioTipo } from '@prisma/client';
 
-// Cuántos días antes del examen real vence el plan, para que el
-// estudiante llegue descansado. Ver "Vigencia de los planes" en el roadmap.
-export const DIAS_ANTES_DEL_EXAMEN = 2;
-
 @Injectable()
 export class CalendarioIcfesService {
   constructor(private prisma: PrismaService) {}
@@ -25,14 +21,23 @@ export class CalendarioIcfesService {
       );
     }
 
+    const calendarioActivo = await this.prisma.calendarioIcfes.findFirst({
+      where: { activo: true },
+      select: { id: true },
+    });
+
     return this.prisma.calendarioIcfes.create({
-      data: { anio, calendario, fechaExamen },
+      data: { anio, calendario, fechaExamen, activo: !calendarioActivo },
     });
   }
 
   async listar() {
     return this.prisma.calendarioIcfes.findMany({
-      orderBy: [{ anio: 'desc' }, { calendario: 'asc' }],
+      orderBy: [
+        { activo: 'desc' },
+        { fechaExamen: 'desc' },
+        { calendario: 'asc' },
+      ],
     });
   }
 
@@ -42,6 +47,14 @@ export class CalendarioIcfesService {
     });
     if (!registro)
       throw new NotFoundException('Fecha de calendario no encontrada.');
+    if (
+      registro.activo &&
+      this.calcularFinDelExamen(fechaExamen).getTime() < Date.now()
+    ) {
+      throw new BadRequestException(
+        'La convocatoria activa no puede tener una fecha vencida.',
+      );
+    }
 
     return this.prisma.calendarioIcfes.update({
       where: { id },
@@ -55,8 +68,46 @@ export class CalendarioIcfesService {
     });
     if (!registro)
       throw new NotFoundException('Fecha de calendario no encontrada.');
+    if (registro.activo) {
+      throw new BadRequestException(
+        'Activa otra convocatoria antes de eliminar la actual.',
+      );
+    }
 
     return this.prisma.calendarioIcfes.delete({ where: { id } });
+  }
+
+  async activar(id: string) {
+    const registro = await this.prisma.calendarioIcfes.findUnique({
+      where: { id },
+    });
+    if (!registro) {
+      throw new NotFoundException('Fecha de calendario no encontrada.');
+    }
+    if (
+      this.calcularFinDelExamen(registro.fechaExamen).getTime() < Date.now()
+    ) {
+      throw new BadRequestException(
+        'No puedes activar una convocatoria cuya fecha ya pasó.',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.calendarioIcfes.updateMany({
+        where: { activo: true },
+        data: { activo: false },
+      });
+      return tx.calendarioIcfes.update({
+        where: { id },
+        data: { activo: true },
+      });
+    });
+  }
+
+  obtenerCalendarioActivo() {
+    return this.prisma.calendarioIcfes.findFirst({
+      where: { activo: true },
+    });
   }
 
   // ─── USO GENERAL: PRÓXIMA FECHA DE EXAMEN ──────────────────
@@ -76,16 +127,20 @@ export class CalendarioIcfesService {
   }
 
   // ─── CÁLCULO DE VIGENCIA DEL PLAN ──────────────────────────
-  // Fecha en la que debe vencer un plan (individual o institucional)
-  // para ese calendario: DIAS_ANTES_DEL_EXAMEN antes del examen real.
+  // Fecha en la que debe vencer un acceso individual o institucional:
+  // al terminar el día del examen oficial.
   // Si no hay fecha oficial cargada todavía, devuelve null: quien
   // llama decide qué hacer (ej. no bloquear, o avisar al admin).
   async calcularVigencia(calendario: CalendarioTipo): Promise<Date | null> {
     const proximaFecha = await this.obtenerProximaFecha(calendario);
     if (!proximaFecha) return null;
 
-    const vigencia = new Date(proximaFecha.fechaExamen);
-    vigencia.setDate(vigencia.getDate() - DIAS_ANTES_DEL_EXAMEN);
+    return this.calcularFinDelExamen(proximaFecha.fechaExamen);
+  }
+
+  calcularFinDelExamen(fechaExamen: Date): Date {
+    const vigencia = new Date(fechaExamen);
+    vigencia.setHours(23, 59, 59, 999);
     return vigencia;
   }
 }

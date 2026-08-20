@@ -554,6 +554,7 @@ export async function eliminarPreguntaAdmin(id: string) {
 interface RespuestaPreguntaAdmin {
   texto: string;
   esCorrecta: boolean;
+  explicacion?: string;
 }
 
 export async function crearPreguntaAdmin(
@@ -562,13 +563,14 @@ export async function crearPreguntaAdmin(
   dificultad: string,
   imagenUrl: string | null,
   respuestas: RespuestaPreguntaAdmin[],
+  explicacion?: string,
 ) {
   return apiFetch(
     '/admin/preguntas',
     {
       method: 'POST',
       headers: crearEncabezados(),
-      body: JSON.stringify({ enunciado, subtemaId, dificultad, imagenUrl, respuestas }),
+      body: JSON.stringify({ enunciado, subtemaId, dificultad, imagenUrl, respuestas, explicacion }),
     },
     'Error creando la pregunta',
   );
@@ -579,13 +581,14 @@ export async function crearPreguntaAleatoriaAdmin(
   enunciado: string,
   imagenUrl: string | null,
   respuestas: RespuestaPreguntaAdmin[],
+  explicacion?: string,
 ) {
   return apiFetch(
     '/admin/preguntas-aleatorias',
     {
       method: 'POST',
       headers: crearEncabezados(),
-      body: JSON.stringify({ area, enunciado, imagenUrl, respuestas }),
+      body: JSON.stringify({ area, enunciado, imagenUrl, respuestas, explicacion }),
     },
     'Error agregando la pregunta al banco',
   );
@@ -604,8 +607,25 @@ export async function eliminarUsuarioAdmin(usuarioId: string) {
 }
 
 // ─── CALENDARIO ICFES (admin) ─────────────────────────────────
+export interface CalendarioIcfes {
+  id: string;
+  anio: number;
+  calendario: 'A' | 'B';
+  fechaExamen: string;
+  activo: boolean;
+}
+
 export async function obtenerCalendarioIcfesAdmin() {
-  return apiFetch('/calendario-icfes/admin', { headers: crearEncabezados() }, 'Error obteniendo el calendario');
+  return apiFetch<CalendarioIcfes[]>('/calendario-icfes/admin', { headers: crearEncabezados() }, 'Error obteniendo el calendario');
+}
+
+export async function obtenerCalendarioIcfesActivo() {
+  const resultado = await apiFetch<{ calendario: CalendarioIcfes | null }>(
+    '/calendario-icfes/activo',
+    undefined,
+    'No se pudo consultar el calendario activo',
+  );
+  return resultado.calendario;
 }
 
 export async function crearFechaCalendarioIcfesAdmin(datos: {
@@ -636,6 +656,126 @@ export async function eliminarFechaCalendarioIcfesAdmin(id: string) {
   );
 }
 
+export async function activarCalendarioIcfesAdmin(id: string) {
+  return apiFetch<CalendarioIcfes>(
+    `/calendario-icfes/admin/${id}/activar`,
+    { method: 'PATCH', headers: crearEncabezados() },
+    'No se pudo activar el calendario',
+  );
+}
+
+// ─── CUPONES Y PROMOCIONES (punto 13) ─────────────────────────
+// Valor interno conservado para compatibilidad con órdenes históricas.
+// En la interfaz solo existe un producto: Acceso completo SaberPlus.
+export type TipoPlanPago = 'MENSUAL';
+
+export interface CuponAdmin {
+  id: string;
+  codigo: string | null;
+  titulo: string | null;
+  esAutomatica: boolean;
+  porcentajeDescuento: number;
+  tipoPlan: TipoPlanPago | null;
+  fechaExpiracion: string;
+  usosMaximos: number | null;
+  usosActuales: number;
+  activo: boolean;
+  fechaCreacion: string;
+}
+
+export interface CuponValidado {
+  cuponId: string;
+  codigo: string;
+  porcentajeDescuento: number;
+  usosDisponibles: number | null;
+}
+
+export interface PromocionActiva {
+  cuponId: string;
+  titulo: string;
+  porcentajeDescuento: number;
+  tipoPlan: TipoPlanPago | null;
+  fechaExpiracion: string;
+  usosDisponibles: number | null;
+}
+
+export function obtenerCuponesAdmin() {
+  return apiFetch<CuponAdmin[]>(
+    '/cupones/admin',
+    { headers: crearEncabezados() },
+    'No se pudieron cargar los cupones',
+  );
+}
+
+export function crearCuponAdmin(datos: {
+  codigo?: string;
+  titulo?: string;
+  esAutomatica?: boolean;
+  porcentajeDescuento: number;
+  tipoPlan?: TipoPlanPago;
+  fechaExpiracion: string;
+  usosMaximos?: number;
+}) {
+  return apiFetch<CuponAdmin>(
+    '/cupones/admin',
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify(datos),
+    },
+    'No se pudo crear el cupón',
+  );
+}
+
+export function actualizarCuponAdmin(
+  id: string,
+  datos: {
+    activo?: boolean;
+    titulo?: string;
+    porcentajeDescuento?: number;
+    tipoPlan?: TipoPlanPago | null;
+    fechaExpiracion?: string;
+    usosMaximos?: number | null;
+  },
+) {
+  return apiFetch<CuponAdmin>(
+    `/cupones/admin/${id}`,
+    {
+      method: 'PATCH',
+      headers: crearEncabezados(),
+      body: JSON.stringify(datos),
+    },
+    'No se pudo actualizar el cupón',
+  );
+}
+
+export function eliminarCuponAdmin(id: string) {
+  return apiFetch<CuponAdmin>(
+    `/cupones/admin/${id}`,
+    { method: 'DELETE', headers: crearEncabezados() },
+    'No se pudo eliminar el cupón',
+  );
+}
+
+export function validarCupon(codigo: string, tipoPlan: TipoPlanPago) {
+  const query = new URLSearchParams({ codigo, tipoPlan });
+  return apiFetch<CuponValidado>(
+    `/cupones/validar?${query.toString()}`,
+    { headers: crearEncabezados() },
+    'No se pudo validar el cupón',
+  );
+}
+
+export async function obtenerPromocionActiva(tipoPlan: TipoPlanPago) {
+  const query = new URLSearchParams({ tipoPlan });
+  const resultado = await apiFetch<{ promocion: PromocionActiva | null }>(
+    `/cupones/promocion-activa?${query.toString()}`,
+    undefined,
+    'No se pudo consultar la promocion',
+  );
+  return resultado.promocion;
+}
+
 // ─── PAGOS (ePayco) — punto 9: muro de pago del estudiante individual ───
 export interface DatosCheckoutEpayco {
   factura: string;
@@ -648,12 +788,28 @@ export interface DatosCheckoutEpayco {
   description: string;
   email: string;
   nombre: string;
+  tipoPlan: TipoPlanPago;
+  calendarioIcfes: 'A' | 'B';
+  fechaExamen: string;
+  fechaVencimientoAcceso: string;
+  montoOriginal: number;
+  porcentajeDescuento: number | null;
+  codigoCupon: string | null;
+  tituloPromocion: string | null;
 }
 
-export async function crearOrdenPagoIndividual(grado: 'DECIMO' | 'ONCE') {
+export async function crearOrdenPagoIndividual(
+  codigoCupon?: string,
+) {
   return apiFetch<DatosCheckoutEpayco>(
     '/pagos/crear-orden',
-    { method: 'POST', headers: crearEncabezados(), body: JSON.stringify({ grado }) },
+    {
+      method: 'POST',
+      headers: crearEncabezados(),
+      body: JSON.stringify({
+        codigoCupon: codigoCupon?.trim() || undefined,
+      }),
+    },
     'No se pudo iniciar el pago',
   );
 }
@@ -662,7 +818,12 @@ export interface EstadoOrdenPago {
   factura: string;
   estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'PENDIENTE_BANCO' | 'FALLIDA';
   monto: number;
-  grado: 'DECIMO' | 'ONCE';
+  montoOriginal: number | null;
+  cuponId: string | null;
+  grado: 'DECIMO' | 'ONCE' | null;
+  tipoPlan: TipoPlanPago;
+  calendarioIcfes: 'A' | 'B' | null;
+  fechaVencimientoAcceso: string | null;
   fechaActualizacion: string;
 }
 
@@ -681,8 +842,8 @@ export interface DatosLeadVentas {
   correo: string;
   telefono?: string;
   ciudad?: string;
-  linea: 'ONCE' | 'BACHILLERATO';
-  plan: 'Básico' | 'Plus' | 'Colegio';
+  linea: 'BACHILLERATO';
+  plan: 'Institucional';
   numeroEstudiantesAprox?: number;
   mensaje?: string;
 }
@@ -705,7 +866,7 @@ export async function obtenerLeadsVentasAdmin() {
 
 export async function crearInstitucionDesdeLeadAdmin(datos: {
   leadId: string; contrasenaTemporal: string; planActual?: string;
-  limiteGrado10?: number; limiteGrado11?: number; calendarioIcfes?: 'A' | 'B'; fechaVencimientoPlan?: string;
+  limiteEstudiantes?: number; calendarioIcfes?: 'A' | 'B'; fechaVencimientoPlan?: string;
 }) {
   return apiFetch('/admin/instituciones-desde-lead', { method: 'POST', headers: crearEncabezados(), body: JSON.stringify(datos) }, 'No se pudo crear la institución');
 }

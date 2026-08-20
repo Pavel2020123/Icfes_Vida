@@ -5,6 +5,7 @@ import {
   obtenerCalendarioIcfesAdmin,
   crearFechaCalendarioIcfesAdmin,
   actualizarFechaCalendarioIcfesAdmin,
+  activarCalendarioIcfesAdmin,
   eliminarFechaCalendarioIcfesAdmin,
 } from '../../../lib/api';
 import type { FechaIcfes } from './tipos';
@@ -27,8 +28,22 @@ export default function CalendarioTab({
     setCargando(false);
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { cargar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let activo = true;
+
+    obtenerCalendarioIcfesAdmin()
+      .then((calendarios) => {
+        if (activo) setFechas(calendarios);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (activo) setCargando(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   const crear = async () => {
     if (!nueva.fechaExamen) { mostrarMensaje('Elige una fecha de examen'); return; }
@@ -44,16 +59,47 @@ export default function CalendarioTab({
   };
 
   const actualizar = async (id: string, fechaExamen: string) => {
-    await actualizarFechaCalendarioIcfesAdmin(id, fechaExamen);
-    mostrarMensaje('Fecha actualizada');
-    cargar();
+    try {
+      await actualizarFechaCalendarioIcfesAdmin(id, fechaExamen);
+      mostrarMensaje('Fecha actualizada');
+    } catch (err) {
+      mostrarMensaje(
+        err instanceof Error ? err.message : 'No se pudo actualizar la fecha',
+      );
+    } finally {
+      await cargar();
+    }
   };
 
-  const eliminar = async (id: string) => {
+  const eliminar = async (fecha: FechaIcfes) => {
+    if (fecha.activo) {
+      mostrarMensaje(
+        'Activa otra convocatoria antes de eliminar la actual.',
+      );
+      return;
+    }
     if (!confirm('¿Eliminar esta fecha de examen?')) return;
-    await eliminarFechaCalendarioIcfesAdmin(id);
-    mostrarMensaje('Fecha eliminada');
-    cargar();
+    try {
+      await eliminarFechaCalendarioIcfesAdmin(fecha.id);
+      mostrarMensaje('Fecha eliminada');
+    } catch (err) {
+      mostrarMensaje(
+        err instanceof Error ? err.message : 'No se pudo eliminar la fecha',
+      );
+    } finally {
+      await cargar();
+    }
+  };
+
+  const activar = async (id: string) => {
+    try {
+      await activarCalendarioIcfesAdmin(id);
+      mostrarMensaje('Calendario activo actualizado');
+    } catch (err) {
+      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo activar el calendario');
+    } finally {
+      await cargar();
+    }
   };
 
   return (
@@ -62,8 +108,8 @@ export default function CalendarioTab({
         Calendario oficial ICFES
       </h2>
       <p style={{ color: '#8a9aaa', fontSize: 13, marginBottom: 20 }}>
-        Todos los planes (individuales e institucionales) vencen 2 días antes de la fecha real
-        de presentación que cargues aquí, según el calendario (A o B) de cada estudiante/colegio.
+        El calendario activo aparece en la plataforma y se guarda en cada compra nueva.
+        El acceso se mantiene hasta finalizar el día del examen.
       </p>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -98,13 +144,14 @@ export default function CalendarioTab({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {fechas.map(f => (
-            <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', border: '1px solid #D2E0FB', borderRadius: 10, flexWrap: 'wrap', gap: 10 }}>
+            <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', border: f.activo ? '2px solid #146C94' : '1px solid #D2E0FB', borderRadius: 8, flexWrap: 'wrap', gap: 10, backgroundColor: f.activo ? '#F3F9FC' : '#ffffff' }}>
               <div>
-                <p style={{ fontWeight: 700, color: '#1a2a3a', fontSize: 15 }}>
+                <p style={{ fontWeight: 700, color: '#1a2a3a', fontSize: 15, margin: 0 }}>
                   {f.anio} — Calendario {f.calendario}
+                  {f.activo && <span style={{ marginLeft: 8, color: '#238761', fontSize: 12 }}>Activo</span>}
                 </p>
-                <p style={{ color: '#8a9aaa', fontSize: 13 }}>
-                  Vigencia calculada: 2 días antes de la fecha de examen.
+                <p style={{ color: '#8a9aaa', fontSize: 13, margin: '4px 0 0' }}>
+                  Acceso vigente hasta el día del examen.
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -114,9 +161,19 @@ export default function CalendarioTab({
                   onBlur={e => e.target.value && actualizar(f.id, e.target.value)}
                   style={{ ...inputStyle, width: 170 }}
                 />
+                {!f.activo && (
+                  <button
+                    onClick={() => activar(f.id)}
+                    style={{ backgroundColor: '#146C94', border: 'none', color: '#ffffff', borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Activar
+                  </button>
+                )}
                 <button
-                  onClick={() => eliminar(f.id)}
-                  style={{ background: 'none', border: '1.5px solid #FCD8CD', color: '#BC7C7C', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                  onClick={() => eliminar(f)}
+                  disabled={f.activo}
+                  title={f.activo ? 'Activa otra convocatoria antes de eliminar esta' : 'Eliminar fecha'}
+                  style={{ background: 'none', border: '1.5px solid #FCD8CD', color: '#BC7C7C', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 700, cursor: f.activo ? 'not-allowed' : 'pointer', opacity: f.activo ? 0.5 : 1 }}
                 >
                   Eliminar
                 </button>

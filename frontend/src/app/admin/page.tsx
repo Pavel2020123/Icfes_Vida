@@ -19,6 +19,7 @@ import ContenidoTab from './components/ContenidoTab';
 import InteractivoTab from './components/InteractivoTab';
 import CalendarioTab from './components/CalendarioTab';
 import VentasTab from './components/VentasTab';
+import CuponesTab from './components/CuponesTab';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -139,6 +140,7 @@ export default function AdminPage() {
             { key: 'interactivo', label: 'Ejercicio interactivo' },
             { key: 'calendario', label: '📅 Calendario ICFES' },
             { key: 'ventas', label: 'Ventas e instituciones' },
+            { key: 'cupones', label: 'Cupones y promociones' },
           ].map(p => (
             <button
               key={p.key}
@@ -199,6 +201,8 @@ export default function AdminPage() {
         )}
 
         {pestana === 'ventas' && <VentasTab mostrarMensaje={mostrarMensaje} />}
+
+        {pestana === 'cupones' && <CuponesTab mostrarMensaje={mostrarMensaje} />}
       </div>
       </div>
     </ProtectedRoute>

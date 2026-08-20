@@ -1,22 +1,12 @@
 import * as crypto from 'crypto';
-import { Grado } from '@prisma/client';
 
-// ─── PRECIOS SABERPLUS (actualizados 2026) ───────────────────
-export const PRECIO_INDIVIDUAL_COP: Record<Grado, number> = {
-  DECIMO: 12900,
-  ONCE: 12900,
-};
+// Un único pago cubre el acceso completo hasta la convocatoria activa.
+export const PRECIO_ACCESO_COMPLETO_COP = 45000;
 
-export const PRECIO_TEMPORADA_COP = {
-  TEMPORADA_A: 79900,
-  TEMPORADA_B: 49900,
-};
-
-// Precios institucionales por estudiante/mes
+// Valores de referencia por estudiante y convocatoria.
 export const PRECIO_INSTITUCIONAL_COP = {
-  RANGO_20_50: 4900,
-  RANGO_51_100: 3900,
-  RANGO_101_PLUS: 2900,
+  RANGO_10_39: 35000,
+  RANGO_40_99: 30000,
 };
 
 // ─── FIRMA DE SEGURIDAD DEL WEBHOOK DE WOMPI ────────────────

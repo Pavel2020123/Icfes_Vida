@@ -54,8 +54,7 @@ export class AdminService {
     leadId: string;
     contrasenaTemporal: string;
     planActual?: string;
-    limiteGrado10?: number;
-    limiteGrado11?: number;
+    limiteEstudiantes?: number;
     calendarioIcfes?: CalendarioTipo;
     fechaVencimientoPlan?: Date;
   }) {
@@ -97,16 +96,31 @@ export class AdminService {
         })) !== null,
     );
 
+    const convocatoriaActiva = await this.prisma.calendarioIcfes.findFirst({
+      where: { activo: true },
+    });
+    if (!convocatoriaActiva && !datos.fechaVencimientoPlan) {
+      throw new BadRequestException(
+        'Crea y activa una convocatoria ICFES antes de habilitar la institución.',
+      );
+    }
+    const calendario =
+      datos.calendarioIcfes ?? convocatoriaActiva?.calendario ?? 'A';
+    const vencimiento =
+      datos.fechaVencimientoPlan ??
+      (convocatoriaActiva
+        ? this.finDelDia(convocatoriaActiva.fechaExamen)
+        : undefined);
+
     const resultado = await this.prisma.$transaction(async (tx) => {
       const institucion = await tx.institucion.create({
         data: {
           nombre: lead.nombreColegio,
           codigoUnico,
           planActual: datos.planActual || lead.plan,
-          limiteGrado10: datos.limiteGrado10,
-          limiteGrado11: datos.limiteGrado11,
-          calendarioIcfes: datos.calendarioIcfes ?? 'A',
-          fechaVencimientoPlan: datos.fechaVencimientoPlan,
+          limiteEstudiantes: datos.limiteEstudiantes,
+          calendarioIcfes: calendario,
+          fechaVencimientoPlan: vencimiento,
         },
       });
       const responsable = await tx.usuario.create({
@@ -133,6 +147,12 @@ export class AdminService {
       institucion: resultado.institucion,
       responsable: resultado.responsable,
     };
+  }
+
+  private finDelDia(fecha: Date) {
+    const fin = new Date(fecha);
+    fin.setHours(23, 59, 59, 999);
+    return fin;
   }
 
   // ─── TEMAS ───────────────────────────────────────────────────
@@ -243,8 +263,13 @@ export class AdminService {
     enunciado: string,
     subtemaId: string,
     dificultad: Dificultad,
-    respuestas: { texto: string; esCorrecta: boolean }[],
+    respuestas: {
+      texto: string;
+      esCorrecta: boolean;
+      explicacion?: string;
+    }[],
     imagenUrl?: string,
+    explicacion?: string,
   ) {
     return this.prisma.pregunta.create({
       data: {
@@ -252,8 +277,13 @@ export class AdminService {
         subtemaId,
         dificultad,
         imagenUrl: imagenUrl || null,
+        explicacion: explicacion?.trim() || null,
         respuestas: {
-          create: respuestas,
+          create: respuestas.map((respuesta) => ({
+            texto: respuesta.texto,
+            esCorrecta: respuesta.esCorrecta,
+            explicacion: respuesta.explicacion?.trim() || null,
+          })),
         },
       },
       include: { respuestas: true },
@@ -266,8 +296,13 @@ export class AdminService {
   async crearPreguntaAleatoria(
     area: AreaIcfes,
     enunciado: string,
-    respuestas: { texto: string; esCorrecta: boolean }[],
+    respuestas: {
+      texto: string;
+      esCorrecta: boolean;
+      explicacion?: string;
+    }[],
     imagenUrl?: string,
+    explicacion?: string,
   ) {
     let tema = await this.prisma.tema.findFirst({
       where: { nombre: 'Banco General', area },
@@ -293,6 +328,7 @@ export class AdminService {
       'MEDIO',
       respuestas,
       imagenUrl,
+      explicacion,
     );
   }
 

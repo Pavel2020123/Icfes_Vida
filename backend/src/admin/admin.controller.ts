@@ -65,6 +65,10 @@ class RespuestaDto {
 
   @IsBoolean()
   esCorrecta!: boolean;
+
+  @IsOptional()
+  @IsString()
+  explicacion?: string;
 }
 
 class CrearPreguntaDto {
@@ -87,6 +91,10 @@ class CrearPreguntaDto {
   @IsOptional()
   @IsString()
   imagenUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  explicacion?: string;
 }
 
 class CrearPreguntaAleatoriaDto {
@@ -105,6 +113,10 @@ class CrearPreguntaAleatoriaDto {
   @IsOptional()
   @IsString()
   imagenUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  explicacion?: string;
 }
 
 class ActualizarContenidoDto {
@@ -169,12 +181,7 @@ class CrearInstitucionDesdeLeadDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  limiteGrado10?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  limiteGrado11?: number;
+  limiteEstudiantes?: number;
 
   @IsOptional()
   @IsEnum(CalendarioTipo)
@@ -266,6 +273,7 @@ export class AdminController {
       body.dificultad,
       body.respuestas,
       body.imagenUrl,
+      body.explicacion,
     );
   }
 
@@ -277,6 +285,7 @@ export class AdminController {
       body.enunciado,
       body.respuestas,
       body.imagenUrl,
+      body.explicacion,
     );
   }
 

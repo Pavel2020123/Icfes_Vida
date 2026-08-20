@@ -17,13 +17,14 @@ export default function PreguntasTab({
   const [subtemaSeleccionado, setSubtemaSeleccionado] = useState('');
   const [nuevaPregunta, setNuevaPregunta] = useState({
     enunciado: '',
+    explicacion: '',
     dificultad: 'MEDIO',
     imagenes: '',
     respuestas: [
-      { texto: '', esCorrecta: true },
-      { texto: '', esCorrecta: false },
-      { texto: '', esCorrecta: false },
-      { texto: '', esCorrecta: false },
+      { texto: '', esCorrecta: true, explicacion: '' },
+      { texto: '', esCorrecta: false, explicacion: '' },
+      { texto: '', esCorrecta: false, explicacion: '' },
+      { texto: '', esCorrecta: false, explicacion: '' },
     ],
   });
   const [preguntasSubtema, setPreguntasSubtema] = useState<PreguntaAdmin[]>([]);
@@ -40,7 +41,6 @@ export default function PreguntasTab({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarPreguntasDeSubtema(subtemaSeleccionado);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subtemaSeleccionado]);
 
   const eliminarPreguntaSubtema = async (id: string) => {
@@ -72,17 +72,19 @@ export default function PreguntasTab({
       nuevaPregunta.dificultad,
       nuevaPregunta.imagenes || null,
       nuevaPregunta.respuestas,
+      nuevaPregunta.explicacion,
     );
 
     setNuevaPregunta({
       enunciado: '',
+      explicacion: '',
       dificultad: 'MEDIO',
       imagenes: '',
       respuestas: [
-        { texto: '', esCorrecta: true },
-        { texto: '', esCorrecta: false },
-        { texto: '', esCorrecta: false },
-        { texto: '', esCorrecta: false },
+        { texto: '', esCorrecta: true, explicacion: '' },
+        { texto: '', esCorrecta: false, explicacion: '' },
+        { texto: '', esCorrecta: false, explicacion: '' },
+        { texto: '', esCorrecta: false, explicacion: '' },
       ],
     });
     mostrarMensaje('Pregunta creada');
@@ -156,7 +158,7 @@ export default function PreguntasTab({
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {nuevaPregunta.respuestas.map((r, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '18px 20px minmax(0, 1fr)', alignItems: 'start', gap: 10 }}>
                       <input
                         type="radio"
                         name="correcta"
@@ -165,23 +167,49 @@ export default function PreguntasTab({
                           ...nuevaPregunta,
                           respuestas: nuevaPregunta.respuestas.map((resp, idx) => ({ ...resp, esCorrecta: idx === i })),
                         })}
-                        style={{ width: 18, height: 18, cursor: 'pointer', accentColor: '#146C94' }}
+                        style={{ width: 18, height: 18, marginTop: 11, cursor: 'pointer', accentColor: '#146C94' }}
                       />
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#146C94', width: 20 }}>
+                      <span style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: '#146C94', width: 20 }}>
                         {['A', 'B', 'C', 'D'][i]}
                       </span>
-                      <input
-                        placeholder={`Opción ${['A', 'B', 'C', 'D'][i]}`}
-                        value={r.texto}
-                        onChange={e => setNuevaPregunta({
-                          ...nuevaPregunta,
-                          respuestas: nuevaPregunta.respuestas.map((resp, idx) => idx === i ? { ...resp, texto: e.target.value } : resp),
-                        })}
-                        style={{ ...inputStyle, flex: 1 }}
-                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <input
+                          placeholder={`Opción ${['A', 'B', 'C', 'D'][i]}`}
+                          value={r.texto}
+                          onChange={e => setNuevaPregunta({
+                            ...nuevaPregunta,
+                            respuestas: nuevaPregunta.respuestas.map((resp, idx) => idx === i ? { ...resp, texto: e.target.value } : resp),
+                          })}
+                          style={inputStyle}
+                        />
+                        <textarea
+                          placeholder="Explicación de esta opción (opcional)"
+                          aria-label={`Explicación de la opción ${['A', 'B', 'C', 'D'][i]}`}
+                          value={r.explicacion}
+                          onChange={e => setNuevaPregunta({
+                            ...nuevaPregunta,
+                            respuestas: nuevaPregunta.respuestas.map((resp, idx) => idx === i ? { ...resp, explicacion: e.target.value } : resp),
+                          })}
+                          rows={2}
+                          style={{ ...inputStyle, resize: 'vertical', fontFamily: 'system-ui, sans-serif' }}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5a6a', display: 'block', marginBottom: 6 }}>
+                  Explicación general (opcional)
+                </label>
+                <textarea
+                  value={nuevaPregunta.explicacion}
+                  onChange={e => setNuevaPregunta({ ...nuevaPregunta, explicacion: e.target.value })}
+                  placeholder="Describe el procedimiento, concepto o razonamiento correcto."
+                  rows={4}
+                  style={{ ...inputStyle, resize: 'vertical', fontFamily: 'system-ui, sans-serif' }}
+                />
               </div>
 
               <button onClick={crearPregunta} style={{ ...btnStyle, padding: '13px' }}>
@@ -201,7 +229,14 @@ export default function PreguntasTab({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {preguntasSubtema.map(p => (
                   <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, border: '1px solid #D2E0FB', borderRadius: 10, padding: '12px 16px' }}>
-                    <p style={{ fontSize: 14, color: '#1a2a3a', margin: 0 }}>{p.enunciado}</p>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: 14, color: '#1a2a3a', margin: 0 }}>{p.enunciado}</p>
+                      {p.explicacion && (
+                        <p style={{ margin: '6px 0 0', color: '#5D6C76', fontSize: 12, lineHeight: 1.45 }}>
+                          Explicación: {p.explicacion}
+                        </p>
+                      )}
+                    </div>
                     <button
                       onClick={() => eliminarPreguntaSubtema(p.id)}
                       style={{ backgroundColor: '#FCD8CD', color: '#BC7C7C', border: 'none', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}

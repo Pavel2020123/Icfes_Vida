@@ -7,12 +7,12 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { Grado, TipoPlan } from '@prisma/client';
+import { CalendarioTipo } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CalendarioIcfesService } from '../calendario-icfes/calendario-icfes.service';
+import { CuponesService } from '../cupones/cupones.service';
 import {
-  PRECIO_INDIVIDUAL_COP,
-  PRECIO_TEMPORADA_COP,
+  PRECIO_ACCESO_COMPLETO_COP,
   estadoDesdeRespuestaWompi,
   firmaWompiValida,
 } from './wompi.util';
@@ -44,14 +44,11 @@ export class PagosService {
   constructor(
     private prisma: PrismaService,
     private calendarioIcfesService: CalendarioIcfesService,
+    private cuponesService: CuponesService,
   ) {}
 
   // ─── CREAR ORDEN ──────────────────────────────────────────────
-  async crearOrden(
-    usuarioId: string,
-    grado: Grado,
-    tipoPlan: TipoPlan = 'MENSUAL',
-  ) {
+  async crearOrden(usuarioId: string, codigoCupon?: string) {
     const publicKey = process.env.WOMPI_PUBLIC_KEY;
 
     if (!publicKey) {
@@ -72,6 +69,7 @@ export class PagosService {
         nombre: true,
         rol: true,
         institucionId: true,
+        grado: true,
       },
     });
 
@@ -93,58 +91,85 @@ export class PagosService {
       );
     }
 
-    let monto: number;
-    let nombrePlan: string;
-
-    if (tipoPlan === 'TEMPORADA_A') {
-      monto = PRECIO_TEMPORADA_COP.TEMPORADA_A;
-      nombrePlan = 'Temporada Calendario A';
-    } else if (tipoPlan === 'TEMPORADA_B') {
-      monto = PRECIO_TEMPORADA_COP.TEMPORADA_B;
-      nombrePlan = 'Temporada Calendario B';
-    } else {
-      monto = PRECIO_INDIVIDUAL_COP[grado];
-      nombrePlan = 'Plan Mensual';
+    const convocatoria =
+      await this.calendarioIcfesService.obtenerCalendarioActivo();
+    if (!convocatoria) {
+      throw new ServiceUnavailableException(
+        'No hay una convocatoria ICFES activa. Intenta de nuevo más tarde.',
+      );
     }
+
+    const fechaVencimientoAcceso =
+      this.calendarioIcfesService.calcularFinDelExamen(
+        convocatoria.fechaExamen,
+      );
+    if (fechaVencimientoAcceso.getTime() <= Date.now()) {
+      throw new ServiceUnavailableException(
+        'La convocatoria activa ya terminó. Estamos preparando la siguiente.',
+      );
+    }
+
+    const montoOriginal = PRECIO_ACCESO_COMPLETO_COP;
+    const tipoPlan = 'MENSUAL' as const;
 
     const factura = this.generarFactura();
 
-    await this.prisma.$transaction([
-      this.prisma.pagoOrden.create({
+    const codigoNormalizado = codigoCupon?.trim();
+    const resultadoOrden = await this.prisma.$transaction(async (tx) => {
+      const descuento = codigoNormalizado
+        ? await this.cuponesService.aplicar(
+            codigoNormalizado,
+            tipoPlan,
+            montoOriginal,
+            tx,
+          )
+        : await this.cuponesService.aplicarAutomatica(
+            tipoPlan,
+            montoOriginal,
+            tx,
+          );
+      const monto = descuento?.montoConDescuento ?? montoOriginal;
+
+      await tx.pagoOrden.create({
         data: {
           factura,
           usuarioId: usuario.id,
-          grado,
+          grado: usuario.grado,
           tipoPlan,
+          calendarioIcfes: convocatoria.calendario,
+          fechaVencimientoAcceso,
           monto,
+          montoOriginal: descuento ? montoOriginal : null,
+          cuponId: descuento?.cuponId ?? null,
           moneda: 'COP',
           estado: 'PENDIENTE',
         },
-      }),
-      // Guardamos el grado ya desde aquí para que quede consistente en
-      // el perfil, aunque el plan solo se active cuando Wompi confirme
-      // el pago.
-      this.prisma.usuario.update({
-        where: { id: usuario.id },
-        data: { grado },
-      }),
-    ]);
+      });
 
-    const nombreGrado = grado === 'DECIMO' ? '10' : '11';
+      return { descuento, monto };
+    });
 
     return {
       factura,
       publicKey,
       test: process.env.WOMPI_TEST_MODE !== 'false',
-      amount: monto,
+      amount: resultadoOrden.monto,
+      montoOriginal,
+      porcentajeDescuento:
+        resultadoOrden.descuento?.porcentajeDescuento ?? null,
+      codigoCupon: resultadoOrden.descuento?.codigo ?? null,
+      tituloPromocion: resultadoOrden.descuento?.titulo ?? null,
       currency: 'COP',
       country: 'co',
-      name: `SaberPlus — ${nombrePlan}`,
-      description: `Acceso ilimitado a SaberPlus. ${nombrePlan} — ${nombreGrado}`,
+      name: 'SaberPlus — Acceso completo',
+      description: `Preparación completa para Saber 11 · Calendario ${convocatoria.calendario}`,
       email: usuario.correo,
       nombre: usuario.nombre,
       redirectUrl: `${process.env.FRONTEND_URL}/pagos/respuesta`,
       tipoPlan,
+      calendarioIcfes: convocatoria.calendario,
+      fechaExamen: convocatoria.fechaExamen,
+      fechaVencimientoAcceso,
     };
   }
 
@@ -206,27 +231,69 @@ export class PagosService {
       };
     }
 
-    // Idempotencia
-    if (orden.estado === 'APROBADA' && orden.transaccionId === transactionId) {
+    const montoRecibido = Number(amount);
+    if (
+      !Number.isFinite(montoRecibido) ||
+      montoRecibido !== orden.monto ||
+      currency.toUpperCase() !== orden.moneda
+    ) {
+      this.logger.error(
+        `Monto o moneda inválidos para la factura ${factura}. ` +
+          `Esperado ${orden.monto} ${orden.moneda}; recibido ${amount} ${currency}.`,
+      );
+      throw new BadRequestException(
+        'El monto confirmado no coincide con la orden de pago.',
+      );
+    }
+
+    if (
+      orden.estado === 'APROBADA' ||
+      orden.estado === 'RECHAZADA' ||
+      orden.estado === 'FALLIDA'
+    ) {
       return {
         mensaje: 'Transacción ya procesada.',
       };
     }
 
     const nuevoEstado = estadoDesdeRespuestaWompi(datos.status ?? '');
+    const debeLiberarCupon =
+      orden.cuponId !== null &&
+      (nuevoEstado === 'RECHAZADA' || nuevoEstado === 'FALLIDA');
 
-    await this.prisma.pagoOrden.update({
-      where: { id: orden.id },
-      data: {
-        estado: nuevoEstado,
-        refPayco: refPayco || null,
-        transaccionId: transactionId,
-        motivoRespuesta: datos.response_reason_text ?? null,
-      },
+    const procesada = await this.prisma.$transaction(async (tx) => {
+      const actualizada = await tx.pagoOrden.updateMany({
+        where: { id: orden.id, estado: orden.estado },
+        data: {
+          estado: nuevoEstado,
+          refPayco: refPayco || null,
+          transaccionId: transactionId,
+          motivoRespuesta: datos.response_reason_text ?? null,
+        },
+      });
+
+      if (actualizada.count === 0) return false;
+
+      if (debeLiberarCupon && orden.cuponId) {
+        await tx.cupon.updateMany({
+          where: { id: orden.cuponId, usosActuales: { gt: 0 } },
+          data: { usosActuales: { decrement: 1 } },
+        });
+      }
+
+      return true;
     });
 
+    if (!procesada) {
+      return { mensaje: 'Transacción ya procesada.' };
+    }
+
     if (nuevoEstado === 'APROBADA') {
-      await this.activarPlanPagado(orden.usuarioId, orden.grado);
+      await this.activarPlanPagado(
+        orden.usuarioId,
+        orden.calendarioIcfes,
+        orden.fechaVencimientoAcceso,
+      );
     }
 
     return {
@@ -235,18 +302,23 @@ export class PagosService {
   }
 
   // ─── ACTIVAR EL PLAN TRAS UN PAGO APROBADO ───────────────────
-  private async activarPlanPagado(usuarioId: string, grado: Grado) {
+  private async activarPlanPagado(
+    usuarioId: string,
+    calendarioOrden: CalendarioTipo | null,
+    vigenciaOrden: Date | null,
+  ) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
-      select: { calendarioIcfes: true },
+      select: { calendarioIcfes: true, fechaVencimientoPlan: true },
     });
 
     if (!usuario) return;
 
-    const calendario = usuario.calendarioIcfes ?? 'A';
+    const calendario = calendarioOrden ?? usuario.calendarioIcfes ?? 'A';
 
     let vigencia =
-      await this.calendarioIcfesService.calcularVigencia(calendario);
+      vigenciaOrden ??
+      (await this.calendarioIcfesService.calcularVigencia(calendario));
 
     if (!vigencia) {
       this.logger.warn(
@@ -259,11 +331,16 @@ export class PagosService {
       vigencia.setDate(vigencia.getDate() + DIAS_VIGENCIA_RESPALDO);
     }
 
+    const vigenciaFinal =
+      usuario.fechaVencimientoPlan && usuario.fechaVencimientoPlan > vigencia
+        ? usuario.fechaVencimientoPlan
+        : vigencia;
+
     await this.prisma.usuario.update({
       where: { id: usuarioId },
       data: {
-        fechaVencimientoPlan: vigencia,
-        grado,
+        calendarioIcfes: calendario,
+        fechaVencimientoPlan: vigenciaFinal,
       },
     });
   }
@@ -277,7 +354,12 @@ export class PagosService {
         usuarioId: true,
         estado: true,
         monto: true,
+        montoOriginal: true,
+        cuponId: true,
         grado: true,
+        tipoPlan: true,
+        calendarioIcfes: true,
+        fechaVencimientoAcceso: true,
         fechaActualizacion: true,
       },
     });
@@ -290,7 +372,12 @@ export class PagosService {
       factura: orden.factura,
       estado: orden.estado,
       monto: orden.monto,
+      montoOriginal: orden.montoOriginal,
+      cuponId: orden.cuponId,
       grado: orden.grado,
+      tipoPlan: orden.tipoPlan,
+      calendarioIcfes: orden.calendarioIcfes,
+      fechaVencimientoAcceso: orden.fechaVencimientoAcceso,
       fechaActualizacion: orden.fechaActualizacion,
     };
   }

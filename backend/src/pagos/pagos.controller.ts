@@ -8,17 +8,16 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { IsIn } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { PagosService } from './pagos.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { AuthenticatedRequest } from '../auth/auth.types';
 
 class CrearOrdenDto {
-  @IsIn(['DECIMO', 'ONCE'])
-  grado!: 'DECIMO' | 'ONCE';
-
-  @IsIn(['MENSUAL', 'TEMPORADA_A', 'TEMPORADA_B'])
-  tipoPlan!: 'MENSUAL' | 'TEMPORADA_A' | 'TEMPORADA_B';
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  codigoCupon?: string;
 }
 
 @Controller('pagos')
@@ -35,11 +34,7 @@ export class PagosController {
     @Body() body: CrearOrdenDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.pagosService.crearOrden(
-      req.usuario.sub,
-      body.grado,
-      body.tipoPlan,
-    );
+    return this.pagosService.crearOrden(req.usuario.sub, body.codigoCupon);
   }
 
   // ─── WEBHOOK PÚBLICO: lo invoca Wompi servidor a servidor ─────

@@ -12,9 +12,6 @@ import { crearLeadVentas } from '../lib/api';
 interface FormularioVentasProps {
   abierto: boolean;
   onCerrar: () => void;
-  linea: 'ONCE' | 'BACHILLERATO';
-  lineaEtiqueta: string; // "Once" | "Bachillerato", para el título
-  plan: 'Básico' | 'Plus' | 'Colegio';
 }
 
 const inputStyle = {
@@ -41,9 +38,6 @@ const labelStyle = {
 export default function FormularioVentas({
   abierto,
   onCerrar,
-  linea,
-  lineaEtiqueta,
-  plan,
 }: FormularioVentasProps) {
   const [nombreColegio, setNombreColegio] = useState('');
   const [nombreContacto, setNombreContacto] = useState('');
@@ -86,8 +80,8 @@ export default function FormularioVentas({
         correo: correo.trim(),
         telefono: telefono.trim() || undefined,
         ciudad: ciudad.trim() || undefined,
-        linea,
-        plan,
+        linea: 'BACHILLERATO',
+        plan: 'Institucional',
         numeroEstudiantesAprox: numeroEstudiantesAprox
           ? Number(numeroEstudiantesAprox)
           : undefined,
@@ -105,7 +99,7 @@ export default function FormularioVentas({
     <Modal
       abierto={abierto}
       onCerrar={limpiarYCerrar}
-      titulo={`Hablar con ventas — ${lineaEtiqueta} ${plan}`}
+      titulo="Propuesta institucional"
       descripcion={
         enviado
           ? undefined

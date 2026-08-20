@@ -11,6 +11,9 @@ import {
   marcarProgresoSubtema,
 } from '../../../lib/api';
 import LectorContenido from '../../../components/LectorContenido';
+import RevisionPreguntas, {
+  type DetalleRevision,
+} from '../../../components/RevisionPreguntas';
 
 const AREA_NOMBRES: Record<string, string> = {
   LECTURA_CRITICA: 'Lectura Crítica',
@@ -272,7 +275,11 @@ export default function AreaPage() {
 
   const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
   const [respuestasEstudiante, setRespuestasEstudiante] = useState<Record<string, string>>({});
-  const [resultado, setResultado] = useState<{ correctas: number; total: number } | null>(null);
+  const [resultado, setResultado] = useState<{
+    correctas: number;
+    total: number;
+    detalle: DetalleRevision[];
+  } | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [cargandoPreguntas, setCargandoPreguntas] = useState(false);
 
@@ -347,7 +354,7 @@ export default function AreaPage() {
       const correctas = data.resumen?.respuestasCorrectas ?? 0;
       const total = data.resumen?.totalPreguntas ?? preguntas.length;
 
-      setResultado({ correctas, total });
+      setResultado({ correctas, total, detalle: data.detalle ?? [] });
 
       const porcentaje = Math.round((correctas / total) * 100);
       await marcarProgresoSubtema(subtemaActivo.id, porcentaje);
@@ -544,28 +551,31 @@ export default function AreaPage() {
                     </div>
                   ) : resultado ? (
                     // RESULTADO
-                    <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '40px', border: '1.5px solid #AFD3E2', textAlign: 'center' }}>
-                      <p style={{ fontSize: 56, fontWeight: 900, color: resultado.correctas >= resultado.total * 0.6 ? '#19A7CE' : '#BC7C7C', marginBottom: 8 }}>
-                        {resultado.correctas}/{resultado.total}
-                      </p>
-                      <p style={{ fontSize: 18, fontWeight: 700, color: '#1a2a3a', marginBottom: 8 }}>
-                        {resultado.correctas >= resultado.total * 0.6 ? '¡Muy bien! Tema completado' : 'Sigue practicando'}
-                      </p>
-                      <p style={{ color: '#4a5a6a', fontSize: 14, marginBottom: 28 }}>
-                        {resultado.correctas >= resultado.total * 0.6 ? 'Puedes continuar con el siguiente tema.' : 'Repasa el tema y vuelve a intentarlo.'}
-                      </p>
-                      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => {
-                            setResultado(null);
-                            setRespuestasEstudiante({});
-                            cargarPreguntas(subtemaActivo.id);
-                          }}
-                          style={{ backgroundColor: '#F6F1F1', color: '#146C94', border: '1.5px solid #AFD3E2', padding: '11px 24px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
-                        >
-                          Reintentar
-                        </button>
+                    <div>
+                      <div style={{ backgroundColor: '#ffffff', borderRadius: 8, padding: '40px', border: '1.5px solid #AFD3E2', textAlign: 'center' }}>
+                        <p style={{ fontSize: 56, fontWeight: 900, color: resultado.correctas >= resultado.total * 0.6 ? '#19A7CE' : '#BC7C7C', marginBottom: 8 }}>
+                          {resultado.correctas}/{resultado.total}
+                        </p>
+                        <p style={{ fontSize: 18, fontWeight: 700, color: '#1a2a3a', marginBottom: 8 }}>
+                          {resultado.correctas >= resultado.total * 0.6 ? '¡Muy bien! Tema completado' : 'Sigue practicando'}
+                        </p>
+                        <p style={{ color: '#4a5a6a', fontSize: 14, marginBottom: 28 }}>
+                          {resultado.correctas >= resultado.total * 0.6 ? 'Puedes continuar con el siguiente tema.' : 'Repasa el tema y vuelve a intentarlo.'}
+                        </p>
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => {
+                              setResultado(null);
+                              setRespuestasEstudiante({});
+                              cargarPreguntas(subtemaActivo.id);
+                            }}
+                            style={{ backgroundColor: '#F6F1F1', color: '#146C94', border: '1.5px solid #AFD3E2', padding: '11px 24px', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                          >
+                            Reintentar
+                          </button>
+                        </div>
                       </div>
+                      <RevisionPreguntas detalle={resultado.detalle} />
                     </div>
                   ) : (
                     // PREGUNTAS

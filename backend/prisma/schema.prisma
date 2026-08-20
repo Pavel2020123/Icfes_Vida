@@ -24,9 +24,11 @@ model CalendarioIcfes {
   anio          Int
   calendario    CalendarioTipo
   fechaExamen   DateTime       @db.Date
+  activo        Boolean        @default(false)
   fechaCreacion DateTime       @default(now()) @db.Timestamp(6)
 
   @@unique([anio, calendario])
+  @@index([activo, fechaExamen])
 }
 
 model Clase {
@@ -60,6 +62,7 @@ model Institucion {
   imagenPortada        String?         @db.VarChar(255)
   limiteGrado10        Int?
   limiteGrado11        Int?
+  limiteEstudiantes    Int?
   // Calendario ICFES que rige a este colegio (define contra qué fecha
   // de examen se calcula la vigencia del plan institucional). Punto 6.
   calendarioIcfes      CalendarioTipo? @default(A)
@@ -99,10 +102,8 @@ model Usuario {
   institucionId           String?              @db.Uuid
   fotoPerfil              String?
   descripcion             String?
-   // Grado del estudiante individual: se usa para mostrar en el perfil
- // y para el plan de pago. Precios actuales: $12.900 mensual,
- // $49.900 temporada B, $79.900 temporada A. Los estudiantes de una
- // institución heredan el grado de su Clase y no necesitan este campo.
+  // El grado personaliza contenido y estadísticas, pero no cambia el
+  // producto ni el precio del acceso individual.
   grado                   Grado?
   ClaseEstudiante         ClaseEstudiante[]
   Institucion             Institucion?         @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
@@ -125,18 +126,18 @@ enum LineaInteres {
 }
 
 model LeadVentas {
-  id                      String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombreColegio           String       @db.VarChar(255)
-  nombreContacto          String       @db.VarChar(255)
-  correo                  String       @db.VarChar(255)
-  telefono                String?      @db.VarChar(50)
-  ciudad                  String?      @db.VarChar(100)
-  linea                   LineaInteres
-  plan                    String       @db.VarChar(50)
-  numeroEstudiantesAprox  Int?
-  mensaje                 String?      @db.Text
-  atendido                Boolean      @default(false)
-  fechaCreacion           DateTime     @default(now()) @db.Timestamp(6)
+  id                     String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombreColegio          String       @db.VarChar(255)
+  nombreContacto         String       @db.VarChar(255)
+  correo                 String       @db.VarChar(255)
+  telefono               String?      @db.VarChar(50)
+  ciudad                 String?      @db.VarChar(100)
+  linea                  LineaInteres
+  plan                   String       @db.VarChar(50)
+  numeroEstudiantesAprox Int?
+  mensaje                String?      @db.Text
+  atendido               Boolean      @default(false)
+  fechaCreacion          DateTime     @default(now()) @db.Timestamp(6)
 
   @@index([atendido, fechaCreacion])
 }
@@ -158,28 +159,51 @@ enum EstadoPago {
 // que viaja a ePayco como x_id_invoice y vuelve en el webhook, así que
 // es la llave para encontrar la orden de vuelta sin depender de sesión.
 enum TipoPlan {
- MENSUAL
- TEMPORADA_A
- TEMPORADA_B
+  MENSUAL
+  TEMPORADA_A
+  TEMPORADA_B
 }
 
 model PagoOrden {
- id String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
- factura String @unique @db.VarChar(50)
- usuarioId String @db.Uuid
- Usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pagoorden_usuario")
- grado Grado
- tipoPlan TipoPlan @default(MENSUAL)
- monto Int
- moneda String @default("COP") @db.VarChar(10)
- estado EstadoPago @default(PENDIENTE)
- refPayco String? @db.VarChar(50)
- transaccionId String? @db.VarChar(100)
- motivoRespuesta String? @db.Text
- fechaCreacion DateTime @default(now()) @db.Timestamp(6)
- fechaActualizacion DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  id                     String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  factura                String          @unique @db.VarChar(50)
+  usuarioId              String          @db.Uuid
+  Usuario                Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pagoorden_usuario")
+  grado                  Grado?
+  tipoPlan               TipoPlan        @default(MENSUAL)
+  calendarioIcfes        CalendarioTipo?
+  fechaVencimientoAcceso DateTime?       @db.Timestamp(6)
+  monto                  Int
+  montoOriginal          Int?
+  moneda                 String          @default("COP") @db.VarChar(10)
+  estado                 EstadoPago      @default(PENDIENTE)
+  cuponId                String?         @db.Uuid
+  Cupon                  Cupon?          @relation(fields: [cuponId], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "fk_pagoorden_cupon")
+  refPayco               String?         @db.VarChar(50)
+  transaccionId          String?         @db.VarChar(100)
+  motivoRespuesta        String?         @db.Text
+  fechaCreacion          DateTime        @default(now()) @db.Timestamp(6)
+  fechaActualizacion     DateTime        @default(now()) @updatedAt @db.Timestamp(6)
 
- @@index([usuarioId])
+  @@index([usuarioId])
+  @@index([cuponId])
+}
+
+model Cupon {
+  id                  String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  codigo              String      @unique @db.VarChar(50)
+  titulo              String?     @db.VarChar(120)
+  esAutomatica        Boolean     @default(false)
+  porcentajeDescuento Int
+  tipoPlan            TipoPlan?
+  fechaExpiracion     DateTime    @db.Timestamp(6)
+  usosMaximos         Int?
+  usosActuales        Int         @default(0)
+  activo              Boolean     @default(true)
+  fechaCreacion       DateTime    @default(now()) @db.Timestamp(6)
+  PagoOrden           PagoOrden[]
+
+  @@index([esAutomatica, activo, fechaExpiracion], map: "Cupon_promocion_activa_idx")
 }
 
 // --- MÓDULO: BANCO INTELIGENTE DE PREGUNTAS ---
@@ -226,6 +250,7 @@ model Subtema {
 model Pregunta {
   id                     String      @id @default(uuid())
   enunciado              String      @db.Text
+  explicacion            String?     @db.Text
   imagenUrl              String?
   dificultad             Dificultad  @default(MEDIO)
   porcentajeAciertos     Float       @default(0.0)
@@ -236,11 +261,12 @@ model Pregunta {
 }
 
 model Respuesta {
-  id         String   @id @default(uuid())
-  texto      String   @db.Text
-  esCorrecta Boolean  @default(false)
-  preguntaId String
-  pregunta   Pregunta @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  texto       String   @db.Text
+  explicacion String?  @db.Text
+  esCorrecta  Boolean  @default(false)
+  preguntaId  String
+  pregunta    Pregunta @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
 }
 
 // --- MÓDULO: RESULTADOS DE SIMULACROS ---

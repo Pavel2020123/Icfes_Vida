@@ -11,14 +11,14 @@ import {
 import { inputStyle, btnStyle } from './estilos';
 
 const PLANES = [
-  { value: '', label: 'Todos los planes' },
-  { value: 'MENSUAL', label: 'Solo Mensual' },
-  { value: 'TEMPORADA_A', label: 'Solo Temporada A' },
-  { value: 'TEMPORADA_B', label: 'Solo Temporada B' },
+  { value: '', label: 'Acceso completo' },
+  { value: 'MENSUAL', label: 'Acceso completo' },
 ];
 
 interface NuevoCupon {
+  esAutomatica: boolean;
   codigo: string;
+  titulo: string;
   porcentajeDescuento: number;
   tipoPlan: string;
   fechaExpiracion: string;
@@ -26,12 +26,20 @@ interface NuevoCupon {
 }
 
 const CUPON_VACIO: NuevoCupon = {
+  esAutomatica: true,
   codigo: '',
+  titulo: '',
   porcentajeDescuento: 20,
   tipoPlan: '',
   fechaExpiracion: '',
   usosMaximos: '',
 };
+
+function aFechaLocal(fecha: string) {
+  const date = new Date(fecha);
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
 
 export default function CuponesTab({
   mostrarMensaje,
@@ -41,6 +49,9 @@ export default function CuponesTab({
   const [cupones, setCupones] = useState<CuponAdmin[]>([]);
   const [cargando, setCargando] = useState(true);
   const [nuevo, setNuevo] = useState<NuevoCupon>(CUPON_VACIO);
+  const [edicion, setEdicion] = useState<(NuevoCupon & { id: string }) | null>(null);
+  const [ahora] = useState(() => Date.now());
+  const [fechaMinima] = useState(() => aFechaLocal(new Date().toISOString()));
 
   const cargar = async () => {
     setCargando(true);
@@ -51,50 +62,95 @@ export default function CuponesTab({
   };
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { cargar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar(); }, []);
 
   const crear = async () => {
-    if (!nuevo.codigo.trim()) { mostrarMensaje('Escribe un código para el cupón'); return; }
-    if (!nuevo.fechaExpiracion) { mostrarMensaje('Elige hasta cuándo dura el cupón'); return; }
+    if (!nuevo.esAutomatica && !nuevo.codigo.trim()) { mostrarMensaje('Escribe un código para el cupón'); return; }
+    if (!nuevo.fechaExpiracion) { mostrarMensaje('Elige hasta cuándo dura la promoción'); return; }
+    if (nuevo.porcentajeDescuento < 1 || nuevo.porcentajeDescuento > 99) {
+      mostrarMensaje('El descuento debe estar entre 1% y 99%');
+      return;
+    }
 
     try {
       await crearCuponAdmin({
-        codigo: nuevo.codigo.trim(),
+        esAutomatica: nuevo.esAutomatica,
+        codigo: nuevo.esAutomatica ? undefined : nuevo.codigo.trim(),
+        titulo: nuevo.esAutomatica ? nuevo.titulo.trim() || undefined : undefined,
         porcentajeDescuento: Number(nuevo.porcentajeDescuento),
-        tipoPlan: nuevo.tipoPlan ? (nuevo.tipoPlan as 'MENSUAL' | 'TEMPORADA_A' | 'TEMPORADA_B') : undefined,
+        tipoPlan: 'MENSUAL',
         fechaExpiracion: new Date(nuevo.fechaExpiracion).toISOString(),
         usosMaximos: nuevo.usosMaximos ? Number(nuevo.usosMaximos) : undefined,
       });
     } catch (err) {
-      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo crear el cupón');
+      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo crear la promoción');
       return;
     }
 
-    mostrarMensaje('Cupón creado');
+    mostrarMensaje('Promoción creada');
     setNuevo(CUPON_VACIO);
     cargar();
+  };
+
+  const iniciarEdicion = (cupon: CuponAdmin) => {
+    setEdicion({
+      id: cupon.id,
+      esAutomatica: cupon.esAutomatica,
+      codigo: cupon.codigo ?? '',
+      titulo: cupon.titulo ?? '',
+      porcentajeDescuento: cupon.porcentajeDescuento,
+      tipoPlan: cupon.tipoPlan ?? '',
+      fechaExpiracion: aFechaLocal(cupon.fechaExpiracion),
+      usosMaximos: cupon.usosMaximos?.toString() ?? '',
+    });
+  };
+
+  const guardarEdicion = async () => {
+    if (!edicion) return;
+    if (edicion.porcentajeDescuento < 1 || edicion.porcentajeDescuento > 99) {
+      mostrarMensaje('El descuento debe estar entre 1% y 99%');
+      return;
+    }
+    if (!edicion.fechaExpiracion) {
+      mostrarMensaje('Elige hasta cuándo dura la promoción');
+      return;
+    }
+    try {
+      await actualizarCuponAdmin(edicion.id, {
+        titulo: edicion.esAutomatica ? edicion.titulo : undefined,
+        porcentajeDescuento: Number(edicion.porcentajeDescuento),
+        tipoPlan: 'MENSUAL',
+        fechaExpiracion: new Date(edicion.fechaExpiracion).toISOString(),
+        usosMaximos: edicion.usosMaximos ? Number(edicion.usosMaximos) : null,
+      });
+      setEdicion(null);
+      mostrarMensaje('Promoción actualizada');
+      cargar();
+    } catch (err) {
+      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo actualizar la promoción');
+    }
   };
 
   const alternarActivo = async (cupon: CuponAdmin) => {
     try {
       await actualizarCuponAdmin(cupon.id, { activo: !cupon.activo });
     } catch (err) {
-      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo actualizar el cupón');
+      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo actualizar la promoción');
       return;
     }
-    mostrarMensaje(cupon.activo ? 'Cupón desactivado' : 'Cupón activado');
+    mostrarMensaje(cupon.activo ? 'Promoción desactivada' : 'Promoción activada');
     cargar();
   };
 
   const eliminar = async (id: string) => {
-    if (!confirm('¿Eliminar este cupón? Ya no se podrá usar.')) return;
+    if (!confirm('¿Eliminar esta promoción? Ya no se podrá usar.')) return;
     try {
       await eliminarCuponAdmin(id);
     } catch (err) {
-      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo eliminar el cupón');
+      mostrarMensaje(err instanceof Error ? err.message : 'No se pudo eliminar la promoción');
       return;
     }
-    mostrarMensaje('Cupón eliminado');
+    mostrarMensaje('Promoción eliminada');
     cargar();
   };
 
@@ -103,7 +159,7 @@ export default function CuponesTab({
     return encontrado ? encontrado.label : tipoPlan;
   };
 
-  const estaExpirado = (cupon: CuponAdmin) => new Date(cupon.fechaExpiracion).getTime() < Date.now();
+  const estaExpirado = (cupon: CuponAdmin) => new Date(cupon.fechaExpiracion).getTime() < ahora;
   const usosAgotados = (cupon: CuponAdmin) =>
     cupon.usosMaximos !== null && cupon.usosActuales >= cupon.usosMaximos;
 
@@ -113,12 +169,42 @@ export default function CuponesTab({
         Cupones y promociones
       </h2>
       <p style={{ color: '#8a9aaa', fontSize: 13, marginBottom: 20 }}>
-        Crea un código con un % de descuento. Puedes limitarlo a un plan específico, ponerle
-        fecha de vencimiento y un cupo máximo de usos (ej. solo los primeros 10 o 90 estudiantes).
+        Publica descuentos automáticos o crea códigos para el acceso completo.
+        Puedes limitar cada promoción por fecha y cantidad de estudiantes.
       </p>
 
       {/* ─── FORMULARIO DE CREACIÓN ─── */}
+      <div style={{ display: 'inline-grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, marginBottom: 16, border: '1px solid #AFD3E2', borderRadius: 8 }}>
+        <button
+          type="button"
+          onClick={() => setNuevo({ ...nuevo, esAutomatica: true })}
+          style={{ padding: '9px 14px', border: 'none', borderRadius: 6, background: nuevo.esAutomatica ? '#146C94' : '#ffffff', color: nuevo.esAutomatica ? '#ffffff' : '#4a5a6a', fontWeight: 700, cursor: 'pointer' }}
+        >
+          Descuento automático
+        </button>
+        <button
+          type="button"
+          onClick={() => setNuevo({ ...nuevo, esAutomatica: false })}
+          style={{ padding: '9px 14px', border: 'none', borderRadius: 6, background: !nuevo.esAutomatica ? '#146C94' : '#ffffff', color: !nuevo.esAutomatica ? '#ffffff' : '#4a5a6a', fontWeight: 700, cursor: 'pointer' }}
+        >
+          Código promocional
+        </button>
+      </div>
+
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24, alignItems: 'flex-end' }}>
+        {nuevo.esAutomatica ? (
+        <div>
+          <label style={{ display: 'block', fontSize: 12, color: '#8a9aaa', marginBottom: 4 }}>Título visible</label>
+          <input
+            type="text"
+            maxLength={120}
+            placeholder="Ej. 30% de descuento hoy"
+            value={nuevo.titulo}
+            onChange={e => setNuevo({ ...nuevo, titulo: e.target.value })}
+            style={{ ...inputStyle, width: 230 }}
+          />
+        </div>
+        ) : (
         <div>
           <label style={{ display: 'block', fontSize: 12, color: '#8a9aaa', marginBottom: 4 }}>Código</label>
           <input
@@ -129,13 +215,14 @@ export default function CuponesTab({
             style={{ ...inputStyle, width: 200, textTransform: 'uppercase' }}
           />
         </div>
+        )}
 
         <div>
           <label style={{ display: 'block', fontSize: 12, color: '#8a9aaa', marginBottom: 4 }}>% Descuento</label>
           <input
             type="number"
             min={1}
-            max={100}
+            max={99}
             value={nuevo.porcentajeDescuento}
             onChange={e => setNuevo({ ...nuevo, porcentajeDescuento: Number(e.target.value) })}
             style={{ ...inputStyle, width: 100 }}
@@ -143,23 +230,13 @@ export default function CuponesTab({
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#8a9aaa', marginBottom: 4 }}>Aplica a</label>
-          <select
-            value={nuevo.tipoPlan}
-            onChange={e => setNuevo({ ...nuevo, tipoPlan: e.target.value })}
-            style={{ ...inputStyle, width: 170 }}
-          >
-            {PLANES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
-        </div>
-
-        <div>
           <label style={{ display: 'block', fontSize: 12, color: '#8a9aaa', marginBottom: 4 }}>Vence</label>
           <input
-            type="date"
+            type="datetime-local"
             value={nuevo.fechaExpiracion}
             onChange={e => setNuevo({ ...nuevo, fechaExpiracion: e.target.value })}
-            style={{ ...inputStyle, width: 160 }}
+            min={fechaMinima}
+            style={{ ...inputStyle, width: 200 }}
           />
         </div>
 
@@ -177,14 +254,14 @@ export default function CuponesTab({
           />
         </div>
 
-        <button onClick={crear} style={btnStyle}>Crear cupón</button>
+        <button onClick={crear} style={btnStyle}>Crear promoción</button>
       </div>
 
       {/* ─── LISTA ─── */}
       {cargando ? (
         <p style={{ color: '#8a9aaa' }}>Cargando...</p>
       ) : cupones.length === 0 ? (
-        <p style={{ color: '#8a9aaa' }}>Todavía no has creado ningún cupón.</p>
+        <p style={{ color: '#8a9aaa' }}>Todavía no has creado ninguna promoción.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {cupones.map(c => {
@@ -204,10 +281,12 @@ export default function CuponesTab({
               >
                 <div>
                   <p style={{ fontWeight: 800, color: '#1a2a3a', fontSize: 15, marginBottom: 2 }}>
-                    {c.codigo} — {c.porcentajeDescuento}% de descuento
+                    {c.esAutomatica
+                      ? c.titulo || `${c.porcentajeDescuento}% de descuento`
+                      : `${c.codigo} — ${c.porcentajeDescuento}% de descuento`}
                   </p>
                   <p style={{ color: '#8a9aaa', fontSize: 13 }}>
-                    {etiquetaPlan(c.tipoPlan)} · Vence {new Date(c.fechaExpiracion).toLocaleDateString('es-CO')}
+                    {c.esAutomatica ? 'Automática' : 'Código promocional'} · {etiquetaPlan(c.tipoPlan)} · Vence {new Date(c.fechaExpiracion).toLocaleString('es-CO')}
                     {' · '}
                     Usos: {c.usosActuales}{c.usosMaximos !== null ? ` / ${c.usosMaximos}` : ' (sin límite)'}
                     {vencido && ' · Expirado'}
@@ -217,6 +296,15 @@ export default function CuponesTab({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    onClick={() => iniciarEdicion(c)}
+                    style={{
+                      background: 'none', border: '1.5px solid #AFD3E2', color: '#146C94',
+                      borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    Editar
+                  </button>
                   <button
                     onClick={() => alternarActivo(c)}
                     style={{
@@ -238,6 +326,65 @@ export default function CuponesTab({
                     Eliminar
                   </button>
                 </div>
+
+                {edicion?.id === c.id && (
+                  <div style={{
+                    width: '100%', display: 'flex', gap: 10, flexWrap: 'wrap',
+                    alignItems: 'flex-end', borderTop: '1px solid #D2E0FB', paddingTop: 12,
+                  }}>
+                    {edicion.esAutomatica && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, color: '#8a9aaa', marginBottom: 4 }}>Título visible</label>
+                        <input
+                          type="text"
+                          maxLength={120}
+                          value={edicion.titulo}
+                          onChange={e => setEdicion({ ...edicion, titulo: e.target.value })}
+                          style={{ ...inputStyle, width: 230 }}
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: '#8a9aaa', marginBottom: 4 }}>Descuento</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={99}
+                        value={edicion.porcentajeDescuento}
+                        onChange={e => setEdicion({ ...edicion, porcentajeDescuento: Number(e.target.value) })}
+                        style={{ ...inputStyle, width: 100 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: '#8a9aaa', marginBottom: 4 }}>Vence</label>
+                      <input
+                        type="datetime-local"
+                        value={edicion.fechaExpiracion}
+                        onChange={e => setEdicion({ ...edicion, fechaExpiracion: e.target.value })}
+                        min={fechaMinima}
+                        style={{ ...inputStyle, width: 200 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: '#8a9aaa', marginBottom: 4 }}>Máx. usos</label>
+                      <input
+                        type="number"
+                        min={Math.max(1, c.usosActuales)}
+                        placeholder="Sin límite"
+                        value={edicion.usosMaximos}
+                        onChange={e => setEdicion({ ...edicion, usosMaximos: e.target.value })}
+                        style={{ ...inputStyle, width: 130 }}
+                      />
+                    </div>
+                    <button onClick={guardarEdicion} style={btnStyle}>Guardar</button>
+                    <button
+                      onClick={() => setEdicion(null)}
+                      style={{ ...btnStyle, backgroundColor: '#ffffff', color: '#4a5a6a', border: '1px solid #AFD3E2' }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

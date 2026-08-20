@@ -36,23 +36,29 @@ export class InstitucionAccesoService {
     estudianteId?: string,
     cantidadNueva: number = 1,
   ) {
+    void grado;
     const institucion = await this.prisma.institucion.findUnique({
       where: { id: institucionId },
-      select: { limiteGrado10: true, limiteGrado11: true },
+      select: {
+        limiteEstudiantes: true,
+        limiteGrado10: true,
+        limiteGrado11: true,
+      },
     });
 
+    const limiteLegado =
+      (institucion?.limiteGrado10 ?? 0) + (institucion?.limiteGrado11 ?? 0);
     const limite =
-      grado === 'DECIMO'
-        ? institucion?.limiteGrado10
-        : institucion?.limiteGrado11;
+      institucion?.limiteEstudiantes ??
+      (limiteLegado > 0 ? limiteLegado : null);
 
     // NULL = sin límite fijo (plan "Colegio", cotización directa).
     if (limite === null || limite === undefined) {
       return;
     }
 
-    const estudiantesEnGrado = await this.prisma.claseEstudiante.findMany({
-      where: { Clase: { institucionId, grado } },
+    const estudiantesInstitucion = await this.prisma.claseEstudiante.findMany({
+      where: { Clase: { institucionId } },
       select: { usuarioId: true },
       distinct: ['usuarioId'],
     });
@@ -61,24 +67,23 @@ export class InstitucionAccesoService {
     // en otro grupo del mismo grado), no lo volvemos a contar: no está
     // ocupando un cupo nuevo, solo se está agregando a un segundo grupo.
     const yaContabilizado = estudianteId
-      ? estudiantesEnGrado.some((e) => e.usuarioId === estudianteId)
+      ? estudiantesInstitucion.some((e) => e.usuarioId === estudianteId)
       : false;
 
     // cantidadNueva permite validar un lote completo de una sola vez (por
     // ejemplo, una importación por CSV) en lugar de un estudiante a la vez.
     if (
       !yaContabilizado &&
-      estudiantesEnGrado.length + cantidadNueva - 1 >= limite
+      estudiantesInstitucion.length + cantidadNueva > limite
     ) {
-      const nombreGrado = grado === 'DECIMO' ? '10' : '11';
       if (cantidadNueva > 1) {
-        const disponibles = Math.max(limite - estudiantesEnGrado.length, 0);
+        const disponibles = Math.max(limite - estudiantesInstitucion.length, 0);
         throw new BadRequestException(
-          `Solo hay ${disponibles} cupo(s) disponible(s) de grado ${nombreGrado} y el archivo trae ${cantidadNueva} estudiantes nuevos.`,
+          `Solo hay ${disponibles} cupo(s) disponible(s) y el archivo trae ${cantidadNueva} estudiantes nuevos.`,
         );
       }
       throw new BadRequestException(
-        `Se alcanzó el cupo de ${limite} estudiantes de grado ${nombreGrado} para tu institución.`,
+        `Se alcanzó el cupo total de ${limite} estudiantes para tu institución.`,
       );
     }
   }

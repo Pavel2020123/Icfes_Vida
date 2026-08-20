@@ -1,400 +1,496 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Logotipo from '../../components/Logotipo';
 import BotonPagoEpayco from '../../components/BotonPagoEpayco';
 import FormularioVentas from '../../components/FormularioVentas';
-
-// ─── PUNTO 10 DEL ROADMAP ───────────────────────────────────────
-// Página de planes rediseñada con los nombres/precios OFICIALES de
-// la tabla del roadmap (19 jul 2026). Dos audiencias distintas:
-//
-//  1) Estudiante individual → paga directo con ePayco (punto 9),
-//     precio fijo según su grado: $25.000 (g10) / $35.000 (g11).
-//
-//  2) Institución (colegio) → NO hay autoregistro (ver "Flujo de
-//     cotización" del roadmap): el director habla con ventas, el
-//     trato se cierra por fuera, y luego el admin crea la cuenta
-//     manualmente (punto 12). El CTA "Hablar con ventas" abre el
-//     formulario del punto 11, que guarda el lead en la base de
-//     datos (antes era un mailto temporal).
+import {
+  obtenerCalendarioIcfesActivo,
+  obtenerPromocionActiva,
+  type CalendarioIcfes,
+  type PromocionActiva,
+} from '../../lib/api';
 
 type Audiencia = 'estudiante' | 'colegio';
-type Linea = 'once' | 'bachillerato';
 
-const AUDIENCIA_LABELS: Record<Audiencia, string> = {
-  estudiante: 'Estudiante',
-  colegio: 'Colegio',
-};
+const PRECIO_ACCESO_COMPLETO = 45000;
 
-const LINEA_LABELS: Record<Linea, string> = {
-  once: 'Solo grado 11 (Once)',
-  bachillerato: 'Grado 10 y 11 (Bachillerato)',
-};
+const RANGOS_INSTITUCIONALES = [
+  { cantidad: '10 a 39', precio: '$35.000', detalle: 'por estudiante' },
+  { cantidad: '40 a 99', precio: '$30.000', detalle: 'por estudiante' },
+  { cantidad: '100 o más', precio: 'Cotización', detalle: 'acuerdo institucional' },
+];
 
-interface PlanInstitucional {
-  nombre: 'Básico' | 'Plus' | 'Colegio';
-  cupos: string;
-  cotizacionDirecta: boolean;
-  destacado: boolean;
-  precio?: string;
-  preciosPorGrado?: { grado: string; valor: string }[];
+const formatoVigencia = new Intl.DateTimeFormat('es-CO', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+
+function formatearPrecio(valor: number) {
+  return `$${valor.toLocaleString('es-CO')}`;
 }
 
-const PLANES_ONCE: PlanInstitucional[] = [
-  { nombre: 'Básico', cupos: 'Hasta 25 estudiantes', precio: '$30.000 / estudiante', cotizacionDirecta: false, destacado: false },
-  { nombre: 'Plus', cupos: 'Hasta 40 estudiantes', precio: '$28.000 / estudiante', cotizacionDirecta: false, destacado: true },
-  { nombre: 'Colegio', cupos: 'Sin límite de cupos', precio: 'Cotización directa', cotizacionDirecta: true, destacado: false },
-];
+function precioConDescuento(valor: number, promocion: PromocionActiva | null) {
+  if (!promocion) return valor;
+  return Math.round(valor * (1 - promocion.porcentajeDescuento / 100));
+}
 
-const PLANES_BACHILLERATO: PlanInstitucional[] = [
-  { nombre: 'Básico', cupos: '15 cupos grado 10 + 15 cupos grado 11', preciosPorGrado: [{ grado: 'Grado 10', valor: '$21.000' }, { grado: 'Grado 11', valor: '$30.000' }], cotizacionDirecta: false, destacado: false },
-  { nombre: 'Plus', cupos: '50 cupos grado 10 + 50 cupos grado 11', preciosPorGrado: [{ grado: 'Grado 10', valor: '$19.000' }, { grado: 'Grado 11', valor: '$28.000' }], cotizacionDirecta: false, destacado: true },
-  { nombre: 'Colegio', cupos: 'Sin límite de cupos', precio: 'Cotización directa', cotizacionDirecta: true, destacado: false },
-];
+function ListaIncluye() {
+  return (
+    <ul
+      style={{
+        display: 'grid',
+        gap: 9,
+        padding: 0,
+        margin: '0 0 24px',
+        listStyle: 'none',
+        color: '#445763',
+        fontSize: 13,
+      }}
+    >
+      {[
+        'Todas las áreas y simulacros',
+        'Banco de preguntas y explicaciones',
+        'Acceso hasta el día del examen',
+      ].map((texto) => (
+        <li key={texto} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span
+            aria-hidden="true"
+            style={{ color: '#238761', fontWeight: 900, fontSize: 15 }}
+          >
+            ✓
+          </span>
+          {texto}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function PlanesPage() {
   const [audiencia, setAudiencia] = useState<Audiencia>('estudiante');
-  const [linea, setLinea] = useState<Linea>('once');
-  const [planSeleccionado, setPlanSeleccionado] = useState<PlanInstitucional['nombre']>('Plus');
   const [formularioVentasAbierto, setFormularioVentasAbierto] = useState(false);
+  const [promocion, setPromocion] = useState<PromocionActiva | null>(null);
+  const [calendario, setCalendario] = useState<CalendarioIcfes | null>(null);
 
-  const planesInstitucionales = linea === 'once' ? PLANES_ONCE : PLANES_BACHILLERATO;
-  const audienciaIndex = Object.keys(AUDIENCIA_LABELS).indexOf(audiencia);
+  useEffect(() => {
+    let vigente = true;
+
+    Promise.all([
+      obtenerPromocionActiva('MENSUAL').catch(() => null),
+      obtenerCalendarioIcfesActivo().catch(() => null),
+    ]).then(([promocionActiva, calendarioActivo]) => {
+      if (!vigente) return;
+      setPromocion(promocionActiva);
+      setCalendario(calendarioActivo);
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  const precioFinal = precioConDescuento(PRECIO_ACCESO_COMPLETO, promocion);
+  const colorCalendario = calendario?.calendario === 'B' ? '#F2B45B' : '#8DD8FF';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', color: '#1a2a3a', fontFamily: 'system-ui, sans-serif' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#F6F7F8',
+        color: '#1a2a3a',
+        fontFamily: 'system-ui, sans-serif',
+      }}
+    >
+      <nav
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          backgroundColor: '#146C94',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.16)',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1120,
+            height: 68,
+            margin: '0 auto',
+            padding: '0 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+            <Link href="/" style={{ textDecoration: 'none' }}>
+              <Logotipo colorTexto="#ffffff" colorAcento="#8DD8FF" />
+            </Link>
+            {calendario && (
+              <span
+                style={{
+                  padding: '5px 8px',
+                  border: `1px solid ${colorCalendario}`,
+                  borderRadius: 6,
+                  color: colorCalendario,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Calendario {calendario.calendario}
+              </span>
+            )}
+          </div>
 
-      {/* NAVBAR */}
-      <nav style={{ backgroundColor: '#146C94', position: 'sticky', top: 0, zIndex: 50, boxShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-        <div style={{ maxWidth: 1250, margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 72 }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <Logotipo colorTexto="#ffffff" colorAcento="#8DD8FF" />
-          </Link>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Link href="/login" style={{ color: '#ffffff', textDecoration: 'none', fontSize: 16, fontWeight: 500, padding: '8px 12px' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <Link
+              href="/login"
+              style={{
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontSize: 14,
+                fontWeight: 600,
+                padding: '8px 10px',
+              }}
+            >
               Iniciar sesión
             </Link>
-            <Link href="/registro" className="btn-cta" style={{ backgroundColor: '#8DD8FF', color: '#1a2a3a', padding: '10px 24px', borderRadius: 8, textDecoration: 'none', fontSize: 16, fontWeight: 700, boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'inline-block' }}>
-              Empezar gratis
+            <Link
+              href="/registro"
+              style={{
+                padding: '9px 14px',
+                borderRadius: 8,
+                backgroundColor: '#8DD8FF',
+                color: '#173746',
+                textDecoration: 'none',
+                fontSize: 14,
+                fontWeight: 800,
+              }}
+            >
+              Probar gratis
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* HEADER CON TOGGLE ANIMADO: ESTUDIANTE / COLEGIO */}
-      <section style={{ padding: '64px 24px 48px', textAlign: 'center' }}>
-        <p style={{ color: '#19A7CE', fontWeight: 600, fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-          Sin sorpresas
+      <header style={{ padding: '54px 24px 34px', textAlign: 'center' }}>
+        <p
+          style={{
+            margin: '0 0 10px',
+            color: '#168BB3',
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: 0,
+            textTransform: 'uppercase',
+          }}
+        >
+          Un pago, una preparación completa
         </p>
-        <h1 style={{ fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900, color: '#1a2a3a', marginBottom: 16 }}>
-          Un solo pago. Todo el calendario.
+        <h1
+          style={{
+            maxWidth: 620,
+            margin: '0 auto 12px',
+            color: '#172B38',
+            fontSize: 40,
+            lineHeight: 1.12,
+            fontWeight: 900,
+            letterSpacing: 0,
+          }}
+        >
+          Prepárate hasta el día de tu ICFES
         </h1>
-        <p style={{ fontSize: 17, color: '#4a5a6a', maxWidth: 520, margin: '0 auto 40px' }}>
-          Tu plan vence 1-2 días antes de tu fecha real de presentación del ICFES, para que llegues descansado.
+        <p
+          style={{
+            maxWidth: 540,
+            margin: '0 auto 28px',
+            color: '#5D6C76',
+            fontSize: 16,
+            lineHeight: 1.55,
+          }}
+        >
+          El grado no cambia el precio. Tú eliges cuándo empezar y SaberPlus te acompaña durante toda la convocatoria.
         </p>
 
-        <div style={{
-          position: 'relative',
-          display: 'inline-grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          backgroundColor: '#D2E0FB',
-          borderRadius: 50,
-          padding: 4,
-          margin: '0 auto',
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: 4,
-            bottom: 4,
-            left: 4,
-            width: 'calc((100% - 8px) / 2)',
-            backgroundColor: '#146C94',
-            borderRadius: 50,
-            transform: `translateX(${audienciaIndex * 100}%)`,
-            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            zIndex: 1,
-          }} />
-          {(Object.keys(AUDIENCIA_LABELS) as Audiencia[]).map((aud) => (
+        <div
+          style={{
+            position: 'relative',
+            display: 'inline-grid',
+            gridTemplateColumns: 'repeat(2, minmax(110px, 1fr))',
+            padding: 4,
+            borderRadius: 8,
+            backgroundColor: '#DCE8ED',
+          }}
+        >
+          {(['estudiante', 'colegio'] as Audiencia[]).map((opcion) => (
             <button
-              key={aud}
-              onClick={() => setAudiencia(aud)}
+              key={opcion}
+              type="button"
+              onClick={() => setAudiencia(opcion)}
               style={{
                 position: 'relative',
-                zIndex: 2,
-                padding: '10px 32px',
-                borderRadius: 50,
+                zIndex: 1,
+                padding: '10px 18px',
                 border: 'none',
-                fontSize: 15,
-                fontWeight: 700,
+                borderRadius: 6,
+                backgroundColor: audiencia === opcion ? '#146C94' : 'transparent',
+                color: audiencia === opcion ? '#ffffff' : '#40525E',
+                fontSize: 14,
+                fontWeight: 800,
                 cursor: 'pointer',
-                backgroundColor: 'transparent',
-                color: audiencia === aud ? '#ffffff' : '#4a5a6a',
-                transition: 'color 0.3s ease',
               }}
             >
-              {AUDIENCIA_LABELS[aud]}
+              {opcion === 'estudiante' ? 'Estudiante' : 'Colegio'}
             </button>
           ))}
         </div>
-      </section>
+      </header>
 
-      {/* ─── ESTUDIANTE INDIVIDUAL ─────────────────────────────── */}
-      {audiencia === 'estudiante' && (
-        <section style={{ padding: '0 24px 80px' }}>
-          <div style={{ maxWidth: 760, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 24, alignItems: 'start' }}>
-
-            {/* Prueba gratis */}
-            <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '36px 28px', border: '1px solid #AFD3E2', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Prueba gratis</h2>
-              <p style={{ fontSize: 13, color: '#4a5a6a', marginBottom: 20 }}>
-                Conoce la plataforma sin compromiso.
-              </p>
-              <div style={{ marginBottom: 24 }}>
-                <span style={{ fontSize: 36, fontWeight: 900, color: '#146C94' }}>$0</span>
-                <span style={{ fontSize: 13, color: '#8a9aaa', display: 'block', marginTop: 4 }}>3 días de acceso</span>
-              </div>
-              <Link
-                href="/registro"
-                className="btn-cta"
-                style={{ display: 'block', textAlign: 'center', backgroundColor: '#146C94', color: '#ffffff', padding: '13px', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}
-              >
-                Registrarme gratis
-              </Link>
-            </div>
-
-            {/* Grado 11 (destacado) — mismo fondo blanco que las otras dos;
-                se diferencia con una franja de color arriba, un borde
-                marcado y la insignia "Más popular", no con un relleno
-                oscuro completo. */}
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 20,
-              padding: '40px 28px 36px',
-              border: '1.5px solid #146C94',
-              boxShadow: 'inset 0 4px 0 0 #146C94, 0 12px 28px rgba(20,108,148,0.18)',
-              position: 'relative',
-            }}>
-              <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', backgroundColor: '#8DD8FF', color: '#1a2a3a', fontSize: 12, fontWeight: 800, padding: '5px 18px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-                Más popular
-              </div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a2a3a', marginBottom: 6 }}>Grado 11</h2>
-              <p style={{ fontSize: 13, color: '#4a5a6a', marginBottom: 20 }}>
-                Todo lo que necesitas para presentar el ICFES.
-              </p>
-              <div style={{ marginBottom: 24 }}>
-                <span style={{ fontSize: 36, fontWeight: 900, color: '#146C94' }}>$35.000</span>
-                <span style={{ fontSize: 13, color: '#8a9aaa', display: 'block', marginTop: 4 }}>hasta 1-2 días antes de tu examen</span>
-              </div>
-              <BotonPagoEpayco grado="ONCE" etiqueta="Comprar" precio="$35.000" destacado />
-            </div>
-
-            {/* Grado 10 */}
-            <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '36px 28px', border: '1px solid #AFD3E2', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Grado 10</h2>
-              <p style={{ fontSize: 13, color: '#4a5a6a', marginBottom: 20 }}>
-                Adelántate y llega listo a once.
-              </p>
-              <div style={{ marginBottom: 24 }}>
-                <span style={{ fontSize: 36, fontWeight: 900, color: '#146C94' }}>$25.000</span>
-                <span style={{ fontSize: 13, color: '#8a9aaa', display: 'block', marginTop: 4 }}>hasta 1-2 días antes de tu examen</span>
-              </div>
-              <BotonPagoEpayco grado="DECIMO" etiqueta="Comprar" precio="$25.000" />
-            </div>
-          </div>
-
-          <p style={{ textAlign: 'center', fontSize: 13, color: '#8a9aaa', marginTop: 32 }}>
-            ¿Eres profesor o director y quieres esto para todo tu curso?{' '}
-            <button
-              onClick={() => setAudiencia('colegio')}
-              style={{ background: 'none', border: 'none', color: '#146C94', fontWeight: 700, cursor: 'pointer', fontSize: 13, textDecoration: 'underline', padding: 0 }}
-            >
-              Ver planes de colegio
-            </button>
-          </p>
-        </section>
-      )}
-
-      {/* ─── COLEGIO / INSTITUCIÓN ──────────────────────────────── */}
-      {audiencia === 'colegio' && (
-        <section style={{ padding: '0 24px 80px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 40, flexWrap: 'wrap' }}>
-            {(Object.keys(LINEA_LABELS) as Linea[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLinea(l)}
-                style={{
-                  padding: '9px 20px',
-                  borderRadius: 30,
-                  border: linea === l ? 'none' : '1.5px solid #AFD3E2',
-                  backgroundColor: linea === l ? '#146C94' : '#ffffff',
-                  color: linea === l ? '#ffffff' : '#4a5a6a',
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
-              >
-                {LINEA_LABELS[l]}
-              </button>
-            ))}
-          </div>
-
-          <div role="radiogroup" aria-label="Elegir plan" style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24, alignItems: 'start' }}>
-            {planesInstitucionales.map((plan) => {
-              const seleccionado = plan.nombre === planSeleccionado;
-              return (
-                <div
-                  key={plan.nombre}
-                  role="radio"
-                  aria-checked={seleccionado}
-                  tabIndex={0}
-                  onClick={() => setPlanSeleccionado(plan.nombre)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setPlanSeleccionado(plan.nombre);
-                    }
-                  }}
-                  className="plan-card"
-                  style={{
-                    backgroundColor: plan.destacado ? '#146C94' : '#ffffff',
-                    borderRadius: 20,
-                    padding: '36px 28px',
-                    border: seleccionado
-                      ? '2.5px solid #19A7CE'
-                      : plan.destacado
-                      ? 'none'
-                      : '1px solid #AFD3E2',
-                    boxShadow: seleccionado
-                      ? '0 12px 32px rgba(25,167,206,0.35)'
-                      : plan.destacado
-                      ? '0 12px 32px rgba(20,108,148,0.30)'
-                      : '0 2px 12px rgba(0,0,0,0.06)',
-                    position: 'relative',
-                    outline: 'none',
-                  }}
-                >
-                  {plan.destacado && (
-                    <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', backgroundColor: '#8DD8FF', color: '#1a2a3a', fontSize: 12, fontWeight: 800, padding: '5px 18px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-                      Más popular
-                    </div>
-                  )}
-
-                  {/* Indicador de selección: funciona igual sobre fondo blanco u oscuro */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 16,
-                    right: 16,
-                    width: 22,
-                    height: 22,
-                    borderRadius: '50%',
-                    border: `2px solid ${seleccionado ? '#19A7CE' : (plan.destacado ? 'rgba(255,255,255,0.5)' : '#AFD3E2')}`,
-                    backgroundColor: seleccionado ? '#19A7CE' : 'transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.18s ease',
-                  }}>
-                    {seleccionado && (
-                      <span style={{ color: '#ffffff', fontSize: 13, fontWeight: 900, lineHeight: 1 }}>✓</span>
-                    )}
-                  </div>
-
-                  <h2 style={{ fontSize: 24, fontWeight: 800, color: plan.destacado ? '#ffffff' : '#1a2a3a', marginBottom: 6, paddingRight: 24 }}>
-                    {linea === 'once' ? 'Once' : 'Bachillerato'} {plan.nombre}
-                  </h2>
-                  <p style={{ fontSize: 13, color: plan.destacado ? '#D2E0FB' : '#4a5a6a', marginBottom: 20 }}>
-                    {plan.cupos}
-                  </p>
-                  <div>
-                  {plan.preciosPorGrado ? (
-                    <div style={{ display: 'flex', gap: 28 }}>
-                      {plan.preciosPorGrado.map((pg) => (
-                        <div key={pg.grado}>
-                          <span style={{
-                            display: 'block',
-                            fontSize: 11,
-                            fontWeight: 700,
-                            letterSpacing: 0.6,
-                            textTransform: 'uppercase',
-                            color: plan.destacado ? '#D2E0FB' : '#8a9aaa',
-                            marginBottom: 4,
-                          }}>
-                            {pg.grado}
-                          </span>
-                          <span style={{ fontSize: 24, fontWeight: 900, color: plan.destacado ? '#8DD8FF' : '#146C94' }}>
-                            {pg.valor}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: plan.cotizacionDirecta ? 22 : 28, fontWeight: 900, color: plan.destacado ? '#8DD8FF' : '#146C94' }}>
-                      {plan.precio}
-                    </span>
-                  )}
-                </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* ─── Un solo CTA para los 3 planes ───────────────────── */}
-          <div style={{ textAlign: 'center', marginTop: 36 }}>
-            <p style={{ fontSize: 14, color: '#4a5a6a', marginBottom: 16 }}>
-              Plan seleccionado:{' '}
-              <strong style={{ color: '#146C94' }}>
-                {linea === 'once' ? 'Once' : 'Bachillerato'} {planSeleccionado}
-              </strong>
-            </p>
-            <button
-              onClick={() => setFormularioVentasAbierto(true)}
-              className="btn-cta"
+      {audiencia === 'estudiante' ? (
+        <main style={{ padding: '0 24px 80px' }}>
+          <div
+            style={{
+              maxWidth: 680,
+              margin: '0 auto',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gap: 20,
+              alignItems: 'stretch',
+            }}
+          >
+            <section
               style={{
-                backgroundColor: '#146C94',
-                color: '#ffffff',
-                padding: '15px 40px',
-                borderRadius: 10,
-                border: 'none',
-                fontWeight: 700,
-                fontSize: 16,
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(20,108,148,0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 390,
+                padding: '34px 28px 28px',
+                border: '1px solid #CCD8DE',
+                borderRadius: 8,
+                backgroundColor: '#ffffff',
+                boxShadow: '0 8px 24px rgba(30,55,70,0.07)',
               }}
             >
-              Hablar con ventas
-            </button>
-          </div>
+              <p style={{ margin: '0 0 7px', color: '#168BB3', fontSize: 12, fontWeight: 800 }}>
+                CONOCE SABERPLUS
+              </p>
+              <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 850 }}>
+                Prueba gratis
+              </h2>
+              <p style={{ minHeight: 42, margin: '0 0 22px', color: '#5D6C76', fontSize: 13, lineHeight: 1.5 }}>
+                Explora la plataforma antes de tomar una decisión.
+              </p>
+              <strong style={{ color: '#146C94', fontSize: 36, lineHeight: 1.1, fontWeight: 900 }}>
+                $0
+              </strong>
+              <span style={{ marginTop: 6, color: '#6E7D87', fontSize: 12 }}>
+                3 días desde la verificación del correo
+              </span>
+              <div style={{ marginTop: 'auto' }}>
+                <Link
+                  href="/registro"
+                  style={{
+                    display: 'block',
+                    padding: '13px 16px',
+                    border: '1px solid #146C94',
+                    borderRadius: 8,
+                    color: '#146C94',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    fontSize: 14,
+                    fontWeight: 800,
+                  }}
+                >
+                  Empezar prueba gratis
+                </Link>
+              </div>
+            </section>
 
-          <p style={{ textAlign: 'center', fontSize: 13, color: '#8a9aaa', marginTop: 24, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
-            El plan de colegio no es autoregistro: escríbenos, acordamos los detalles y nosotros creamos la cuenta
-            de tu institución lista para usar.
-          </p>
-        </section>
+            <section
+              style={{
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 390,
+                padding: '34px 28px 28px',
+                border: '2px solid #146C94',
+                borderRadius: 8,
+                backgroundColor: '#ffffff',
+                boxShadow: 'inset 0 4px 0 #146C94, 0 14px 30px rgba(20,108,148,0.15)',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -14,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  padding: '6px 15px',
+                  borderRadius: 7,
+                  backgroundColor: '#75CBEA',
+                  color: '#173746',
+                  fontSize: 12,
+                  fontWeight: 850,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Acceso completo
+              </span>
+
+              {promocion && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 24,
+                    right: 18,
+                    padding: '7px 9px',
+                    borderRadius: 6,
+                    backgroundColor: '#F26B5B',
+                    boxShadow: '0 4px 10px rgba(198,72,57,0.2)',
+                    color: '#ffffff',
+                    fontSize: 16,
+                    fontWeight: 900,
+                  }}
+                >
+                  -{promocion.porcentajeDescuento}%
+                </span>
+              )}
+
+              <p style={{ margin: '0 0 7px', color: '#168BB3', fontSize: 12, fontWeight: 800 }}>
+                PAGO ÚNICO
+              </p>
+              <h2 style={{ margin: '0 0 8px', paddingRight: promocion ? 66 : 0, fontSize: 22, fontWeight: 850 }}>
+                Preparación Saber 11
+              </h2>
+              <p style={{ minHeight: 42, margin: '0 0 18px', color: '#5D6C76', fontSize: 13, lineHeight: 1.5 }}>
+                Sin mensualidades ni cobros posteriores.
+              </p>
+
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                <strong style={{ color: '#146C94', fontSize: 36, lineHeight: 1.1, fontWeight: 900 }}>
+                  {formatearPrecio(precioFinal)}
+                </strong>
+                {promocion && (
+                  <span style={{ color: '#84909A', fontSize: 14, textDecoration: 'line-through' }}>
+                    {formatearPrecio(PRECIO_ACCESO_COMPLETO)}
+                  </span>
+                )}
+              </div>
+
+              {calendario && (
+                <time
+                  dateTime={calendario.fechaExamen}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '9px 0 18px', color: '#687580', fontSize: 12 }}
+                >
+                  <span aria-hidden="true" style={{ fontSize: 16 }}>◷</span>
+                  Acceso hasta {formatoVigencia.format(new Date(calendario.fechaExamen))}
+                </time>
+              )}
+              {!calendario && (
+                <p style={{ margin: '9px 0 18px', color: '#687580', fontSize: 12 }}>
+                  Convocatoria y fecha de acceso por confirmar
+                </p>
+              )}
+
+              <ListaIncluye />
+
+              <div style={{ marginTop: 'auto' }}>
+                <BotonPagoEpayco
+                  etiqueta={calendario ? 'Comprar acceso' : 'Fechas por confirmar'}
+                  precio={formatearPrecio(precioFinal)}
+                  destacado
+                  deshabilitado={!calendario}
+                />
+              </div>
+            </section>
+          </div>
+        </main>
+      ) : (
+        <main style={{ padding: '0 24px 80px' }}>
+          <section style={{ maxWidth: 900, margin: '0 auto' }}>
+            <div style={{ maxWidth: 620, margin: '0 auto 28px', textAlign: 'center' }}>
+              <h2 style={{ margin: '0 0 9px', fontSize: 25, fontWeight: 850 }}>
+                Un solo acceso para todos tus estudiantes
+              </h2>
+              <p style={{ margin: 0, color: '#5D6C76', fontSize: 14, lineHeight: 1.55 }}>
+                Los cupos pueden asignarse a estudiantes de cualquier grado. El colegio recibe la misma plataforma, seguimiento y convocatoria para todo el grupo.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: 14,
+              }}
+            >
+              {RANGOS_INSTITUCIONALES.map((rango, indice) => (
+                <article
+                  key={rango.cantidad}
+                  style={{
+                    padding: '24px 22px',
+                    border: indice === 1 ? '2px solid #146C94' : '1px solid #CCD8DE',
+                    borderRadius: 8,
+                    backgroundColor: '#ffffff',
+                    boxShadow: indice === 1 ? '0 10px 24px rgba(20,108,148,0.13)' : '0 6px 18px rgba(30,55,70,0.06)',
+                  }}
+                >
+                  <p style={{ margin: '0 0 7px', color: '#5D6C76', fontSize: 12, fontWeight: 700 }}>
+                    {rango.cantidad} estudiantes
+                  </p>
+                  <strong style={{ color: '#146C94', fontSize: 25, fontWeight: 900 }}>
+                    {rango.precio}
+                  </strong>
+                  <p style={{ margin: '4px 0 0', color: '#77848D', fontSize: 12 }}>
+                    {rango.detalle}
+                  </p>
+                </article>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 28, textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setFormularioVentasAbierto(true)}
+                style={{
+                  padding: '14px 30px',
+                  border: 'none',
+                  borderRadius: 8,
+                  backgroundColor: '#146C94',
+                  color: '#ffffff',
+                  fontSize: 15,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 16px rgba(20,108,148,0.2)',
+                }}
+              >
+                Solicitar propuesta institucional
+              </button>
+              <p style={{ margin: '12px 0 0', color: '#77848D', fontSize: 12 }}>
+                La cantidad final, facturación y activación se acuerdan con el colegio.
+              </p>
+            </div>
+          </section>
+        </main>
       )}
 
-      {/* FOOTER */}
-      <footer style={{ backgroundColor: '#1a2a3a', padding: '32px 24px', textAlign: 'center' }}>
-        <p style={{ color: '#8DD8FF', fontWeight: 800, fontSize: 18, marginBottom: 8 }}>
+      <footer style={{ padding: '28px 24px', backgroundColor: '#172B38', textAlign: 'center' }}>
+        <p style={{ margin: '0 0 8px', color: '#8DD8FF', fontSize: 17, fontWeight: 850 }}>
           Saber<span style={{ color: '#ffffff' }}>Plus</span>
         </p>
-        <p style={{ color: '#AFD3E2', fontSize: 13 }}>
-          © 2026 SaberPlus. Todos los derechos reservados.
-        </p>
-        <div style={{ marginTop: 12 }}>
-          <Link href="/terminos" style={{ color: '#ffffff', fontSize: 13, marginRight: 18 }}>Términos y condiciones</Link>
-          <Link href="/privacidad" style={{ color: '#ffffff', fontSize: 13 }}>Política de privacidad</Link>
-        </div>
+        <Link href="/terminos" style={{ marginRight: 16, color: '#D5E3E9', fontSize: 12 }}>
+          Términos
+        </Link>
+        <Link href="/privacidad" style={{ color: '#D5E3E9', fontSize: 12 }}>
+          Privacidad
+        </Link>
       </footer>
 
-      {/* ─── PUNTO 11: formulario "Hablar con ventas" ─────────── */}
       <FormularioVentas
         abierto={formularioVentasAbierto}
         onCerrar={() => setFormularioVentasAbierto(false)}
-        linea={linea === 'once' ? 'ONCE' : 'BACHILLERATO'}
-        lineaEtiqueta={linea === 'once' ? 'Once' : 'Bachillerato'}
-        plan={planSeleccionado}
       />
     </div>
   );

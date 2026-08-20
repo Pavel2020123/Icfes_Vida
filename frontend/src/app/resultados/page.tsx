@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import RevisionPreguntas, {
+  type DetalleRevision,
+} from '../../components/RevisionPreguntas';
 
 const AREA_NOMBRES: Record<string, string> = {
   LECTURA_CRITICA: 'Lectura Crítica',
@@ -24,6 +27,7 @@ interface Resultado {
   tipo?: 'personalizado';
   areasSeleccionadas?: string[];
   desglose?: DesgloseArea[];
+  detalle?: DetalleRevision[];
   resumen: {
     totalPreguntas: number;
     respuestasCorrectas: number;
@@ -140,6 +144,8 @@ export default function ResultadosPage() {
             </Link>
           </div>
         </div>
+
+        <RevisionPreguntas detalle={resultado.detalle ?? []} />
 
       </main>
     </div>

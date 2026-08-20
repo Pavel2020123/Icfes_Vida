@@ -103,19 +103,20 @@ function validarFormularioRapido(
 //   gestiona la institución, no tiene sentido que pague aquí.
 
 type Sesion = 'anonimo' | 'individual' | 'institucional';
+type PasoCodigo = 'inicio' | 'pregunta' | 'con_codigo' | 'sin_codigo';
 
 interface BotonPagoEpaycoProps {
-  grado: 'DECIMO' | 'ONCE';
   etiqueta: string;
   precio: string;
   destacado?: boolean;
+  deshabilitado?: boolean;
 }
 
 export default function BotonPagoEpayco({
-  grado,
   etiqueta,
   precio,
   destacado = false,
+  deshabilitado = false,
 }: BotonPagoEpaycoProps) {
   // "destacado" ya no cambia el color del botón (ahora todos son iguales).
   // Se deja el prop para no romper a quienes ya lo pasan (planes/page.tsx,
@@ -131,6 +132,8 @@ export default function BotonPagoEpayco({
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [confirmar, setConfirmar] = useState('');
+  const [codigoCupon, setCodigoCupon] = useState('');
+  const [pasoCodigo, setPasoCodigo] = useState<PasoCodigo>('inicio');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
@@ -151,9 +154,9 @@ export default function BotonPagoEpayco({
 
   // ─── Una vez hay sesión (ya sea previa o recién creada), esto abre
   // el checkout de ePayco. ─────────────────────────────────────────
-  const irAEpayco = async () => {
+  const irAEpayco = async (codigoPromocional?: string) => {
     const [datos] = await Promise.all([
-      crearOrdenPagoIndividual(grado),
+      crearOrdenPagoIndividual(codigoPromocional),
       cargarScriptEpayco(),
     ]);
 
@@ -188,8 +191,13 @@ export default function BotonPagoEpayco({
     });
   };
 
-  const manejarClick = async () => {
+  const procesarPago = async (usarCodigo: boolean) => {
     setError('');
+
+    if (usarCodigo && !codigoCupon.trim()) {
+      setError('Escribe el código promocional o continúa sin código.');
+      return;
+    }
 
     // Visitante sin cuenta: primer clic solo abre el mini-formulario,
     // todavía no pagamos nada.
@@ -229,7 +237,7 @@ export default function BotonPagoEpayco({
         setSesion('individual');
       }
 
-      await irAEpayco();
+      await irAEpayco(usarCodigo ? codigoCupon.trim() : undefined);
     } catch (err) {
       setError(
         err instanceof Error
@@ -238,6 +246,32 @@ export default function BotonPagoEpayco({
       );
     } finally {
       setCargando(false);
+    }
+  };
+
+  const manejarClick = () => {
+    setError('');
+    if (pasoCodigo === 'inicio') {
+      setPasoCodigo('pregunta');
+      return;
+    }
+    void procesarPago(pasoCodigo === 'con_codigo');
+  };
+
+  const elegirCodigo = (tieneCodigo: boolean) => {
+    setError('');
+    if (tieneCodigo) {
+      setPasoCodigo('con_codigo');
+      if (sesion === 'anonimo') setMostrarFormulario(true);
+      return;
+    }
+
+    setCodigoCupon('');
+    setPasoCodigo('sin_codigo');
+    if (sesion === 'anonimo') {
+      setMostrarFormulario(true);
+    } else {
+      void procesarPago(false);
     }
   };
 
@@ -319,31 +353,92 @@ export default function BotonPagoEpayco({
         </div>
       )}
 
-      <button
-        onClick={manejarClick}
-        disabled={cargando}
-        className="btn-cta"
-        style={{
-          // Un solo color para todos los botones de "Comprar",
-          // sin importar si la tarjeta es la destacada.
-          backgroundColor: 'var(--color-primario, #146C94)',
-          color: '#ffffff',
-          border: 'none',
-          borderRadius: 10,
-          padding: '12px 24px',
-          fontSize: 15,
-          fontWeight: 700,
-          width: '100%',
-          cursor: cargando ? 'default' : 'pointer',
-          opacity: cargando ? 0.7 : 1,
-        }}
-      >
-        {cargando
-          ? 'Un momento...'
-          : sesion === 'anonimo' && mostrarFormulario
-            ? `Crear cuenta y pagar · ${precio}`
-            : `${etiqueta} · ${precio}`}
-      </button>
+      {pasoCodigo === 'pregunta' && (
+        <div
+          style={{
+            padding: 12,
+            border: '1px solid #AFD3E2',
+            borderRadius: 8,
+            backgroundColor: '#F7FAFC',
+          }}
+        >
+          <p style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700 }}>
+            ¿Quieres ingresar un código promocional?
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => elegirCodigo(true)}
+              style={{
+                padding: '9px 10px',
+                border: '1px solid #146C94',
+                borderRadius: 8,
+                backgroundColor: '#ffffff',
+                color: '#146C94',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Sí, tengo uno
+            </button>
+            <button
+              type="button"
+              onClick={() => elegirCodigo(false)}
+              style={{
+                padding: '9px 10px',
+                border: 'none',
+                borderRadius: 8,
+                backgroundColor: '#146C94',
+                color: '#ffffff',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              No, continuar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {pasoCodigo === 'con_codigo' && (
+        <input
+          type="text"
+          aria-label="Código promocional"
+          placeholder="Código promocional"
+          value={codigoCupon}
+          maxLength={50}
+          onChange={(e) => setCodigoCupon(e.target.value.toUpperCase())}
+          style={{ ...inputStyle, textTransform: 'uppercase' }}
+        />
+      )}
+
+      {pasoCodigo !== 'pregunta' && (
+        <button
+          onClick={manejarClick}
+          disabled={cargando || deshabilitado}
+          className="btn-cta"
+          style={{
+            backgroundColor: 'var(--color-primario, #146C94)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: 8,
+            padding: '12px 24px',
+            fontSize: 15,
+            fontWeight: 700,
+            width: '100%',
+            cursor: cargando || deshabilitado ? 'default' : 'pointer',
+            opacity: cargando || deshabilitado ? 0.62 : 1,
+          }}
+        >
+          {cargando
+            ? 'Un momento...'
+            : deshabilitado
+              ? etiqueta
+              : sesion === 'anonimo' && mostrarFormulario
+                ? `Crear cuenta y pagar · ${precio}`
+                : `${etiqueta} · ${precio}`}
+        </button>
+      )}
 
       {sesion === 'anonimo' && mostrarFormulario && (
         <p

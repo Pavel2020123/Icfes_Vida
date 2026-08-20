@@ -46,8 +46,7 @@ class CrearLeadVentasDto {
   @IsEnum(LineaInteres)
   linea!: LineaInteres;
 
-  // Mismos nombres que las tarjetas de plan en /planes.
-  @IsIn(['Básico', 'Plus', 'Colegio'])
+  @IsIn(['Básico', 'Plus', 'Colegio', 'Institucional'])
   plan!: string;
 
   @IsOptional()

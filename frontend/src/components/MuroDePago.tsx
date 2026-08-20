@@ -18,22 +18,21 @@ export default function MuroDePago() {
         maxWidth: 480,
         width: '100%',
         backgroundColor: '#ffffff',
-        borderRadius: 16,
+        borderRadius: 8,
         padding: '40px 32px',
         textAlign: 'center',
         boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
       }}>
-        <div style={{ fontSize: 48, marginBottom: 8 }}>⏳</div>
+        <div style={{ fontSize: 38, marginBottom: 8, color: '#146C94' }}>◷</div>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: '#146C94', margin: '0 0 12px' }}>
           Tu prueba gratis de 3 días terminó
         </h1>
         <p style={{ fontSize: 15, color: '#555', lineHeight: 1.5, margin: '0 0 24px' }}>
-          Activa tu plan según tu grado para seguir practicando, viendo tus temas y presentando simulacros.
+          Activa el acceso completo para seguir practicando, estudiando tus temas y presentando simulacros hasta el día del examen.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-          <BotonPagoEpayco grado="ONCE" etiqueta="Activar Grado 11" precio="$35.000" destacado />
-          <BotonPagoEpayco grado="DECIMO" etiqueta="Activar Grado 10" precio="$25.000" />
+          <BotonPagoEpayco etiqueta="Comprar acceso completo" precio="$45.000" destacado />
         </div>
 
         <p style={{ fontSize: 12, color: '#999', margin: '0 0 8px' }}>
@@ -49,7 +48,7 @@ export default function MuroDePago() {
             textDecoration: 'underline',
           }}
         >
-          Ver todos los planes
+          Ver detalles del acceso
         </Link>
       </div>
     </div>
