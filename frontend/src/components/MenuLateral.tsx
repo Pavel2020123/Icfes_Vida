@@ -215,6 +215,17 @@ export default function MenuLateral({
                   Mi institución
                 </div>
               </Link>
+
+              <Link href="/institucion/alertas" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+                <div
+                  style={{ ...linkStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FBE9E7'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <span>Alertas de riesgo</span>
+                  <span aria-hidden="true" style={{ color: '#A43C36', fontWeight: 900 }}>!</span>
+                </div>
+              </Link>
       
               <Link href="/institucion/estudiantes" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
                 <div
@@ -333,6 +344,17 @@ export default function MenuLateral({
           {/* Divisor */}
           <div style={{ height: 1, backgroundColor: '#F0F0F0', margin: '8px 0' }} />
 
+          <Link href="/diagnostico" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+            <div
+              style={{ ...linkStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <span>Diagnóstico inicial</span>
+              <span aria-hidden="true" style={{ color: '#16805E', fontWeight: 800 }}>01</span>
+            </div>
+          </Link>
+
           {/* Preguntas aleatorias */}
           <Link href="/preguntas-aleatorias" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
             <div
@@ -342,6 +364,49 @@ export default function MenuLateral({
             >
               <span>Preguntas aleatorias</span>
               <span style={{ fontSize: 16 }}>🎲</span>
+            </div>
+          </Link>
+
+          <Link href="/historial-respuestas" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+            <div
+              style={linkStyle}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              Historial de respuestas
+            </div>
+          </Link>
+
+          <Link href="/formulas" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+            <div
+              style={{ ...linkStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <span>Formulario por área</span>
+              <span aria-hidden="true" style={{ color: '#146C94', fontWeight: 800 }}>ƒx</span>
+            </div>
+          </Link>
+
+          <Link href="/glosario" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+            <div
+              style={{ ...linkStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <span>Glosario de términos</span>
+              <span aria-hidden="true" style={{ color: '#8A5C00', fontWeight: 800 }}>A–Z</span>
+            </div>
+          </Link>
+
+          <Link href="/estrategia-examen" onClick={() => setAbierto(false)} style={{ textDecoration: 'none', display: 'block' }}>
+            <div
+              style={{ ...linkStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F6F1F1'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <span>Estrategia de examen</span>
+              <span aria-hidden="true" style={{ color: '#2E7D4F', fontWeight: 900 }}>✓</span>
             </div>
           </Link>
 

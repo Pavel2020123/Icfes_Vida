@@ -6,8 +6,10 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   Request,
   UseGuards,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AdminGuard } from '../auth/jwt.guard';
@@ -95,6 +97,15 @@ class CrearPreguntaDto {
   @IsOptional()
   @IsString()
   explicacion?: string;
+
+  @IsOptional()
+  @IsString()
+  casoId?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  ordenEnCaso?: number;
 }
 
 class CrearPreguntaAleatoriaDto {
@@ -117,6 +128,58 @@ class CrearPreguntaAleatoriaDto {
   @IsOptional()
   @IsString()
   explicacion?: string;
+
+  @IsOptional()
+  @IsString()
+  casoId?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  ordenEnCaso?: number;
+}
+
+class CrearCasoPreguntaDto {
+  @IsEnum(AreaIcfes)
+  area!: AreaIcfes;
+
+  @IsString()
+  @IsNotEmpty()
+  contexto!: string;
+
+  @IsOptional()
+  @IsString()
+  titulo?: string;
+
+  @IsOptional()
+  @IsString()
+  imagenUrl?: string;
+}
+
+class ActualizarCasoPreguntaDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  contexto?: string;
+
+  @IsOptional()
+  @IsString()
+  titulo?: string;
+
+  @IsOptional()
+  @IsString()
+  imagenUrl?: string;
+}
+
+class AsignarCasoPreguntaDto {
+  @IsOptional()
+  @IsString()
+  casoId?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  ordenEnCaso?: number;
 }
 
 class ActualizarContenidoDto {
@@ -265,6 +328,11 @@ export class AdminController {
     return this.adminService.obtenerPreguntasPorSubtema(subtemaId);
   }
 
+  @Get('preguntas/:id/estadisticas')
+  estadisticasPregunta(@Param('id') id: string) {
+    return this.adminService.obtenerEstadisticasPregunta(id);
+  }
+
   @Post('preguntas')
   crearPregunta(@Body() body: CrearPreguntaDto) {
     return this.adminService.crearPregunta(
@@ -274,6 +342,8 @@ export class AdminController {
       body.respuestas,
       body.imagenUrl,
       body.explicacion,
+      body.casoId,
+      body.ordenEnCaso,
     );
   }
 
@@ -286,6 +356,46 @@ export class AdminController {
       body.respuestas,
       body.imagenUrl,
       body.explicacion,
+      body.casoId,
+      body.ordenEnCaso,
+    );
+  }
+
+  @Get('casos-preguntas')
+  listarCasosPreguntas(
+    @Query('area', new ParseEnumPipe(AreaIcfes, { optional: true }))
+    area?: AreaIcfes,
+  ) {
+    return this.adminService.listarCasosPreguntas(area);
+  }
+
+  @Post('casos-preguntas')
+  crearCasoPregunta(@Body() body: CrearCasoPreguntaDto) {
+    return this.adminService.crearCasoPregunta(body);
+  }
+
+  @Patch('casos-preguntas/:id')
+  actualizarCasoPregunta(
+    @Param('id') id: string,
+    @Body() body: ActualizarCasoPreguntaDto,
+  ) {
+    return this.adminService.actualizarCasoPregunta(id, body);
+  }
+
+  @Delete('casos-preguntas/:id')
+  eliminarCasoPregunta(@Param('id') id: string) {
+    return this.adminService.eliminarCasoPregunta(id);
+  }
+
+  @Patch('preguntas/:id/caso')
+  asignarCasoPregunta(
+    @Param('id') id: string,
+    @Body() body: AsignarCasoPreguntaDto,
+  ) {
+    return this.adminService.asignarPreguntaACaso(
+      id,
+      body.casoId ?? null,
+      body.ordenEnCaso,
     );
   }
 

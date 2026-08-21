@@ -1,3 +1,7 @@
+import ContextoCasoPregunta, {
+  type CasoPreguntaPublico,
+} from "./ContextoCasoPregunta";
+
 export interface RespuestaRevision {
   id: string;
   texto: string;
@@ -13,6 +17,8 @@ export interface DetalleRevision {
   respuestaSeleccionadaId: string;
   respuestaCorrectaId: string;
   explicacion: string | null;
+  ordenEnCaso: number | null;
+  caso: CasoPreguntaPublico | null;
   respuestas: RespuestaRevision[];
 }
 
@@ -24,82 +30,138 @@ export default function RevisionPreguntas({
   if (detalle.length === 0) return null;
 
   return (
-    <section style={{ marginTop: 32, textAlign: 'left' }}>
-      <h2 style={{ margin: '0 0 6px', color: '#1a2a3a', fontSize: 22 }}>
+    <section style={{ marginTop: 32, textAlign: "left" }}>
+      <h2 style={{ margin: "0 0 6px", color: "#1a2a3a", fontSize: 22 }}>
         Revisa tus respuestas
       </h2>
-      <p style={{ margin: '0 0 18px', color: '#687580', fontSize: 14 }}>
+      <p style={{ margin: "0 0 18px", color: "#687580", fontSize: 14 }}>
         Compara tu elección con la respuesta correcta y repasa el razonamiento.
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {detalle.map((pregunta, indice) => (
           <article
             key={`${pregunta.preguntaId}-${indice}`}
             style={{
               padding: 22,
-              border: `1.5px solid ${pregunta.esCorrecto ? '#A6D9B8' : '#E8B4B4'}`,
+              border: `1.5px solid ${pregunta.esCorrecto ? "#A6D9B8" : "#E8B4B4"}`,
               borderRadius: 8,
-              backgroundColor: '#ffffff',
+              backgroundColor: "#ffffff",
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
-              <span style={{ color: '#687580', fontSize: 12, fontWeight: 700 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 12,
+              }}
+            >
+              <span style={{ color: "#687580", fontSize: 12, fontWeight: 700 }}>
                 Pregunta {indice + 1}
               </span>
-              <span style={{ color: pregunta.esCorrecto ? '#2E7D4F' : '#A84B4B', fontSize: 12, fontWeight: 800 }}>
-                {pregunta.esCorrecto ? 'Correcta' : 'Por revisar'}
+              <span
+                style={{
+                  color: pregunta.esCorrecto ? "#2E7D4F" : "#A84B4B",
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                {pregunta.esCorrecto ? "Correcta" : "Por revisar"}
               </span>
             </div>
 
-            <p style={{ margin: '0 0 16px', color: '#1a2a3a', fontSize: 15, fontWeight: 650, lineHeight: 1.55 }}>
+            <ContextoCasoPregunta
+              caso={pregunta.caso}
+              ordenEnCaso={pregunta.ordenEnCaso}
+            />
+
+            <p
+              style={{
+                margin: "0 0 16px",
+                color: "#1a2a3a",
+                fontSize: 15,
+                fontWeight: 650,
+                lineHeight: 1.55,
+              }}
+            >
               {pregunta.enunciado}
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {pregunta.respuestas.map((respuesta, respuestaIndice) => {
                 const seleccionada =
                   respuesta.id === pregunta.respuestaSeleccionadaId;
                 const correcta = respuesta.id === pregunta.respuestaCorrectaId;
                 const color = correcta
-                  ? '#2E7D4F'
+                  ? "#2E7D4F"
                   : seleccionada
-                    ? '#A84B4B'
-                    : '#4A5A64';
+                    ? "#A84B4B"
+                    : "#4A5A64";
                 const fondo = correcta
-                  ? '#EEF8F1'
+                  ? "#EEF8F1"
                   : seleccionada
-                    ? '#FFF1F1'
-                    : '#F7F9FA';
+                    ? "#FFF1F1"
+                    : "#F7F9FA";
 
                 return (
                   <div
                     key={respuesta.id}
                     style={{
-                      padding: '11px 12px',
-                      borderLeft: `3px solid ${correcta ? '#75BE8D' : seleccionada ? '#D78C8C' : '#D5DEE3'}`,
+                      padding: "11px 12px",
+                      borderLeft: `3px solid ${correcta ? "#75BE8D" : seleccionada ? "#D78C8C" : "#D5DEE3"}`,
                       backgroundColor: fondo,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: 8,
+                      }}
+                    >
                       <strong style={{ color, fontSize: 13 }}>
-                        {['A', 'B', 'C', 'D'][respuestaIndice] ?? respuestaIndice + 1}.
+                        {["A", "B", "C", "D"][respuestaIndice] ??
+                          respuestaIndice + 1}
+                        .
                       </strong>
-                      <span style={{ flex: 1, color, fontSize: 14, lineHeight: 1.45 }}>
+                      <span
+                        style={{
+                          flex: 1,
+                          color,
+                          fontSize: 14,
+                          lineHeight: 1.45,
+                        }}
+                      >
                         {respuesta.texto}
                       </span>
                       {(seleccionada || correcta) && (
-                        <span style={{ color, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>
+                        <span
+                          style={{
+                            color,
+                            fontSize: 11,
+                            fontWeight: 800,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {seleccionada && correcta
-                            ? 'Tu respuesta · Correcta'
+                            ? "Tu respuesta · Correcta"
                             : seleccionada
-                              ? 'Tu respuesta'
-                              : 'Correcta'}
+                              ? "Tu respuesta"
+                              : "Correcta"}
                         </span>
                       )}
                     </div>
                     {respuesta.explicacion && (
-                      <p style={{ margin: '7px 0 0 22px', color: '#5D6C76', fontSize: 12, lineHeight: 1.5 }}>
+                      <p
+                        style={{
+                          margin: "7px 0 0 22px",
+                          color: "#5D6C76",
+                          fontSize: 12,
+                          lineHeight: 1.5,
+                        }}
+                      >
                         {respuesta.explicacion}
                       </p>
                     )}
@@ -109,11 +171,31 @@ export default function RevisionPreguntas({
             </div>
 
             {pregunta.explicacion && (
-              <div style={{ marginTop: 15, paddingTop: 14, borderTop: '1px solid #DCE4E8' }}>
-                <p style={{ margin: '0 0 5px', color: '#146C94', fontSize: 12, fontWeight: 800 }}>
+              <div
+                style={{
+                  marginTop: 15,
+                  paddingTop: 14,
+                  borderTop: "1px solid #DCE4E8",
+                }}
+              >
+                <p
+                  style={{
+                    margin: "0 0 5px",
+                    color: "#146C94",
+                    fontSize: 12,
+                    fontWeight: 800,
+                  }}
+                >
                   Cómo se resuelve
                 </p>
-                <p style={{ margin: 0, color: '#3F4E58', fontSize: 13, lineHeight: 1.6 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#3F4E58",
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                  }}
+                >
                   {pregunta.explicacion}
                 </p>
               </div>

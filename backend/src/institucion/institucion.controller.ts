@@ -20,6 +20,7 @@ import { GrupoService } from './grupo.service';
 import { EstudianteService } from './estudiante.service';
 import { EstudianteImportService } from './estudiante-import.service';
 import { ArchivoAlmacenamientoService } from './archivo-almacenamiento.service';
+import { AlertasRiesgoService } from './alertas-riesgo.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { logoMulterOptions } from './logo-upload.config';
 import { csvMulterOptions } from './csv-upload.config';
@@ -138,6 +139,7 @@ export class InstitucionController {
     private readonly estudianteService: EstudianteService,
     private readonly estudianteImportService: EstudianteImportService,
     private readonly archivoAlmacenamientoService: ArchivoAlmacenamientoService,
+    private readonly alertasRiesgoService: AlertasRiesgoService,
   ) {}
 
   @Get('me')
@@ -226,6 +228,11 @@ export class InstitucionController {
     return this.institucionService.obtenerAnaliticasDeMiInstitucion(
       req.usuario.sub,
     );
+  }
+
+  @Get('me/alertas-riesgo')
+  obtenerAlertasRiesgo(@Request() req: AuthenticatedRequest) {
+    return this.alertasRiesgoService.obtenerAlertas(req.usuario.sub);
   }
 
   @Post('me/estudiantes')

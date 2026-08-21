@@ -8,6 +8,8 @@ import {
   obtenerPerfilCompleto,
   obtenerHistorialSimulacros,
   obtenerProgresoSimulacros,
+  obtenerEstadoDiagnostico,
+  type EstadoDiagnostico,
 } from '../../lib/api';
 import { RolUsuario } from '../../lib/auth';
 import MenuLateral from '../../components/MenuLateral';
@@ -15,6 +17,7 @@ import MuroDePago from '../../components/MuroDePago';
 import AvisoVerificarCorreo from '../../components/AvisoVerificarCorreo';
 import { useBranding } from '../../context/ThemeContext';
 import { gradoLabel, gradoIcon, gradoBadgeClass } from '@/lib/grado-label';
+import EstadoDiagnosticoBanner from '../../components/EstadoDiagnosticoBanner';
 
 const AREAS = [
   { key: 'LECTURA_CRITICA', nombre: 'Lectura Crítica' },
@@ -72,6 +75,7 @@ export default function DashboardPage() {
   const [planVencido, setPlanVencido] = useState(false);
   const [correo, setCorreo] = useState('');
   const [requiereVerificacion, setRequiereVerificacion] = useState(false);
+  const [diagnostico, setDiagnostico] = useState<EstadoDiagnostico | null>(null);
 
   useEffect(() => {
     const token = obtenerToken();
@@ -94,8 +98,9 @@ export default function DashboardPage() {
       obtenerHistorialSimulacros(),
       obtenerProgresoSimulacros(),
       obtenerPerfilCompleto().catch(() => null),
+      obtenerEstadoDiagnostico().catch(() => null),
     ])
-      .then(([historialData, progresoData, perfil]) => {
+      .then(([historialData, progresoData, perfil, estadoDiagnostico]) => {
         setHistorial(historialData.resultados ?? []);
         const totalXp = (historialData.resultados ?? []).reduce(
           (acc: number, r: Resultado) => acc + (r.xpGanado ?? 0), 0
@@ -104,6 +109,7 @@ export default function DashboardPage() {
         setProgreso(progresoData);
         setPlanVencido(Boolean(perfil?.planVencido));
         setRequiereVerificacion(Boolean(perfil?.requiereVerificacionCorreo));
+        setDiagnostico(estadoDiagnostico);
       })
       .catch(() => {})
       .finally(() => setCargando(false));
@@ -176,6 +182,10 @@ export default function DashboardPage() {
 
         {rol === 'ESTUDIANTE' ? (
           <>
+            {diagnostico && (
+              <EstadoDiagnosticoBanner diagnostico={diagnostico} />
+            )}
+
             {/* BARRA DE PROGRESO GRANDE */}
             <div style={{
               backgroundColor: '#ffffff',

@@ -1,12 +1,12 @@
 export const AREAS = [
-  { key: 'LECTURA_CRITICA', nombre: 'Lectura Crítica' },
-  { key: 'MATEMATICAS', nombre: 'Matemáticas' },
-  { key: 'CIENCIAS_NATURALES', nombre: 'Ciencias Naturales' },
-  { key: 'SOCIALES_CIUDADANAS', nombre: 'Sociales y Ciudadanas' },
-  { key: 'INGLES', nombre: 'Inglés' },
+  { key: "LECTURA_CRITICA", nombre: "Lectura Crítica" },
+  { key: "MATEMATICAS", nombre: "Matemáticas" },
+  { key: "CIENCIAS_NATURALES", nombre: "Ciencias Naturales" },
+  { key: "SOCIALES_CIUDADANAS", nombre: "Sociales y Ciudadanas" },
+  { key: "INGLES", nombre: "Inglés" },
 ];
 
-export const DIFICULTADES = ['BASICO', 'MEDIO', 'AVANZADO'];
+export const DIFICULTADES = ["BASICO", "MEDIO", "AVANZADO"];
 
 export interface Usuario {
   id: string;
@@ -58,17 +58,37 @@ export interface PreguntaAdmin {
   explicacion: string | null;
   imagenUrl: string | null;
   dificultad: string;
+  casoId: string | null;
+  ordenEnCaso: number | null;
+  caso: {
+    id: string;
+    titulo: string | null;
+    contexto: string;
+    imagenUrl: string | null;
+    area: string;
+  } | null;
   respuestas: RespuestaAdmin[];
 }
 
-export type Pestana = 'stats' | 'temas' | 'preguntas' | 'aleatorias' | 'usuarios' | 'contenido' | 'interactivo' | 'calendario' | 'ventas' | 'cupones';
+export type Pestana =
+  | "stats"
+  | "temas"
+  | "casos"
+  | "preguntas"
+  | "aleatorias"
+  | "usuarios"
+  | "contenido"
+  | "interactivo"
+  | "calendario"
+  | "ventas"
+  | "cupones";
 
 export interface LeadVentasAdmin {
   id: string;
   nombreColegio: string;
   nombreContacto: string;
   correo: string;
-  linea: 'ONCE' | 'BACHILLERATO';
+  linea: "ONCE" | "BACHILLERATO";
   plan: string;
   atendido: boolean;
 }
@@ -76,7 +96,7 @@ export interface LeadVentasAdmin {
 export interface FechaIcfes {
   id: string;
   anio: number;
-  calendario: 'A' | 'B';
+  calendario: "A" | "B";
   fechaExamen: string;
   activo: boolean;
 }

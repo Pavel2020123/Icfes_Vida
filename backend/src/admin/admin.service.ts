@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AreaIcfes,
@@ -259,6 +263,98 @@ export class AdminService {
   }
 
   // ─── PREGUNTAS ──────────────────────────────────────────────
+  listarCasosPreguntas(area?: AreaIcfes) {
+    return this.prisma.casoPregunta.findMany({
+      where: area ? { area } : undefined,
+      include: { _count: { select: { preguntas: true } } },
+      orderBy: { fechaCreacion: 'desc' },
+    });
+  }
+
+  crearCasoPregunta(datos: {
+    area: AreaIcfes;
+    contexto: string;
+    titulo?: string;
+    imagenUrl?: string;
+  }) {
+    const contexto = datos.contexto.trim();
+    if (!contexto) {
+      throw new BadRequestException(
+        'El contexto del caso no puede estar vacío.',
+      );
+    }
+
+    return this.prisma.casoPregunta.create({
+      data: {
+        area: datos.area,
+        contexto,
+        titulo: datos.titulo?.trim() || null,
+        imagenUrl: datos.imagenUrl?.trim() || null,
+      },
+      include: { _count: { select: { preguntas: true } } },
+    });
+  }
+
+  async actualizarCasoPregunta(
+    id: string,
+    datos: { contexto?: string; titulo?: string; imagenUrl?: string },
+  ) {
+    const existente = await this.prisma.casoPregunta.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!existente) throw new BadRequestException('El caso no existe.');
+
+    const contexto = datos.contexto?.trim();
+    if (datos.contexto !== undefined && !contexto) {
+      throw new BadRequestException(
+        'El contexto del caso no puede estar vacío.',
+      );
+    }
+
+    return this.prisma.casoPregunta.update({
+      where: { id },
+      data: {
+        ...(contexto !== undefined && { contexto }),
+        ...(datos.titulo !== undefined && {
+          titulo: datos.titulo.trim() || null,
+        }),
+        ...(datos.imagenUrl !== undefined && {
+          imagenUrl: datos.imagenUrl.trim() || null,
+        }),
+      },
+      include: { _count: { select: { preguntas: true } } },
+    });
+  }
+
+  async eliminarCasoPregunta(id: string) {
+    const caso = await this.prisma.casoPregunta.findUnique({
+      where: { id },
+      include: { _count: { select: { preguntas: true } } },
+    });
+    if (!caso) throw new BadRequestException('El caso no existe.');
+    if (caso._count.preguntas > 0) {
+      throw new BadRequestException(
+        `Retira primero las ${caso._count.preguntas} pregunta(s) asociada(s) a este caso.`,
+      );
+    }
+
+    return this.prisma.casoPregunta.delete({ where: { id } });
+  }
+
+  private async validarCasoParaArea(casoId: string, area: AreaIcfes) {
+    const caso = await this.prisma.casoPregunta.findUnique({
+      where: { id: casoId },
+    });
+    if (!caso) throw new BadRequestException('El caso seleccionado no existe.');
+    if (caso.area !== area) {
+      throw new BadRequestException(
+        'El caso y la pregunta deben pertenecer a la misma área.',
+      );
+    }
+    return caso;
+  }
+
   async crearPregunta(
     enunciado: string,
     subtemaId: string,
@@ -270,7 +366,28 @@ export class AdminService {
     }[],
     imagenUrl?: string,
     explicacion?: string,
+    casoId?: string,
+    ordenEnCaso?: number,
   ) {
+    if (!casoId && ordenEnCaso !== undefined) {
+      throw new BadRequestException(
+        'El orden solo puede indicarse cuando la pregunta pertenece a un caso.',
+      );
+    }
+
+    let ordenFinal: number | null = null;
+    if (casoId) {
+      const subtema = await this.prisma.subtema.findUnique({
+        where: { id: subtemaId },
+        select: { tema: { select: { area: true } } },
+      });
+      if (!subtema) throw new BadRequestException('El subtema no existe.');
+      await this.validarCasoParaArea(casoId, subtema.tema.area);
+      ordenFinal =
+        ordenEnCaso ??
+        (await this.prisma.pregunta.count({ where: { casoId } })) + 1;
+    }
+
     return this.prisma.pregunta.create({
       data: {
         enunciado,
@@ -278,6 +395,8 @@ export class AdminService {
         dificultad,
         imagenUrl: imagenUrl || null,
         explicacion: explicacion?.trim() || null,
+        casoId: casoId || null,
+        ordenEnCaso: ordenFinal,
         respuestas: {
           create: respuestas.map((respuesta) => ({
             texto: respuesta.texto,
@@ -286,7 +405,7 @@ export class AdminService {
           })),
         },
       },
-      include: { respuestas: true },
+      include: { respuestas: true, caso: true },
     });
   }
   // ─── PREGUNTAS ALEATORIAS (carga rápida por área) ────────────
@@ -303,6 +422,8 @@ export class AdminService {
     }[],
     imagenUrl?: string,
     explicacion?: string,
+    casoId?: string,
+    ordenEnCaso?: number,
   ) {
     let tema = await this.prisma.tema.findFirst({
       where: { nombre: 'Banco General', area },
@@ -329,15 +450,166 @@ export class AdminService {
       respuestas,
       imagenUrl,
       explicacion,
+      casoId,
+      ordenEnCaso,
     );
+  }
+
+  async asignarPreguntaACaso(
+    preguntaId: string,
+    casoId: string | null,
+    ordenEnCaso?: number,
+  ) {
+    const pregunta = await this.prisma.pregunta.findUnique({
+      where: { id: preguntaId },
+      select: {
+        id: true,
+        casoId: true,
+        ordenEnCaso: true,
+        subtema: { select: { tema: { select: { area: true } } } },
+      },
+    });
+    if (!pregunta) throw new BadRequestException('La pregunta no existe.');
+
+    if (!casoId) {
+      return this.prisma.pregunta.update({
+        where: { id: preguntaId },
+        data: { casoId: null, ordenEnCaso: null },
+        include: { respuestas: true, caso: true },
+      });
+    }
+
+    await this.validarCasoParaArea(casoId, pregunta.subtema.tema.area);
+    const ordenFinal =
+      ordenEnCaso ??
+      (pregunta.casoId === casoId ? pregunta.ordenEnCaso : null) ??
+      (await this.prisma.pregunta.count({ where: { casoId } })) + 1;
+
+    return this.prisma.pregunta.update({
+      where: { id: preguntaId },
+      data: { casoId, ordenEnCaso: ordenFinal },
+      include: { respuestas: true, caso: true },
+    });
   }
 
   async obtenerPreguntasPorSubtema(subtemaId: string) {
     return this.prisma.pregunta.findMany({
       where: { subtemaId },
-      include: { respuestas: true },
-      orderBy: { id: 'asc' },
+      include: { respuestas: true, caso: true },
+      orderBy: [{ casoId: 'asc' }, { ordenEnCaso: 'asc' }, { id: 'asc' }],
     });
+  }
+
+  async obtenerEstadisticasPregunta(preguntaId: string) {
+    const pregunta = await this.prisma.pregunta.findUnique({
+      where: { id: preguntaId },
+      select: {
+        id: true,
+        enunciado: true,
+        dificultad: true,
+        respuestas: {
+          select: { id: true, texto: true, esCorrecta: true },
+          orderBy: { id: 'asc' },
+        },
+        subtema: {
+          select: {
+            nombre: true,
+            tema: { select: { nombre: true, area: true } },
+          },
+        },
+      },
+    });
+    if (!pregunta) throw new NotFoundException('La pregunta no existe.');
+
+    const [resumen, porResultado, porOpcion, estudiantes, porOrigen] =
+      await Promise.all([
+        this.prisma.historialRespuesta.aggregate({
+          where: { preguntaId },
+          _count: { _all: true },
+          _avg: { tiempoRespuestaSegundos: true },
+          _max: { fechaRespuesta: true },
+        }),
+        this.prisma.historialRespuesta.groupBy({
+          by: ['esCorrecta'],
+          where: { preguntaId },
+          _count: { _all: true },
+        }),
+        this.prisma.historialRespuesta.groupBy({
+          by: ['respuestaSeleccionadaId'],
+          where: { preguntaId },
+          _count: { _all: true },
+        }),
+        this.prisma.historialRespuesta.groupBy({
+          by: ['usuarioId'],
+          where: { preguntaId },
+        }),
+        this.prisma.historialRespuesta.groupBy({
+          by: ['origen'],
+          where: { preguntaId },
+          _count: { _all: true },
+        }),
+      ]);
+
+    const totalIntentos = resumen._count._all;
+    const correctas =
+      porResultado.find((grupo) => grupo.esCorrecta)?._count._all ?? 0;
+    const porcentajeAciertos = totalIntentos
+      ? Math.round((correctas / totalIntentos) * 1000) / 10
+      : 0;
+    const seleccionesPorOpcion = new Map(
+      porOpcion.map((grupo) => [
+        grupo.respuestaSeleccionadaId,
+        grupo._count._all,
+      ]),
+    );
+    const origenes = Object.fromEntries(
+      porOrigen.map((grupo) => [grupo.origen, grupo._count._all]),
+    );
+
+    return {
+      pregunta: {
+        id: pregunta.id,
+        enunciado: pregunta.enunciado,
+        dificultadConfigurada: pregunta.dificultad,
+        subtema: pregunta.subtema.nombre,
+        tema: pregunta.subtema.tema.nombre,
+        area: pregunta.subtema.tema.area,
+      },
+      totalIntentos,
+      estudiantesUnicos: estudiantes.length,
+      correctas,
+      incorrectas: totalIntentos - correctas,
+      porcentajeAciertos,
+      dificultadObservada:
+        totalIntentos === 0
+          ? 'SIN_DATOS'
+          : porcentajeAciertos >= 75
+            ? 'FACIL'
+            : porcentajeAciertos >= 45
+              ? 'MEDIA'
+              : 'DIFICIL',
+      tiempoPromedioSegundos:
+        resumen._avg.tiempoRespuestaSegundos === null
+          ? null
+          : Math.round(resumen._avg.tiempoRespuestaSegundos * 10) / 10,
+      ultimaRespuesta: resumen._max.fechaRespuesta,
+      porOrigen: {
+        SIMULACRO: origenes.SIMULACRO ?? 0,
+        PERSONALIZADO: origenes.PERSONALIZADO ?? 0,
+        PRACTICA: origenes.PRACTICA ?? 0,
+        DIAGNOSTICO: origenes.DIAGNOSTICO ?? 0,
+      },
+      opciones: pregunta.respuestas.map((respuesta) => {
+        const selecciones = seleccionesPorOpcion.get(respuesta.id) ?? 0;
+        return {
+          ...respuesta,
+          selecciones,
+          porcentaje: totalIntentos
+            ? Math.round((selecciones / totalIntentos) * 1000) / 10
+            : 0,
+        };
+      }),
+    };
   }
 
   async eliminarPregunta(preguntaId: string) {

@@ -9,6 +9,7 @@ import { CalendarioIcfesModule } from './calendario-icfes/calendario-icfes.modul
 import { PagosModule } from './pagos/pagos.module';
 import { VentasModule } from './ventas/ventas.module';
 import { CuponesModule } from './cupones/cupones.module';
+import { DiagnosticoModule } from './diagnostico/diagnostico.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CuponesModule } from './cupones/cupones.module';
     PagosModule,
     VentasModule,
     CuponesModule,
+    DiagnosticoModule,
   ],
   controllers: [AppController],
 })

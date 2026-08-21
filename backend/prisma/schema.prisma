@@ -108,6 +108,8 @@ model Usuario {
   ClaseEstudiante         ClaseEstudiante[]
   Institucion             Institucion?         @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
   resultados              ResultadoSimulacro[]
+  historialRespuestas     HistorialRespuesta[]
+  diagnosticoInicial      DiagnosticoInicial?
   progresotemas           ProgresoTema[]
   PagoOrden               PagoOrden[]
 }
@@ -248,16 +250,34 @@ model Subtema {
 }
 
 model Pregunta {
-  id                     String      @id @default(uuid())
-  enunciado              String      @db.Text
-  explicacion            String?     @db.Text
+  id                     String               @id @default(uuid())
+  enunciado              String               @db.Text
+  explicacion            String?              @db.Text
   imagenUrl              String?
-  dificultad             Dificultad  @default(MEDIO)
-  porcentajeAciertos     Float       @default(0.0)
-  tiempoPromedioSegundos Int         @default(0)
+  dificultad             Dificultad           @default(MEDIO)
+  porcentajeAciertos     Float                @default(0.0)
+  tiempoPromedioSegundos Int                  @default(0)
   subtemaId              String
-  subtema                Subtema     @relation(fields: [subtemaId], references: [id])
+  casoId                 String?
+  ordenEnCaso            Int?
+  subtema                Subtema              @relation(fields: [subtemaId], references: [id])
+  caso                   CasoPregunta?        @relation(fields: [casoId], references: [id], onDelete: SetNull)
   respuestas             Respuesta[]
+  historialRespuestas    HistorialRespuesta[]
+
+  @@index([casoId, ordenEnCaso])
+}
+
+model CasoPregunta {
+  id            String     @id @default(uuid())
+  titulo        String?
+  contexto      String     @db.Text
+  imagenUrl     String?
+  area          AreaIcfes
+  fechaCreacion DateTime   @default(now())
+  preguntas     Pregunta[]
+
+  @@index([area, fechaCreacion])
 }
 
 model Respuesta {
@@ -271,6 +291,49 @@ model Respuesta {
 
 // --- MÓDULO: RESULTADOS DE SIMULACROS ---
 
+enum OrigenRespuesta {
+  SIMULACRO
+  PERSONALIZADO
+  PRACTICA
+  DIAGNOSTICO
+}
+
+enum NivelDiagnostico {
+  POR_REFORZAR
+  EN_PROCESO
+  FORTALEZA
+}
+
+model DiagnosticoInicial {
+  id                  String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  usuarioId           String                     @unique @db.Uuid
+  preguntaIds         Json
+  iniciadoEn          DateTime                   @default(now()) @db.Timestamp(6)
+  completadoEn        DateTime?                  @db.Timestamp(6)
+  totalPreguntas      Int                        @default(0)
+  respuestasCorrectas Int?
+  porcentaje          Float?
+  nivel               NivelDiagnostico?
+  usuario             Usuario                    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  resultadosPorArea   DiagnosticoResultadoArea[]
+
+  @@index([completadoEn])
+}
+
+model DiagnosticoResultadoArea {
+  id                  String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  diagnosticoId       String             @db.Uuid
+  area                AreaIcfes
+  totalPreguntas      Int
+  respuestasCorrectas Int
+  porcentaje          Float
+  nivel               NivelDiagnostico
+  diagnostico         DiagnosticoInicial @relation(fields: [diagnosticoId], references: [id], onDelete: Cascade)
+
+  @@unique([diagnosticoId, area])
+  @@index([area, nivel])
+}
+
 model ResultadoSimulacro {
   id                  String    @id @default(uuid())
   usuarioId           String    @db.Uuid
@@ -281,6 +344,28 @@ model ResultadoSimulacro {
   puntaje             Float // Porcentaje 0-100
   xpGanado            Int       @default(0)
   fechaRealizado      DateTime  @default(now())
+}
+
+model HistorialRespuesta {
+  id                      String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sesionId                String          @db.Uuid
+  usuarioId               String          @db.Uuid
+  preguntaId              String
+  respuestaSeleccionadaId String
+  respuestaCorrectaId     String
+  area                    AreaIcfes
+  origen                  OrigenRespuesta
+  esCorrecta              Boolean
+  tiempoRespuestaSegundos Int?
+  fechaRespuesta          DateTime        @default(now()) @db.Timestamp(6)
+  usuario                 Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  pregunta                Pregunta        @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, fechaRespuesta])
+  @@index([usuarioId, esCorrecta, fechaRespuesta])
+  @@index([usuarioId, area, fechaRespuesta])
+  @@index([preguntaId])
+  @@index([sesionId])
 }
 
 model ProgresoTema {

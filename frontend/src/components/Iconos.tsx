@@ -120,3 +120,22 @@ export function IconoSubir({ size = 18, color = 'currentColor' }: IconoProps) {
     </svg>
   );
 }
+
+export function IconoAlerta({ size = 18, color = 'currentColor' }: IconoProps) {
+  return (
+    <svg {...propsBase(size, color)}>
+      <path d="M10.3 4.2 2.7 18a2 2 0 0 0 1.8 3h15a2 2 0 0 0 1.8-3L13.7 4.2a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+export function IconoRecargar({ size = 18, color = 'currentColor' }: IconoProps) {
+  return (
+    <svg {...propsBase(size, color)}>
+      <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+      <path d="M20 4v7h-7" />
+    </svg>
+  );
+}

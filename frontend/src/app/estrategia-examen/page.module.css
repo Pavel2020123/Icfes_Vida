@@ -1,0 +1,585 @@
+.page {
+  min-height: 100vh;
+  background: #f4f7f8;
+  color: #1a2a3a;
+}
+
+.header {
+  background: #146c94;
+  border-bottom: 4px solid #19a7ce;
+  color: #ffffff;
+}
+
+.headerInner {
+  width: min(1080px, calc(100% - 40px));
+  min-height: 68px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand,
+.backLink {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.brand {
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.brandAccent {
+  color: #8dd8ff;
+}
+
+.backLink {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.main {
+  width: min(1080px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 34px 0 72px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  color: #2e7d4f;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 28px;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.description {
+  max-width: 700px;
+  margin: 0;
+  color: #5b6c75;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.printButton {
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid #9db8c5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #146c94;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.planner {
+  margin-bottom: 38px;
+  padding: 22px;
+  border: 1px solid #adc5cf;
+  border-left: 5px solid #146c94;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.plannerHeader,
+.sectionHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.plannerHeader {
+  margin-bottom: 18px;
+}
+
+.sectionHeader {
+  margin-bottom: 14px;
+  padding-bottom: 9px;
+  border-bottom: 2px solid #19a7ce;
+}
+
+.sectionEyebrow {
+  margin: 0 0 3px;
+  color: #73838b;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: #173d50;
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.plannerHint,
+.sectionHint {
+  margin: 0;
+  color: #687982;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.plannerInputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  color: #526771;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.input {
+  width: 100%;
+  height: 42px;
+  padding: 0 11px;
+  border: 1px solid #a9bdc7;
+  border-radius: 6px;
+  background: #f9fbfc;
+  color: #1a2a3a;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid #d4e0e5;
+  background: #eef7fa;
+}
+
+.metric {
+  min-width: 0;
+  padding: 14px;
+  border-right: 1px solid #d4e0e5;
+}
+
+.metric:last-child {
+  border-right: 0;
+}
+
+.metricValue,
+.metricLabel {
+  display: block;
+}
+
+.metricValue {
+  color: #146c94;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.metricLabel {
+  margin-top: 3px;
+  color: #63757e;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.section {
+  margin-bottom: 38px;
+}
+
+.phaseGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.phaseCard {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #cad7dc;
+  border-radius: 7px;
+  background: #ffffff;
+  break-inside: avoid;
+}
+
+.phaseNumber {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: #146c94;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.phaseMoment {
+  margin: 0 0 3px;
+  color: #8a5c00;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.phaseTitle {
+  margin: 0 0 5px;
+  color: #183b4b;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.phaseObjective {
+  margin: 0 0 10px;
+  color: #596b74;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.actionList,
+.tacticList {
+  margin: 0;
+  padding-left: 18px;
+  color: #405660;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.actionList li + li,
+.tacticList li + li {
+  margin-top: 5px;
+}
+
+.areaTabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: 1px solid #afc5d0;
+  background: #ffffff;
+}
+
+.areaTab {
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 0;
+  border-right: 1px solid #dce5e9;
+  background: #ffffff;
+  color: #4a5d67;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.areaTab:last-child {
+  border-right: 0;
+}
+
+.areaTabActive {
+  background: #d8eef6;
+  box-shadow: inset 0 -3px #146c94;
+  color: #123f54;
+}
+
+.tacticPanel {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.7fr) minmax(320px, 1.3fr);
+  gap: 26px;
+  padding: 22px;
+  border: 1px solid #afc5d0;
+  border-top: 0;
+  background: #ffffff;
+}
+
+.tacticName {
+  margin: 0 0 6px;
+  color: #173d50;
+  font-size: 18px;
+}
+
+.tacticFocus {
+  margin: 0 0 16px;
+  color: #5f717a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.controlQuestion {
+  margin: 0;
+  padding: 12px;
+  border-left: 4px solid #d5a021;
+  background: #fff8df;
+  color: #704c00;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.distractorList {
+  display: grid;
+  border: 1px solid #cad7dc;
+  background: #ffffff;
+}
+
+.distractor {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.55fr) minmax(220px, 1fr) minmax(
+      220px,
+      1fr
+    );
+  border-bottom: 1px solid #dde6e9;
+}
+
+.distractor:last-child {
+  border-bottom: 0;
+}
+
+.distractorTitle,
+.distractorSignal,
+.distractorResponse {
+  min-width: 0;
+  padding: 14px 16px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.distractorTitle,
+.distractorSignal {
+  border-right: 1px solid #dde6e9;
+}
+
+.distractorTitle {
+  color: #963f4d;
+  font-weight: 850;
+}
+
+.distractorSignal {
+  color: #52666f;
+}
+
+.distractorResponse {
+  color: #2f6d47;
+  font-weight: 700;
+}
+
+.checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid #cad7dc;
+  background: #ffffff;
+}
+
+.checkItem {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-right: 1px solid #e0e7ea;
+  border-bottom: 1px solid #e0e7ea;
+  color: #405660;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.checkItem:nth-child(2n) {
+  border-right: 0;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: #2e7d4f;
+}
+
+.checked {
+  color: #66776f;
+  text-decoration: line-through;
+}
+
+.toolLinks {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.toolLink {
+  padding: 9px 12px;
+  border: 1px solid #afc5d0;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #146c94;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f4f7f8;
+  color: #146c94;
+  font-weight: 750;
+}
+
+@media (max-width: 820px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric:nth-child(2) {
+    border-right: 0;
+  }
+
+  .metric:nth-child(-n + 2) {
+    border-bottom: 1px solid #d4e0e5;
+  }
+
+  .phaseGrid,
+  .checklist {
+    grid-template-columns: 1fr;
+  }
+
+  .checkItem,
+  .checkItem:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .areaTabs {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .areaTab {
+    flex: 0 0 160px;
+  }
+
+  .tacticPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .distractor {
+    grid-template-columns: minmax(150px, 0.7fr) minmax(230px, 1.3fr);
+  }
+
+  .distractorResponse {
+    grid-column: 1 / -1;
+    border-top: 1px solid #dde6e9;
+  }
+}
+
+@media (max-width: 620px) {
+  .headerInner,
+  .main {
+    width: min(100% - 28px, 1080px);
+  }
+
+  .main {
+    padding-top: 26px;
+  }
+
+  .titleRow,
+  .plannerHeader,
+  .sectionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .printButton {
+    width: 100%;
+  }
+
+  .planner {
+    padding: 17px;
+  }
+
+  .plannerInputs,
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .metric,
+  .metric:nth-child(2) {
+    border-right: 0;
+    border-bottom: 1px solid #d4e0e5;
+  }
+
+  .metric:last-child {
+    border-bottom: 0;
+  }
+
+  .phaseCard {
+    grid-template-columns: 38px minmax(0, 1fr);
+    padding: 15px;
+  }
+
+  .phaseNumber {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .distractor {
+    grid-template-columns: 1fr;
+  }
+
+  .distractorTitle,
+  .distractorSignal {
+    border-right: 0;
+    border-bottom: 1px solid #dde6e9;
+  }
+
+  .distractorResponse {
+    grid-column: auto;
+    border-top: 0;
+  }
+}
+
+@media print {
+  .page,
+  .main {
+    background: #ffffff;
+  }
+
+  .noPrint {
+    display: none !important;
+  }
+
+  .main {
+    width: 100%;
+    padding: 20px 0 0;
+  }
+
+  .phaseCard,
+  .distractor,
+  .tacticPanel {
+    break-inside: avoid;
+  }
+}

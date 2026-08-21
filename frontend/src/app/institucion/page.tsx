@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { obtenerMiInstitucion, obtenerUrlLogo } from '../../lib/api';
+import { obtenerAlertasRiesgoInstitucion, obtenerMiInstitucion, obtenerUrlLogo } from '../../lib/api';
 import ProtectedRoute from '../../components/ProtectedRoute';
-import { IconoUsuarios, IconoGrupo, IconoFlechaIzquierda } from '../../components/Iconos';
+import { IconoAlerta, IconoUsuarios, IconoGrupo, IconoFlechaIzquierda } from '../../components/Iconos';
 import { gradoLabel, gradoIcon, gradoBadgeClass } from '@/lib/grado-label';
 
 interface Institucion {
@@ -31,6 +31,7 @@ export default function InstitucionPage() {
   const [institucion, setInstitucion] = useState<Institucion | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  const [alertasRiesgo, setAlertasRiesgo] = useState<number | null>(null);
 
   useEffect(() => {
     const token = window.localStorage.getItem('saberplus_token');
@@ -45,6 +46,9 @@ export default function InstitucionPage() {
         setError(err instanceof Error ? err.message : 'No se pudo cargar la institución');
       })
       .finally(() => setCargando(false));
+    obtenerAlertasRiesgoInstitucion()
+      .then((datos) => setAlertasRiesgo(datos.resumen.enRiesgo))
+      .catch(() => setAlertasRiesgo(null));
   }, [router]);
 
   if (cargando) {
@@ -225,6 +229,33 @@ export default function InstitucionPage() {
               <Link href="/institucion/grupos" style={{ textDecoration: 'none' }}>
                 <button style={{ width: '100%', backgroundColor: colorPrimario, color: '#ffffff', padding: '11px 18px', borderRadius: 12, border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
                   Ver grupos
+                </button>
+              </Link>
+            </div>
+
+            <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 24, boxShadow: '0 10px 30px rgba(20,108,148,0.07)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: alertasRiesgo ? '#FBE9E7' : '#E8F5EE', color: alertasRiesgo ? '#A43C36' : '#267153', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <IconoAlerta size={20} />
+                </div>
+
+                <div>
+                  <h2 style={{ fontSize: 15.5, fontWeight: 800, color: '#1a2a3a', margin: 0 }}>
+                    Alertas de riesgo
+                  </h2>
+                  <p style={{ color: '#8a9aaa', fontSize: 13, margin: 0 }}>
+                    {alertasRiesgo === null
+                      ? 'Seguimiento estudiantil'
+                      : alertasRiesgo === 0
+                        ? 'Sin alertas activas'
+                        : `${alertasRiesgo} estudiante${alertasRiesgo === 1 ? '' : 's'} por revisar`}
+                  </p>
+                </div>
+              </div>
+
+              <Link href="/institucion/alertas" style={{ textDecoration: 'none' }}>
+                <button style={{ width: '100%', backgroundColor: alertasRiesgo ? '#A43C36' : colorPrimario, color: '#ffffff', padding: '11px 18px', borderRadius: 12, border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
+                  Revisar alertas
                 </button>
               </Link>
             </div>

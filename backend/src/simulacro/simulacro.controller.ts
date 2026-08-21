@@ -10,9 +10,13 @@ import {
   Param,
   ParseEnumPipe,
   ParseIntPipe,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { SimulacroService } from './simulacro.service';
-import { AreaIcfes, Dificultad } from '@prisma/client';
+import { TemaPdfService } from './tema-pdf.service';
+import { AreaIcfes, Dificultad, OrigenRespuesta } from '@prisma/client';
 import { AdminGuard, JwtGuard } from '../auth/jwt.guard';
 import { PlanVigenteGuard } from '../auth/plan-vigente.guard';
 import { EmailVerificadoGuard } from '../auth/email-verificado.guard';
@@ -24,6 +28,7 @@ import {
   IsString,
   ValidateNested,
   IsInt,
+  IsOptional,
   Min,
   Max,
 } from 'class-validator';
@@ -37,6 +42,12 @@ class RespuestaDto {
   @IsString()
   @IsNotEmpty()
   respuestaId!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(7200)
+  tiempoRespuestaSegundos?: number;
 }
 
 class CalificarDto {
@@ -47,6 +58,10 @@ class CalificarDto {
   @ValidateNested({ each: true })
   @Type(() => RespuestaDto)
   respuestas!: RespuestaDto[];
+
+  @IsOptional()
+  @IsEnum(OrigenRespuesta)
+  origen?: OrigenRespuesta;
 }
 
 class CalificarPersonalizadoDto {
@@ -69,7 +84,10 @@ class ProgresoDto {
 
 @Controller('simulacros')
 export class SimulacroController {
-  constructor(private readonly simulacroService: SimulacroService) {}
+  constructor(
+    private readonly simulacroService: SimulacroService,
+    private readonly temaPdfService: TemaPdfService,
+  ) {}
 
   // GET /simulacros/generar?area=MATEMATICAS
   @Get('generar')
@@ -89,6 +107,9 @@ export class SimulacroController {
       usuarioId,
       body.area,
       body.respuestas,
+      body.origen === OrigenRespuesta.PRACTICA
+        ? OrigenRespuesta.PRACTICA
+        : OrigenRespuesta.SIMULACRO,
     );
   }
   // GET /simulacros/generar-personalizado?areas=MATEMATICAS,LECTURA_CRITICA&cantidad=20&dificultad=MEDIO
@@ -145,6 +166,29 @@ export class SimulacroController {
     return this.simulacroService.obtenerHistorial(usuarioId);
   }
 
+  @UseGuards(JwtGuard)
+  @Get('historial-respuestas')
+  historialRespuestas(
+    @Request() req: AuthenticatedRequest,
+    @Query('area', new ParseEnumPipe(AreaIcfes, { optional: true }))
+    area?: AreaIcfes,
+    @Query('resultado') resultado?: string,
+    @Query('limite', new ParseIntPipe({ optional: true })) limite?: number,
+  ) {
+    const esCorrecta =
+      resultado === 'correctas'
+        ? true
+        : resultado === 'incorrectas'
+          ? false
+          : undefined;
+    return this.simulacroService.obtenerHistorialRespuestas(
+      req.usuario.sub,
+      area,
+      esCorrecta,
+      limite,
+    );
+  }
+
   // POST /simulacros/poblar  ← Solo para desarrollo
   @UseGuards(JwtGuard, AdminGuard)
   @Post('poblar')
@@ -156,6 +200,22 @@ export class SimulacroController {
   @Get('temas')
   obtenerTemas(@Query('area') area: AreaIcfes) {
     return this.simulacroService.obtenerTemasPorArea(area);
+  }
+
+  @UseGuards(JwtGuard, EmailVerificadoGuard, PlanVigenteGuard)
+  @Get('temas/:temaId/pdf')
+  async descargarTemaPdf(
+    @Param('temaId') temaId: string,
+    @Res({ passthrough: true }) respuesta: Response,
+  ) {
+    const pdf = await this.temaPdfService.generarPdfTema(temaId);
+    respuesta.setHeader('Content-Type', 'application/pdf');
+    respuesta.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${pdf.nombre}"`,
+    );
+    respuesta.setHeader('Content-Length', String(pdf.archivo.length));
+    return new StreamableFile(pdf.archivo);
   }
 
   // GET /simulacros/preguntas/:subtemaId

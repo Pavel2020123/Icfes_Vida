@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { obtenerAnaliticasInstitucion, crearEstudianteInstitucion, agregarEstudianteExistenteInstitucion, obtenerGruposInstitucion, importarEstudiantesCsvInstitucion } from '../../../lib/api';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Modal from '../../../components/Modal';
-import { IconoUsuarioMas, IconoVinculo, IconoUsuarios, IconoGrafico, IconoLlave, IconoFlechaIzquierda, IconoSubir } from '../../../components/Iconos';
+import { IconoAlerta, IconoUsuarioMas, IconoVinculo, IconoUsuarios, IconoGrafico, IconoLlave, IconoFlechaIzquierda, IconoSubir } from '../../../components/Iconos';
 
 interface EstudianteAnalitica {
   id: string;
@@ -215,6 +215,14 @@ const abrirModalCsv = () => {
                 <p style={{ color: '#6b7c8c', fontSize: 14.5, marginTop: 6 }}>Matrícula y desempeño de tu institución.</p>
               </div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <Link href="/institucion/alertas" style={{ textDecoration: 'none' }}>
+                  <button
+                    type="button"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#FBE9E7', color: '#A43C36', border: '1.5px solid #EBC8C5', borderRadius: 12, padding: '11px 16px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                  >
+                    <IconoAlerta size={16} /> Alertas
+                  </button>
+                </Link>
                 <button
                   onClick={abrirModalCsv}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 8, backgroundColor: '#F0F7FC', color: '#146C94', border: '1.5px solid #CFE6F2', borderRadius: 12, padding: '11px 16px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}

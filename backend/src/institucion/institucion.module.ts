@@ -7,6 +7,7 @@ import { EstudianteService } from './estudiante.service';
 import { EstudianteImportService } from './estudiante-import.service';
 import { ArchivoAlmacenamientoService } from './archivo-almacenamiento.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { AlertasRiesgoService } from './alertas-riesgo.service';
 
 @Module({
   imports: [PrismaModule],
@@ -18,6 +19,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     EstudianteService,
     EstudianteImportService,
     ArchivoAlmacenamientoService,
+    AlertasRiesgoService,
   ],
 })
 export class InstitucionModule {}

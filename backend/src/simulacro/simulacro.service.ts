@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AreaIcfes, Dificultad } from '@prisma/client';
+import { AreaIcfes, Dificultad, OrigenRespuesta, Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 
 interface RespuestaEstudiante {
   preguntaId: string;
   respuestaId: string;
+  tiempoRespuestaSegundos?: number;
 }
 
 interface PreguntaCalificable {
@@ -12,6 +14,14 @@ interface PreguntaCalificable {
   enunciado: string;
   imagenUrl: string | null;
   explicacion: string | null;
+  ordenEnCaso: number | null;
+  caso: {
+    id: string;
+    titulo: string | null;
+    contexto: string;
+    imagenUrl: string | null;
+    area: AreaIcfes;
+  } | null;
   respuestas: {
     id: string;
     texto: string;
@@ -28,6 +38,8 @@ export interface DetalleRevision {
   respuestaSeleccionadaId: string;
   respuestaCorrectaId: string;
   explicacion: string | null;
+  ordenEnCaso: number | null;
+  caso: PreguntaCalificable['caso'];
   respuestas: PreguntaCalificable['respuestas'];
 }
 
@@ -42,6 +54,46 @@ export class SimulacroService {
       [copia[i], copia[j]] = [copia[j], copia[i]];
     }
     return copia;
+  }
+
+  private seleccionarPreguntasAgrupadas<
+    T extends {
+      id: string;
+      ordenEnCaso: number | null;
+      caso: { id: string } | null;
+    },
+  >(preguntas: T[], cantidad: number): T[] {
+    const grupos = new Map<string, T[]>();
+
+    for (const pregunta of preguntas) {
+      const clave = pregunta.caso
+        ? `caso:${pregunta.caso.id}`
+        : `pregunta:${pregunta.id}`;
+      const grupo = grupos.get(clave) ?? [];
+      grupo.push(pregunta);
+      grupos.set(clave, grupo);
+    }
+
+    const gruposMezclados = this.mezclarPreguntas([...grupos.values()]);
+    const seleccionadas: T[] = [];
+
+    for (const grupo of gruposMezclados) {
+      grupo.sort(
+        (a, b) =>
+          (a.ordenEnCaso ?? Number.MAX_SAFE_INTEGER) -
+          (b.ordenEnCaso ?? Number.MAX_SAFE_INTEGER),
+      );
+
+      if (seleccionadas.length === 0 && grupo.length > cantidad) {
+        return grupo;
+      }
+      if (seleccionadas.length + grupo.length <= cantidad) {
+        seleccionadas.push(...grupo);
+      }
+      if (seleccionadas.length === cantidad) break;
+    }
+
+    return seleccionadas;
   }
 
   private construirDetalleRevision(
@@ -61,6 +113,8 @@ export class SimulacroService {
       respuestaSeleccionadaId,
       respuestaCorrectaId,
       explicacion: pregunta?.explicacion ?? null,
+      ordenEnCaso: pregunta?.ordenEnCaso ?? null,
+      caso: pregunta?.caso ?? null,
       respuestas: pregunta?.respuestas ?? [],
     };
   }
@@ -81,6 +135,16 @@ export class SimulacroService {
         enunciado: true,
         imagenUrl: true,
         dificultad: true,
+        ordenEnCaso: true,
+        caso: {
+          select: {
+            id: true,
+            titulo: true,
+            contexto: true,
+            imagenUrl: true,
+            area: true,
+          },
+        },
         respuestas: {
           select: {
             id: true,
@@ -105,8 +169,8 @@ export class SimulacroService {
       );
     }
 
-    const seleccionadas = this.mezclarPreguntas(todasLasPreguntas).slice(
-      0,
+    const seleccionadas = this.seleccionarPreguntasAgrupadas(
+      todasLasPreguntas,
       cantidad,
     );
 
@@ -123,6 +187,7 @@ export class SimulacroService {
     usuarioId: string,
     area: AreaIcfes,
     respuestasEstudiante: RespuestaEstudiante[],
+    origen: OrigenRespuesta = OrigenRespuesta.SIMULACRO,
   ) {
     if (!respuestasEstudiante || respuestasEstudiante.length === 0) {
       throw new NotFoundException(
@@ -140,6 +205,16 @@ export class SimulacroService {
         enunciado: true,
         imagenUrl: true,
         explicacion: true,
+        ordenEnCaso: true,
+        caso: {
+          select: {
+            id: true,
+            titulo: true,
+            contexto: true,
+            imagenUrl: true,
+            area: true,
+          },
+        },
         respuestas: {
           select: {
             id: true,
@@ -157,6 +232,8 @@ export class SimulacroService {
 
     let correctas = 0;
     const detalle: DetalleRevision[] = [];
+    const sesionId = randomUUID();
+    const historial: Prisma.HistorialRespuestaCreateManyInput[] = [];
 
     for (const respuestaAlumno of respuestasEstudiante) {
       const revision = this.construirDetalleRevision(
@@ -167,6 +244,20 @@ export class SimulacroService {
         revision.preguntaId = respuestaAlumno.preguntaId;
       if (revision.esCorrecto) correctas++;
       detalle.push(revision);
+      if (revision.preguntaId && revision.respuestaCorrectaId) {
+        historial.push({
+          sesionId,
+          usuarioId,
+          preguntaId: revision.preguntaId,
+          respuestaSeleccionadaId: respuestaAlumno.respuestaId,
+          respuestaCorrectaId: revision.respuestaCorrectaId,
+          area,
+          origen,
+          esCorrecta: revision.esCorrecto,
+          tiempoRespuestaSegundos:
+            respuestaAlumno.tiempoRespuestaSegundos ?? null,
+        });
+      }
     }
 
     const totalPreguntas = respuestasEstudiante.length;
@@ -178,22 +269,23 @@ export class SimulacroService {
 
     // Guardar resultado en la BD para estadísticas futuras
     if (usuarioId) {
-      await this.prisma.resultadoSimulacro.create({
-        data: {
-          usuarioId,
-          area,
-          totalPreguntas,
-          respuestasCorrectas: correctas,
-          puntaje,
-          xpGanado,
-        },
-      });
-
-      // Sumar XP al usuario
-      await this.prisma.usuario.update({
-        where: { id: usuarioId },
-        data: { xpTotal: { increment: xpGanado } },
-      });
+      await this.prisma.$transaction([
+        this.prisma.resultadoSimulacro.create({
+          data: {
+            usuarioId,
+            area,
+            totalPreguntas,
+            respuestasCorrectas: correctas,
+            puntaje,
+            xpGanado,
+          },
+        }),
+        this.prisma.historialRespuesta.createMany({ data: historial }),
+        this.prisma.usuario.update({
+          where: { id: usuarioId },
+          data: { xpTotal: { increment: xpGanado } },
+        }),
+      ]);
     }
 
     return {
@@ -237,6 +329,16 @@ export class SimulacroService {
         enunciado: true,
         imagenUrl: true,
         dificultad: true,
+        ordenEnCaso: true,
+        caso: {
+          select: {
+            id: true,
+            titulo: true,
+            contexto: true,
+            imagenUrl: true,
+            area: true,
+          },
+        },
         respuestas: {
           select: {
             id: true,
@@ -261,8 +363,8 @@ export class SimulacroService {
       );
     }
 
-    const seleccionadas = this.mezclarPreguntas(todasLasPreguntas).slice(
-      0,
+    const seleccionadas = this.seleccionarPreguntasAgrupadas(
+      todasLasPreguntas,
       cantidad,
     );
 
@@ -297,6 +399,16 @@ export class SimulacroService {
         enunciado: true,
         imagenUrl: true,
         explicacion: true,
+        ordenEnCaso: true,
+        caso: {
+          select: {
+            id: true,
+            titulo: true,
+            contexto: true,
+            imagenUrl: true,
+            area: true,
+          },
+        },
         respuestas: {
           select: {
             id: true,
@@ -322,6 +434,8 @@ export class SimulacroService {
     let correctas = 0;
     const detalle: DetalleRevision[] = [];
     const porArea: Record<string, { total: number; correctas: number }> = {};
+    const sesionId = randomUUID();
+    const historial: Prisma.HistorialRespuestaCreateManyInput[] = [];
 
     for (const respuestaAlumno of respuestasEstudiante) {
       const preguntaInfo = preguntaInfoPorId.get(respuestaAlumno.preguntaId);
@@ -339,6 +453,20 @@ export class SimulacroService {
       if (revision.esCorrecto) porArea[preguntaInfo.area].correctas++;
 
       detalle.push(revision);
+      if (revision.respuestaCorrectaId) {
+        historial.push({
+          sesionId,
+          usuarioId,
+          preguntaId: revision.preguntaId,
+          respuestaSeleccionadaId: respuestaAlumno.respuestaId,
+          respuestaCorrectaId: revision.respuestaCorrectaId,
+          area: preguntaInfo.area,
+          origen: OrigenRespuesta.PERSONALIZADO,
+          esCorrecta: revision.esCorrecto,
+          tiempoRespuestaSegundos:
+            respuestaAlumno.tiempoRespuestaSegundos ?? null,
+        });
+      }
     }
 
     const totalPreguntas = respuestasEstudiante.length;
@@ -371,7 +499,14 @@ export class SimulacroService {
       });
 
       if (resultados.length > 0) {
-        await this.prisma.resultadoSimulacro.createMany({ data: resultados });
+        await this.prisma.$transaction([
+          this.prisma.resultadoSimulacro.createMany({ data: resultados }),
+          this.prisma.historialRespuesta.createMany({ data: historial }),
+          this.prisma.usuario.update({
+            where: { id: usuarioId },
+            data: { xpTotal: { increment: xpGanado } },
+          }),
+        ]);
       }
 
       desglose.push(
@@ -382,12 +517,6 @@ export class SimulacroService {
           puntaje: resultado.puntaje,
         })),
       );
-
-      // Sumar XP al usuario
-      await this.prisma.usuario.update({
-        where: { id: usuarioId },
-        data: { xpTotal: { increment: xpGanado } },
-      });
     }
 
     return {
@@ -418,6 +547,103 @@ export class SimulacroService {
     };
   }
 
+  async obtenerHistorialRespuestas(
+    usuarioId: string,
+    area?: AreaIcfes,
+    esCorrecta?: boolean,
+    limite: number = 50,
+  ) {
+    const whereBase: Prisma.HistorialRespuestaWhereInput = {
+      usuarioId,
+      ...(area ? { area } : {}),
+    };
+    const whereRegistros: Prisma.HistorialRespuestaWhereInput = {
+      ...whereBase,
+      ...(esCorrecta !== undefined ? { esCorrecta } : {}),
+    };
+    const cantidad = Math.min(Math.max(limite, 1), 100);
+
+    const [registros, total, correctas] = await Promise.all([
+      this.prisma.historialRespuesta.findMany({
+        where: whereRegistros,
+        orderBy: { fechaRespuesta: 'desc' },
+        take: cantidad,
+        include: {
+          pregunta: {
+            select: {
+              enunciado: true,
+              explicacion: true,
+              dificultad: true,
+              caso: { select: { id: true, titulo: true } },
+              subtema: {
+                select: {
+                  nombre: true,
+                  tema: { select: { nombre: true } },
+                },
+              },
+              respuestas: {
+                select: {
+                  id: true,
+                  texto: true,
+                  explicacion: true,
+                  esCorrecta: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.historialRespuesta.count({ where: whereBase }),
+      this.prisma.historialRespuesta.count({
+        where: { ...whereBase, esCorrecta: true },
+      }),
+    ]);
+
+    return {
+      resumen: {
+        total,
+        correctas,
+        incorrectas: total - correctas,
+        porcentajeAciertos:
+          total > 0 ? Math.round((correctas / total) * 1000) / 10 : 0,
+      },
+      respuestas: registros.map((registro) => {
+        const seleccionada = registro.pregunta.respuestas.find(
+          (respuesta) => respuesta.id === registro.respuestaSeleccionadaId,
+        );
+        const correcta = registro.pregunta.respuestas.find(
+          (respuesta) => respuesta.id === registro.respuestaCorrectaId,
+        );
+        return {
+          id: registro.id,
+          sesionId: registro.sesionId,
+          preguntaId: registro.preguntaId,
+          enunciado: registro.pregunta.enunciado,
+          explicacion: registro.pregunta.explicacion,
+          dificultad: registro.pregunta.dificultad,
+          area: registro.area,
+          origen: registro.origen,
+          esCorrecta: registro.esCorrecta,
+          tiempoRespuestaSegundos: registro.tiempoRespuestaSegundos,
+          fechaRespuesta: registro.fechaRespuesta,
+          respuestaSeleccionada: seleccionada
+            ? { id: seleccionada.id, texto: seleccionada.texto }
+            : null,
+          respuestaCorrecta: correcta
+            ? {
+                id: correcta.id,
+                texto: correcta.texto,
+                explicacion: correcta.explicacion,
+              }
+            : null,
+          tema: registro.pregunta.subtema.tema.nombre,
+          subtema: registro.pregunta.subtema.nombre,
+          caso: registro.pregunta.caso,
+        };
+      }),
+    };
+  }
+
   async obtenerPreguntasPorSubtema(subtemaId: string) {
     return this.prisma.pregunta.findMany({
       where: { subtemaId },
@@ -426,6 +652,16 @@ export class SimulacroService {
         enunciado: true,
         imagenUrl: true,
         dificultad: true,
+        ordenEnCaso: true,
+        caso: {
+          select: {
+            id: true,
+            titulo: true,
+            contexto: true,
+            imagenUrl: true,
+            area: true,
+          },
+        },
         respuestas: {
           select: { id: true, texto: true },
         },
@@ -438,7 +674,7 @@ export class SimulacroService {
           },
         },
       },
-      orderBy: { id: 'asc' },
+      orderBy: [{ casoId: 'asc' }, { ordenEnCaso: 'asc' }, { id: 'asc' }],
     });
   }
 

@@ -1,0 +1,397 @@
+.page {
+  min-height: 100vh;
+  background: #f4f7f8;
+  color: #1a2a3a;
+}
+
+.header {
+  background: #146c94;
+  border-bottom: 4px solid #19a7ce;
+  color: #ffffff;
+}
+
+.headerInner {
+  width: min(1080px, calc(100% - 40px));
+  min-height: 68px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand,
+.backLink {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.brand {
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.brandAccent {
+  color: #8dd8ff;
+}
+
+.backLink {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.main {
+  width: min(1080px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 34px 0 72px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  color: #8a5c00;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 28px;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.description {
+  max-width: 680px;
+  margin: 0;
+  color: #5b6c75;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.printButton {
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid #9db8c5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #146c94;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-bottom: 14px;
+  border: 1px solid #afc5d0;
+  background: #ffffff;
+}
+
+.filterButton {
+  min-height: 46px;
+  padding: 8px 10px;
+  border: 0;
+  border-right: 1px solid #dce5e9;
+  background: #ffffff;
+  color: #4a5d67;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.filterButton:last-child {
+  border-right: 0;
+}
+
+.filterActive {
+  background: #d8eef6;
+  box-shadow: inset 0 -3px #146c94;
+  color: #123f54;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-left: 4px solid #d5a021;
+  background: #fff8df;
+}
+
+.search {
+  width: min(480px, 100%);
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #a8bbc4;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1a2a3a;
+  font-size: 14px;
+}
+
+.count {
+  color: #667780;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.alphabet {
+  display: flex;
+  gap: 5px;
+  margin: 16px 0 28px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.letterLink {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #b9cbd4;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #146c94;
+  font-size: 12px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.letterLink:hover {
+  border-color: #146c94;
+  background: #e7f4f8;
+}
+
+.group {
+  scroll-margin-top: 18px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 34px;
+}
+
+.groupLetter {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  border: 2px solid #19a7ce;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #146c94;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.termGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.termCard {
+  min-width: 0;
+  padding: 17px 18px;
+  border: 1px solid #c9d6dc;
+  border-left: 4px solid #146c94;
+  border-radius: 6px;
+  background: #ffffff;
+  break-inside: avoid;
+}
+
+.termCard[data-area="LECTURA_CRITICA"] {
+  border-left-color: #146c94;
+}
+
+.termCard[data-area="MATEMATICAS"] {
+  border-left-color: #6b5ca5;
+}
+
+.termCard[data-area="CIENCIAS_NATURALES"] {
+  border-left-color: #2e7d4f;
+}
+
+.termCard[data-area="SOCIALES_CIUDADANAS"] {
+  border-left-color: #b16a2f;
+}
+
+.termCard[data-area="INGLES"] {
+  border-left-color: #a34f68;
+}
+
+.termHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+.termName {
+  margin: 0;
+  color: #193b4b;
+  font-size: 16px;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.areaBadge {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #edf3f5;
+  color: #687982;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.definition {
+  margin: 0;
+  color: #405660;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.example {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid #e2e9ec;
+  color: #667780;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.related {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.relatedTerm {
+  padding: 3px 6px;
+  border: 1px solid #d5e0e5;
+  border-radius: 4px;
+  color: #526a75;
+  font-size: 10px;
+}
+
+.empty {
+  padding: 38px 20px;
+  border: 1px dashed #9fb5c0;
+  color: #62737c;
+  text-align: center;
+}
+
+.loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f4f7f8;
+  color: #146c94;
+  font-weight: 750;
+}
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .filterButton {
+    border-bottom: 1px solid #dce5e9;
+  }
+
+  .termGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .headerInner,
+  .main {
+    width: min(100% - 28px, 1080px);
+  }
+
+  .main {
+    padding-top: 26px;
+  }
+
+  .titleRow,
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .printButton {
+    width: 100%;
+  }
+
+  .filters {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .filterButton {
+    flex: 0 0 145px;
+    border-bottom: 0;
+  }
+
+  .count {
+    white-space: normal;
+  }
+
+  .group {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .groupLetter {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+}
+
+@media print {
+  .page,
+  .main {
+    background: #ffffff;
+  }
+
+  .noPrint {
+    display: none !important;
+  }
+
+  .main {
+    width: 100%;
+    padding: 20px 0 0;
+  }
+
+  .group {
+    break-before: auto;
+  }
+
+  .termCard {
+    break-inside: avoid;
+  }
+}
