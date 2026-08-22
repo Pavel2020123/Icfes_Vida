@@ -112,8 +112,8 @@ export default function HistorialRespuestasPage() {
     >
       <header
         style={{
-          backgroundColor: "#146C94",
-          borderBottom: "4px solid #19A7CE",
+          backgroundColor: "var(--color-primario, #146c94)",
+          borderBottom: "4px solid var(--color-secundario, #19a7ce)",
         }}
       >
         <div
@@ -131,16 +131,16 @@ export default function HistorialRespuestasPage() {
           <Link
             href="/dashboard"
             style={{
-              color: "#ffffff",
+              color: "var(--color-sobre-primario, #ffffff)",
               textDecoration: "none",
               fontWeight: 800,
             }}
           >
-            Saber<span style={{ color: "#8DD8FF" }}>Plus</span>
+            Saber<span style={{ color: "var(--marca-acento, #8dd8ff)" }}>Plus</span>
           </Link>
           <Link
             href="/dashboard"
-            style={{ color: "#ffffff", textDecoration: "none", fontSize: 14 }}
+            style={{ color: "var(--color-sobre-primario, #ffffff)", textDecoration: "none", fontSize: 14 }}
           >
             Volver al inicio
           </Link>
@@ -163,7 +163,7 @@ export default function HistorialRespuestasPage() {
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-            border: "1px solid #AFD3E2",
+            border: "1px solid var(--marca-borde, #afd3e2)",
             backgroundColor: "#ffffff",
             marginBottom: 18,
           }}
@@ -187,7 +187,7 @@ export default function HistorialRespuestasPage() {
             {
               etiqueta: "Acierto",
               valor: `${historial.resumen.porcentajeAciertos}%`,
-              color: "#146C94",
+              color: "var(--color-primario, #146c94)",
             },
           ].map(({ etiqueta, valor, color }) => (
             <div
@@ -216,7 +216,7 @@ export default function HistorialRespuestasPage() {
             aria-label="Filtrar por área"
             style={{
               padding: "11px 12px",
-              border: "1px solid #AFC5D0",
+              border: "1px solid var(--marca-borde, #afd3e2)",
               background: "#fff",
             }}
           >
@@ -236,7 +236,7 @@ export default function HistorialRespuestasPage() {
             aria-label="Filtrar por resultado"
             style={{
               padding: "11px 12px",
-              border: "1px solid #AFC5D0",
+              border: "1px solid var(--marca-borde, #afd3e2)",
               background: "#fff",
             }}
           >
@@ -262,7 +262,7 @@ export default function HistorialRespuestasPage() {
           <div
             style={{
               padding: "32px 20px",
-              border: "1px dashed #AFC5D0",
+              border: "1px dashed var(--marca-borde, #afd3e2)",
               textAlign: "center",
             }}
           >
@@ -271,7 +271,7 @@ export default function HistorialRespuestasPage() {
             </p>
             <Link
               href="/preguntas-aleatorias"
-              style={{ color: "#146C94", fontWeight: 700 }}
+              style={{ color: "var(--color-primario, #146c94)", fontWeight: 700 }}
             >
               Practicar ahora
             </Link>
@@ -302,7 +302,7 @@ export default function HistorialRespuestasPage() {
                   <div>
                     <span
                       style={{
-                        color: "#146C94",
+                        color: "var(--color-primario, #146c94)",
                         fontSize: 12,
                         fontWeight: 800,
                       }}

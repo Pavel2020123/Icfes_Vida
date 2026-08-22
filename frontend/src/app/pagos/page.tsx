@@ -7,6 +7,8 @@ import {
   crearOrdenPagoIndividual,
   obtenerCalendarioIcfesActivo,
   obtenerPromocionActiva,
+  obtenerResumenReferidos,
+  obtenerToken,
   validarCupon,
   type CuponValidado,
   type CalendarioIcfes,
@@ -55,9 +57,10 @@ export default function PagosPage() {
   const [pasoCodigo, setPasoCodigo] = useState<PasoCodigo>('inicio');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [saldoReferidos, setSaldoReferidos] = useState(0);
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
+    if (!obtenerToken()) {
       window.location.href = '/login';
       return;
     }
@@ -66,11 +69,13 @@ export default function PagosPage() {
     Promise.all([
       obtenerPromocionActiva('MENSUAL'),
       obtenerCalendarioIcfesActivo(),
+      obtenerResumenReferidos().catch(() => null),
     ])
-      .then(([promocionActiva, calendarioActivo]) => {
+      .then(([promocionActiva, calendarioActivo, referidos]) => {
         if (!vigente) return;
         setPromocion(promocionActiva);
         setCalendario(calendarioActivo);
+        setSaldoReferidos(referidos?.saldoReferidosCop ?? 0);
       })
       .catch(() => {
         if (!vigente) return;
@@ -156,6 +161,8 @@ export default function PagosPage() {
   const precioFinal = porcentaje
     ? Math.round(PRECIO_ACCESO_COMPLETO * (1 - porcentaje / 100))
     : PRECIO_ACCESO_COMPLETO;
+  const creditoAplicable = Math.min(saldoReferidos, Math.max(0, precioFinal - 1_000));
+  const precioConCredito = precioFinal - creditoAplicable;
 
   return (
     <>
@@ -191,7 +198,7 @@ export default function PagosPage() {
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 22 }}>
           <strong style={{ color: '#146C94', fontSize: 34, fontWeight: 900 }}>
-            {pesos.format(precioFinal)}
+            {pesos.format(precioConCredito)}
           </strong>
           {porcentaje && (
             <span style={{ color: '#84909A', fontSize: 14, textDecoration: 'line-through' }}>
@@ -199,6 +206,12 @@ export default function PagosPage() {
             </span>
           )}
         </div>
+
+        {creditoAplicable > 0 && (
+          <p style={{ margin: '-12px 0 20px', color: '#16805E', fontSize: 13, fontWeight: 700 }}>
+            Incluye {pesos.format(creditoAplicable)} de saldo por referidos
+          </p>
+        )}
 
         {pasoCodigo === 'pregunta' && (
           <div style={{ padding: 14, marginBottom: 12, border: '1px solid #AFD3E2', borderRadius: 8, backgroundColor: '#F7FAFC' }}>
@@ -252,7 +265,7 @@ export default function PagosPage() {
             {cargando
               ? 'Un momento...'
               : calendario
-                ? `Pagar ${pesos.format(precioFinal)}`
+                ? `Pagar ${pesos.format(precioConCredito)}`
                 : 'Fechas por confirmar'}
           </button>
         )}

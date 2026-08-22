@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Logotipo from '../../components/Logotipo';
 import BotonPagoEpayco from '../../components/BotonPagoEpayco';
 import FormularioVentas from '../../components/FormularioVentas';
+import CountdownIcfes from '../../components/CountdownIcfes';
+import { formatearFechaIcfes } from '../../lib/countdown-icfes';
 import {
   obtenerCalendarioIcfesActivo,
   obtenerPromocionActiva,
@@ -21,12 +23,6 @@ const RANGOS_INSTITUCIONALES = [
   { cantidad: '40 a 99', precio: '$30.000', detalle: 'por estudiante' },
   { cantidad: '100 o más', precio: 'Cotización', detalle: 'acuerdo institucional' },
 ];
-
-const formatoVigencia = new Intl.DateTimeFormat('es-CO', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-});
 
 function formatearPrecio(valor: number) {
   return `$${valor.toLocaleString('es-CO')}`;
@@ -249,6 +245,10 @@ export default function PlanesPage() {
         </div>
       </header>
 
+      <div style={{ maxWidth: 900, margin: '0 auto 32px', padding: '0 24px' }}>
+        <CountdownIcfes calendario={calendario} />
+      </div>
+
       {audiencia === 'estudiante' ? (
         <main style={{ padding: '0 24px 80px' }}>
           <div
@@ -385,7 +385,7 @@ export default function PlanesPage() {
                   style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '9px 0 18px', color: '#687580', fontSize: 12 }}
                 >
                   <span aria-hidden="true" style={{ fontSize: 16 }}>◷</span>
-                  Acceso hasta {formatoVigencia.format(new Date(calendario.fechaExamen))}
+                  Acceso hasta {formatearFechaIcfes(calendario.fechaExamen)}
                 </time>
               )}
               {!calendario && (

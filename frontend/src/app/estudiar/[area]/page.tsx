@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   obtenerToken,
   esRespuestaPlanVencido,
@@ -168,7 +169,7 @@ function EjercicioCloze({ datos }: { datos: DatosCloze }) {
         backgroundColor: "#ffffff",
         borderRadius: 16,
         padding: "28px 32px",
-        border: "1.5px solid #AFD3E2",
+        border: "1.5px solid var(--marca-borde, #afd3e2)",
         marginBottom: 28,
       }}
     >
@@ -176,7 +177,7 @@ function EjercicioCloze({ datos }: { datos: DatosCloze }) {
         style={{
           fontSize: 14,
           fontWeight: 700,
-          color: "#146C94",
+          color: "var(--color-primario, #146c94)",
           marginBottom: 4,
         }}
       >
@@ -229,16 +230,16 @@ function EjercicioCloze({ datos }: { datos: DatosCloze }) {
                     : sobrevolado
                       ? "#FFF3CD"
                       : marcado
-                        ? "#D2E0FB"
+                        ? "var(--marca-superficie-fuerte, #d2e0fb)"
                         : "#F6F1F1",
                 color: esCorrecta
                   ? "#2E7D4F"
                   : esIncorrecta
                     ? "#BC7C7C"
                     : marcado
-                      ? "#146C94"
+                      ? "var(--color-primario, #146c94)"
                       : "#8a9aaa",
-                border: `2px ${marcado || sobrevolado ? "solid" : "dashed"} ${esCorrecta ? "#A6D9B8" : esIncorrecta ? "#E8B4B4" : sobrevolado ? "#F0C95C" : "#AFD3E2"}`,
+                border: `2px ${marcado || sobrevolado ? "solid" : "dashed"} ${esCorrecta ? "#A6D9B8" : esIncorrecta ? "#E8B4B4" : sobrevolado ? "#F0C95C" : "var(--marca-borde, #afd3e2)"}`,
                 transition: "all 0.12s ease",
               }}
             >
@@ -280,12 +281,12 @@ function EjercicioCloze({ datos }: { datos: DatosCloze }) {
                   const esLaCorrecta = opcionIdx === espacio.correctaIndex;
                   let bg = "#F6F1F1",
                     color = "#1a2a3a",
-                    border = "#D2E0FB";
+                    border = "var(--marca-superficie-fuerte, #d2e0fb)";
 
                   if (!verificado && esElegida) {
-                    bg = "#D2E0FB";
-                    color = "#146C94";
-                    border = "#AFD3E2";
+                    bg = "var(--marca-superficie-fuerte, #d2e0fb)";
+                    color = "var(--color-primario, #146c94)";
+                    border = "var(--marca-borde, #afd3e2)";
                   } else if (verificado && esElegida && esLaCorrecta) {
                     bg = "#E3F4E8";
                     color = "#2E7D4F";
@@ -338,8 +339,8 @@ function EjercicioCloze({ datos }: { datos: DatosCloze }) {
             top: touchPos.y - 20,
             padding: "8px 16px",
             borderRadius: 10,
-            backgroundColor: "#146C94",
-            color: "#ffffff",
+            backgroundColor: "var(--color-primario, #146c94)",
+            color: "var(--color-sobre-primario, #ffffff)",
             fontWeight: 700,
             fontSize: 13,
             pointerEvents: "none",
@@ -374,7 +375,7 @@ function EjercicioCloze({ datos }: { datos: DatosCloze }) {
                 color:
                   totalCorrectos === datos.espacios.length
                     ? "#2E7D4F"
-                    : "#146C94",
+                    : "var(--color-primario, #146c94)",
               }}
             >
               {totalCorrectos === datos.espacios.length
@@ -385,8 +386,8 @@ function EjercicioCloze({ datos }: { datos: DatosCloze }) {
               onClick={reiniciar}
               style={{
                 backgroundColor: "#F6F1F1",
-                color: "#146C94",
-                border: "1.5px solid #AFD3E2",
+                color: "var(--color-primario, #146c94)",
+                border: "1.5px solid var(--marca-borde, #afd3e2)",
                 padding: "9px 18px",
                 borderRadius: 10,
                 fontWeight: 700,
@@ -402,8 +403,8 @@ function EjercicioCloze({ datos }: { datos: DatosCloze }) {
             onClick={() => setVerificado(true)}
             disabled={!todosMarcados}
             style={{
-              backgroundColor: todosMarcados ? "#146C94" : "#AFD3E2",
-              color: "#ffffff",
+              backgroundColor: todosMarcados ? "var(--color-primario, #146c94)" : "var(--marca-borde, #afd3e2)",
+              color: todosMarcados ? "var(--color-sobre-primario, #ffffff)" : "#425563",
               border: "none",
               padding: "11px 24px",
               borderRadius: 10,
@@ -514,10 +515,25 @@ export default function AreaPage() {
       .then((data) => {
         setTemas(data.temas ?? []);
         if (data.temas?.length > 0) {
-          setTemaActivo(data.temas[0]);
-          setMenuAbierto([data.temas[0].id]);
-          if (data.temas[0].subtemas?.length > 0) {
-            setSubtemaActivo(data.temas[0].subtemas[0]);
+          const subtemaSolicitado = new URLSearchParams(
+            window.location.search,
+          ).get("subtema");
+          const temaSolicitado = subtemaSolicitado
+            ? data.temas.find((tema: Tema) =>
+                tema.subtemas.some(
+                  (subtema: Subtema) => subtema.id === subtemaSolicitado,
+                ),
+              )
+            : null;
+          const temaInicial = temaSolicitado ?? data.temas[0];
+          const subtemaInicial =
+            temaInicial.subtemas.find(
+              (subtema: Subtema) => subtema.id === subtemaSolicitado,
+            ) ?? temaInicial.subtemas[0];
+          setTemaActivo(temaInicial);
+          setMenuAbierto([temaInicial.id]);
+          if (subtemaInicial) {
+            setSubtemaActivo(subtemaInicial);
           }
         }
       })
@@ -615,7 +631,7 @@ export default function AreaPage() {
           justifyContent: "center",
         }}
       >
-        <p style={{ color: "#146C94", fontSize: 18, fontWeight: 600 }}>
+        <p style={{ color: "var(--color-primario, #146c94)", fontSize: 18, fontWeight: 600 }}>
           Cargando temas...
         </p>
       </div>
@@ -637,7 +653,7 @@ export default function AreaPage() {
       {/* NAVBAR */}
       <nav
         style={{
-          backgroundColor: "#146C94",
+          backgroundColor: "var(--color-primario, #146c94)",
           boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
           position: "sticky",
           top: 0,
@@ -658,21 +674,21 @@ export default function AreaPage() {
               href="/dashboard"
               style={{
                 textDecoration: "none",
-                color: "#D2E0FB",
+                color: "var(--color-sobre-primario, #ffffff)",
                 fontSize: 14,
                 fontWeight: 600,
               }}
             >
               ← Inicio
             </Link>
-            <span style={{ color: "rgba(255,255,255,0.3)" }}>|</span>
-            <span style={{ fontSize: 17, fontWeight: 800, color: "#ffffff" }}>
+            <span style={{ color: "var(--color-sobre-primario, #ffffff)", opacity: 0.35 }}>|</span>
+            <span style={{ fontSize: 17, fontWeight: 800, color: "var(--color-sobre-primario, #ffffff)" }}>
               {AREA_NOMBRES[area] ?? area}
             </span>
           </div>
           <Link href="/dashboard" style={{ textDecoration: "none" }}>
-            <span style={{ fontSize: 18, fontWeight: 800, color: "#ffffff" }}>
-              Saber<span style={{ color: "#8DD8FF" }}>Plus</span>
+            <span style={{ fontSize: 18, fontWeight: 800, color: "var(--color-sobre-primario, #ffffff)" }}>
+              Saber<span style={{ color: "var(--marca-acento, #8dd8ff)" }}>Plus</span>
             </span>
           </Link>
         </div>
@@ -684,7 +700,7 @@ export default function AreaPage() {
           style={{
             width: 280,
             backgroundColor: "#ffffff",
-            borderRight: "1.5px solid #AFD3E2",
+            borderRight: "1.5px solid var(--marca-borde, #afd3e2)",
             overflowY: "auto",
             flexShrink: 0,
           }}
@@ -720,8 +736,8 @@ export default function AreaPage() {
                       borderRadius: 10,
                       border: "none",
                       backgroundColor:
-                        temaActivo?.id === tema.id ? "#D2E0FB" : "transparent",
-                      color: temaActivo?.id === tema.id ? "#146C94" : "#1a2a3a",
+                        temaActivo?.id === tema.id ? "var(--marca-superficie-fuerte, #d2e0fb)" : "transparent",
+                      color: temaActivo?.id === tema.id ? "var(--color-primario, #146c94)" : "#1a2a3a",
                       fontWeight: 700,
                       fontSize: 14,
                       cursor: "pointer",
@@ -745,11 +761,11 @@ export default function AreaPage() {
                           border: "none",
                           backgroundColor:
                             subtemaActivo?.id === sub.id
-                              ? "#146C94"
+                              ? "var(--color-primario, #146c94)"
                               : "transparent",
                           color:
                             subtemaActivo?.id === sub.id
-                              ? "#ffffff"
+                              ? "var(--color-sobre-primario, #ffffff)"
                               : "#4a5a6a",
                           fontWeight: subtemaActivo?.id === sub.id ? 700 : 500,
                           fontSize: 13,
@@ -768,11 +784,11 @@ export default function AreaPage() {
                               backgroundColor:
                                 subtemaActivo?.id === sub.id
                                   ? "rgba(255,255,255,0.2)"
-                                  : "#D2E0FB",
+                                  : "var(--marca-superficie-fuerte, #d2e0fb)",
                               color:
                                 subtemaActivo?.id === sub.id
-                                  ? "#ffffff"
-                                  : "#146C94",
+                                  ? "var(--color-sobre-primario, #ffffff)"
+                                  : "var(--color-primario, #146c94)",
                               padding: "1px 6px",
                               borderRadius: 8,
                               fontWeight: 700,
@@ -832,10 +848,10 @@ export default function AreaPage() {
                       alignItems: "center",
                       gap: 7,
                       padding: "8px 12px",
-                      border: "1px solid #AFC5D0",
+                      border: "1px solid var(--marca-borde, #afd3e2)",
                       borderRadius: 8,
-                      backgroundColor: "#EEF7FA",
-                      color: "#146C94",
+                      backgroundColor: "var(--marca-superficie, #f0f7fc)",
+                      color: "var(--color-primario, #146c94)",
                       fontSize: 12,
                       fontWeight: 750,
                       textDecoration: "none",
@@ -878,10 +894,10 @@ export default function AreaPage() {
                       alignItems: "center",
                       gap: 7,
                       padding: "8px 12px",
-                      border: "1px solid #AFC5D0",
+                      border: "1px solid var(--marca-borde, #afd3e2)",
                       borderRadius: 8,
                       backgroundColor: "#ffffff",
-                      color: "#146C94",
+                      color: "var(--color-primario, #146c94)",
                       fontSize: 12,
                       fontWeight: 750,
                       cursor: descargandoPdf ? "wait" : "pointer",
@@ -899,7 +915,9 @@ export default function AreaPage() {
                 </div>
               </div>
               {errorPdf && (
-                <p style={{ margin: "0 0 10px", color: "#A84B4B", fontSize: 12 }}>
+                <p
+                  style={{ margin: "0 0 10px", color: "#A84B4B", fontSize: 12 }}
+                >
                   {errorPdf}
                 </p>
               )}
@@ -922,7 +940,7 @@ export default function AreaPage() {
                       backgroundColor: "#ffffff",
                       borderRadius: 16,
                       padding: "40px 32px",
-                      border: "1.5px solid #AFD3E2",
+                      border: "1.5px solid var(--marca-borde, #afd3e2)",
                       marginBottom: 28,
                       textAlign: "center",
                     }}
@@ -948,8 +966,8 @@ export default function AreaPage() {
                       <button
                         onClick={() => setModoVista("texto")}
                         style={{
-                          backgroundColor: "#146C94",
-                          color: "#ffffff",
+                          backgroundColor: "var(--color-primario, #146c94)",
+                          color: "var(--color-sobre-primario, #ffffff)",
                           border: "none",
                           padding: "16px 28px",
                           borderRadius: 12,
@@ -963,8 +981,8 @@ export default function AreaPage() {
                       <button
                         onClick={() => setModoVista("video")}
                         style={{
-                          backgroundColor: "#146C94",
-                          color: "#ffffff",
+                          backgroundColor: "var(--color-primario, #146c94)",
+                          color: "var(--color-sobre-primario, #ffffff)",
                           border: "none",
                           padding: "16px 28px",
                           borderRadius: 12,
@@ -985,10 +1003,10 @@ export default function AreaPage() {
                         style={{
                           padding: "9px 20px",
                           borderRadius: 10,
-                          border: `1.5px solid ${modoVista === "texto" ? "#146C94" : "#D2E0FB"}`,
+                          border: `1.5px solid ${modoVista === "texto" ? "var(--color-primario, #146c94)" : "var(--marca-superficie-fuerte, #d2e0fb)"}`,
                           backgroundColor:
-                            modoVista === "texto" ? "#146C94" : "#ffffff",
-                          color: modoVista === "texto" ? "#ffffff" : "#146C94",
+                            modoVista === "texto" ? "var(--color-primario, #146c94)" : "#ffffff",
+                          color: modoVista === "texto" ? "var(--color-sobre-primario, #ffffff)" : "var(--color-primario, #146c94)",
                           fontWeight: 700,
                           fontSize: 13,
                           cursor: "pointer",
@@ -1001,10 +1019,10 @@ export default function AreaPage() {
                         style={{
                           padding: "9px 20px",
                           borderRadius: 10,
-                          border: `1.5px solid ${modoVista === "video" ? "#146C94" : "#D2E0FB"}`,
+                          border: `1.5px solid ${modoVista === "video" ? "var(--color-primario, #146c94)" : "var(--marca-superficie-fuerte, #d2e0fb)"}`,
                           backgroundColor:
-                            modoVista === "video" ? "#146C94" : "#ffffff",
-                          color: modoVista === "video" ? "#ffffff" : "#146C94",
+                            modoVista === "video" ? "var(--color-primario, #146c94)" : "#ffffff",
+                          color: modoVista === "video" ? "var(--color-sobre-primario, #ffffff)" : "var(--color-primario, #146c94)",
                           fontWeight: 700,
                           fontSize: 13,
                           cursor: "pointer",
@@ -1023,7 +1041,7 @@ export default function AreaPage() {
                           style={{
                             borderRadius: 16,
                             overflow: "hidden",
-                            border: "1.5px solid #AFD3E2",
+                            border: "1.5px solid var(--marca-borde, #afd3e2)",
                             aspectRatio: "16/9",
                           }}
                         >
@@ -1050,7 +1068,7 @@ export default function AreaPage() {
                     style={{
                       borderRadius: 16,
                       overflow: "hidden",
-                      border: "1.5px solid #AFD3E2",
+                      border: "1.5px solid var(--marca-borde, #afd3e2)",
                       aspectRatio: "16/9",
                     }}
                   >
@@ -1068,7 +1086,7 @@ export default function AreaPage() {
                     backgroundColor: "#ffffff",
                     borderRadius: 16,
                     padding: "28px 32px",
-                    border: "1.5px dashed #AFD3E2",
+                    border: "1.5px dashed var(--marca-borde, #afd3e2)",
                     marginBottom: 28,
                     textAlign: "center",
                   }}
@@ -1082,13 +1100,17 @@ export default function AreaPage() {
               {/* IMAGEN */}
               {subtemaActivo.imagenUrl && (
                 <div style={{ marginBottom: 28 }}>
-                  <img
+                  <Image
                     src={`/imagenes/${subtemaActivo.imagenUrl}`}
                     alt={subtemaActivo.nombre}
+                    width={1200}
+                    height={675}
+                    unoptimized
                     style={{
                       width: "100%",
+                      height: "auto",
                       borderRadius: 16,
-                      border: "1.5px solid #AFD3E2",
+                      border: "1.5px solid var(--marca-borde, #afd3e2)",
                     }}
                     onError={(e) => (e.currentTarget.style.display = "none")}
                   />
@@ -1114,7 +1136,7 @@ export default function AreaPage() {
                   <div
                     style={{
                       height: 2,
-                      backgroundColor: "#D2E0FB",
+                      backgroundColor: "var(--marca-superficie-fuerte, #d2e0fb)",
                       marginBottom: 32,
                       borderRadius: 1,
                     }}
@@ -1145,7 +1167,7 @@ export default function AreaPage() {
                         backgroundColor: "#F6F1F1",
                         borderRadius: 14,
                         padding: "24px",
-                        border: "1.5px dashed #AFD3E2",
+                        border: "1.5px dashed var(--marca-borde, #afd3e2)",
                         textAlign: "center",
                       }}
                     >
@@ -1162,7 +1184,7 @@ export default function AreaPage() {
                           backgroundColor: "#ffffff",
                           borderRadius: 8,
                           padding: "40px",
-                          border: "1.5px solid #AFD3E2",
+                          border: "1.5px solid var(--marca-borde, #afd3e2)",
                           textAlign: "center",
                         }}
                       >
@@ -1172,7 +1194,7 @@ export default function AreaPage() {
                             fontWeight: 900,
                             color:
                               resultado.correctas >= resultado.total * 0.6
-                                ? "#19A7CE"
+                                ? "var(--color-secundario, #19a7ce)"
                                 : "#BC7C7C",
                             marginBottom: 8,
                           }}
@@ -1218,8 +1240,8 @@ export default function AreaPage() {
                             }}
                             style={{
                               backgroundColor: "#F6F1F1",
-                              color: "#146C94",
-                              border: "1.5px solid #AFD3E2",
+                              color: "var(--color-primario, #146c94)",
+                              border: "1.5px solid var(--marca-borde, #afd3e2)",
                               padding: "11px 24px",
                               borderRadius: 8,
                               fontWeight: 700,
@@ -1249,7 +1271,7 @@ export default function AreaPage() {
                             backgroundColor: "#ffffff",
                             borderRadius: 8,
                             padding: "28px",
-                            border: "1.5px solid #AFD3E2",
+                            border: "1.5px solid var(--marca-borde, #afd3e2)",
                           }}
                         >
                           {(idx === 0 ||
@@ -1282,14 +1304,18 @@ export default function AreaPage() {
                             {pregunta.enunciado}
                           </p>
                           {pregunta.imagenUrl && (
-                            <img
+                            <Image
                               src={`/imagenes/${pregunta.imagenUrl}`}
                               alt="imagen pregunta"
+                              width={900}
+                              height={600}
+                              unoptimized
                               style={{
                                 maxWidth: "100%",
+                                height: "auto",
                                 borderRadius: 10,
                                 marginBottom: 16,
-                                border: "1px solid #AFD3E2",
+                                border: "1px solid var(--marca-borde, #afd3e2)",
                               }}
                               onError={(e) =>
                                 (e.currentTarget.style.display = "none")
@@ -1322,10 +1348,10 @@ export default function AreaPage() {
                                     padding: "13px 18px",
                                     borderRadius: 10,
                                     border: seleccionada
-                                      ? "2px solid #146C94"
-                                      : "1.5px solid #AFD3E2",
+                                      ? "2px solid var(--color-primario, #146c94)"
+                                      : "1.5px solid var(--marca-borde, #afd3e2)",
                                     backgroundColor: seleccionada
-                                      ? "#D2E0FB"
+                                      ? "var(--marca-superficie-fuerte, #d2e0fb)"
                                       : "#F6F1F1",
                                     cursor: "pointer",
                                     textAlign: "left",
@@ -1339,12 +1365,12 @@ export default function AreaPage() {
                                       height: 28,
                                       borderRadius: "50%",
                                       backgroundColor: seleccionada
-                                        ? "#146C94"
+                                        ? "var(--color-primario, #146c94)"
                                         : "#ffffff",
                                       color: seleccionada
-                                        ? "#ffffff"
-                                        : "#146C94",
-                                      border: `2px solid ${seleccionada ? "#146C94" : "#AFD3E2"}`,
+                                        ? "var(--color-sobre-primario, #ffffff)"
+                                        : "var(--color-primario, #146c94)",
+                                      border: `2px solid ${seleccionada ? "var(--color-primario, #146c94)" : "var(--marca-borde, #afd3e2)"}`,
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "center",
@@ -1378,8 +1404,8 @@ export default function AreaPage() {
                           Object.keys(respuestasEstudiante).length === 0
                         }
                         style={{
-                          backgroundColor: enviando ? "#AFD3E2" : "#146C94",
-                          color: "#ffffff",
+                          backgroundColor: enviando ? "var(--marca-borde, #afd3e2)" : "var(--color-primario, #146c94)",
+                          color: enviando ? "#425563" : "var(--color-sobre-primario, #ffffff)",
                           border: "none",
                           padding: "14px",
                           borderRadius: 12,

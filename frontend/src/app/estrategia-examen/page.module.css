@@ -5,9 +5,9 @@
 }
 
 .header {
-  background: #146c94;
-  border-bottom: 4px solid #19a7ce;
-  color: #ffffff;
+  background: var(--color-primario, #146c94);
+  border-bottom: 4px solid var(--color-secundario, #19a7ce);
+  color: var(--color-sobre-primario, #ffffff);
 }
 
 .headerInner {
@@ -32,7 +32,7 @@
 }
 
 .brandAccent {
-  color: #8dd8ff;
+  color: var(--marca-acento, #8dd8ff);
 }
 
 .backLink {
@@ -83,7 +83,7 @@
   border: 1px solid #9db8c5;
   border-radius: 8px;
   background: #ffffff;
-  color: #146c94;
+  color: var(--color-primario, #146c94);
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
@@ -94,7 +94,7 @@
   margin-bottom: 38px;
   padding: 22px;
   border: 1px solid #adc5cf;
-  border-left: 5px solid #146c94;
+  border-left: 5px solid var(--color-primario, #146c94);
   border-radius: 8px;
   background: #ffffff;
 }
@@ -114,7 +114,7 @@
 .sectionHeader {
   margin-bottom: 14px;
   padding-bottom: 9px;
-  border-bottom: 2px solid #19a7ce;
+  border-bottom: 2px solid var(--color-secundario, #19a7ce);
 }
 
 .sectionEyebrow {
@@ -127,7 +127,7 @@
 
 .sectionTitle {
   margin: 0;
-  color: #173d50;
+  color: var(--marca-profunda, #123e52);
   font-size: 20px;
   letter-spacing: 0;
 }
@@ -171,7 +171,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border: 1px solid #d4e0e5;
-  background: #eef7fa;
+  background: var(--marca-superficie, #f0f7fc);
 }
 
 .metric {
@@ -190,7 +190,7 @@
 }
 
 .metricValue {
-  color: #146c94;
+  color: var(--color-primario, #146c94);
   font-size: 18px;
   font-weight: 900;
 }
@@ -217,7 +217,7 @@
   grid-template-columns: 48px minmax(0, 1fr);
   gap: 14px;
   padding: 18px;
-  border: 1px solid #cad7dc;
+  border: 1px solid var(--marca-borde, #afd3e2);
   border-radius: 7px;
   background: #ffffff;
   break-inside: avoid;
@@ -229,8 +229,8 @@
   display: grid;
   place-items: center;
   border-radius: 6px;
-  background: #146c94;
-  color: #ffffff;
+  background: var(--color-primario, #146c94);
+  color: var(--color-sobre-primario, #ffffff);
   font-size: 18px;
   font-weight: 900;
 }
@@ -274,7 +274,7 @@
 .areaTabs {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  border: 1px solid #afc5d0;
+  border: 1px solid var(--marca-borde, #afd3e2);
   background: #ffffff;
 }
 
@@ -295,9 +295,9 @@
 }
 
 .areaTabActive {
-  background: #d8eef6;
-  box-shadow: inset 0 -3px #146c94;
-  color: #123f54;
+  background: var(--marca-superficie-fuerte, #d2e0fb);
+  box-shadow: inset 0 -3px var(--color-primario, #146c94);
+  color: var(--marca-profunda, #123e52);
 }
 
 .tacticPanel {
@@ -305,14 +305,14 @@
   grid-template-columns: minmax(210px, 0.7fr) minmax(320px, 1.3fr);
   gap: 26px;
   padding: 22px;
-  border: 1px solid #afc5d0;
+  border: 1px solid var(--marca-borde, #afd3e2);
   border-top: 0;
   background: #ffffff;
 }
 
 .tacticName {
   margin: 0 0 6px;
-  color: #173d50;
+  color: var(--marca-profunda, #123e52);
   font-size: 18px;
 }
 
@@ -336,7 +336,7 @@
 
 .distractorList {
   display: grid;
-  border: 1px solid #cad7dc;
+  border: 1px solid var(--marca-borde, #afd3e2);
   background: #ffffff;
 }
 
@@ -384,7 +384,7 @@
 .checklist {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 1px solid #cad7dc;
+  border: 1px solid var(--marca-borde, #afd3e2);
   background: #ffffff;
 }
 
@@ -427,10 +427,10 @@
 
 .toolLink {
   padding: 9px 12px;
-  border: 1px solid #afc5d0;
+  border: 1px solid var(--marca-borde, #afd3e2);
   border-radius: 7px;
   background: #ffffff;
-  color: #146c94;
+  color: var(--color-primario, #146c94);
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
@@ -441,7 +441,7 @@
   display: grid;
   place-items: center;
   background: #f4f7f8;
-  color: #146c94;
+  color: var(--color-primario, #146c94);
   font-weight: 750;
 }
 

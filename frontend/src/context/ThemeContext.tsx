@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { obtenerMiInstitucion, obtenerToken, obtenerUrlLogo } from '../lib/api';
 import { decodificarToken } from '../lib/auth';
+import { colorTextoLegible, normalizarColorHex } from '../lib/branding-colors';
 
 // ─── PUNTO 6: actualización automática del branding ─────────────────
 // Sin Supabase todavía no tenemos websockets/tiempo real del lado del
@@ -49,10 +50,28 @@ const BRANDING_INICIAL: Branding = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-function aplicarVariablesCss(colorPrimario: string, colorSecundario: string) {
+function aplicarVariablesCss(
+  colorPrimario: string,
+  colorSecundario: string,
+  institucional: boolean,
+) {
   if (typeof document === 'undefined') return;
   document.documentElement.style.setProperty('--color-primario', colorPrimario);
   document.documentElement.style.setProperty('--color-secundario', colorSecundario);
+  document.documentElement.style.setProperty('--color-primary', colorPrimario);
+  document.documentElement.style.setProperty('--color-secondary', colorSecundario);
+  document.documentElement.style.setProperty(
+    '--color-sobre-primario',
+    colorTextoLegible(colorPrimario),
+  );
+  document.documentElement.style.setProperty(
+    '--color-sobre-secundario',
+    colorTextoLegible(colorSecundario),
+  );
+  document.documentElement.toggleAttribute(
+    'data-branding-institucional',
+    institucional,
+  );
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -66,7 +85,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (!payload?.institucionId) {
       const porDefecto = { ...BRANDING_INICIAL, cargando: false };
       setBranding(porDefecto);
-      aplicarVariablesCss(porDefecto.colorPrimario, porDefecto.colorSecundario);
+      aplicarVariablesCss(
+        porDefecto.colorPrimario,
+        porDefecto.colorSecundario,
+        false,
+      );
       return;
     }
 
@@ -76,17 +99,31 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         nombre: institucion?.nombre ?? null,
         mensajeBienvenida: institucion?.mensajeBienvenida ?? null,
         logoUrl: obtenerUrlLogo(institucion?.logoUrl),
-        colorPrimario: institucion?.colorPrimario || COLOR_PRIMARIO_DEFECTO,
-        colorSecundario: institucion?.colorSecundario || COLOR_SECUNDARIO_DEFECTO,
+        colorPrimario: normalizarColorHex(
+          institucion?.colorPrimario,
+          COLOR_PRIMARIO_DEFECTO,
+        ),
+        colorSecundario: normalizarColorHex(
+          institucion?.colorSecundario,
+          COLOR_SECUNDARIO_DEFECTO,
+        ),
         cargando: false,
       };
       setBranding(nuevoBranding);
-      aplicarVariablesCss(nuevoBranding.colorPrimario, nuevoBranding.colorSecundario);
+      aplicarVariablesCss(
+        nuevoBranding.colorPrimario,
+        nuevoBranding.colorSecundario,
+        true,
+      );
     } catch {
       // Si falla (token vencido, sin red, etc.) caemos a la identidad por defecto.
       const porDefecto = { ...BRANDING_INICIAL, cargando: false };
       setBranding(porDefecto);
-      aplicarVariablesCss(porDefecto.colorPrimario, porDefecto.colorSecundario);
+      aplicarVariablesCss(
+        porDefecto.colorPrimario,
+        porDefecto.colorSecundario,
+        false,
+      );
     }
   }, []);
 
@@ -96,6 +133,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refrescarBranding();
+  }, [refrescarBranding]);
+
+  // Aplica o retira la marca institucional inmediatamente al iniciar o
+  // cerrar sesión, sin esperar al siguiente ciclo de polling.
+  useEffect(() => {
+    const alCambiarSesion = () => refrescarBranding();
+    window.addEventListener('saberplus-sesion-cambiada', alCambiarSesion);
+    return () =>
+      window.removeEventListener('saberplus-sesion-cambiada', alCambiarSesion);
   }, [refrescarBranding]);
 
   // Mecanismo 1: polling. Se pausa mientras la pestaña está en segundo

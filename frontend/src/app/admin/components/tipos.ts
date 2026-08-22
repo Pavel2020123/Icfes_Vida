@@ -81,7 +81,9 @@ export type Pestana =
   | "interactivo"
   | "calendario"
   | "ventas"
-  | "cupones";
+  | "cupones"
+  | "anuncios"
+  | "soporte";
 
 export interface LeadVentasAdmin {
   id: string;

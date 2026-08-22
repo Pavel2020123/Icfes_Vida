@@ -261,7 +261,7 @@ export class DiagnosticoService {
     let respuestasCorrectas = 0;
 
     for (const pregunta of preguntas) {
-      const respuestaEstudiante = respuestasPorPregunta.get(pregunta.id)!;
+      const respuestaEstudiante = respuestasPorPregunta.get(pregunta.id);
       const seleccionada = pregunta.respuestas.find(
         (respuesta) => respuesta.id === respuestaEstudiante.respuestaId,
       );

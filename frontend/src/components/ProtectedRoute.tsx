@@ -43,7 +43,7 @@ export default function ProtectedRoute({ children, rolesPermitidos }: ProtectedR
         minHeight: '100vh',
         backgroundColor: '#F6F1F1',
         fontSize: 18,
-        color: '#146C94',
+        color: 'var(--color-primario, #146c94)',
       }}>
         Cargando...
       </div>

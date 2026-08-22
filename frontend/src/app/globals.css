@@ -1,13 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #146C94;
-  --color-secondary: #19A7CE;
-  --color-fondo: #F6F1F1;
-  --color-fondo-alt: #D2E0FB;
-  --color-acento: #8DD8FF;
+  --color-primario: #146c94;
+  --color-secundario: #19a7ce;
+  --color-primary: var(--color-primario);
+  --color-secondary: var(--color-secundario);
+  --color-sobre-primario: #ffffff;
+  --color-sobre-secundario: #172733;
+  --color-sobre-primario-suave: color-mix(
+    in srgb,
+    var(--color-sobre-primario) 78%,
+    transparent
+  );
+  --marca-gradiente: color-mix(
+    in srgb,
+    var(--color-primario) 78%,
+    var(--color-secundario)
+  );
+  --marca-profunda: color-mix(in srgb, var(--color-primario) 38%, #10212a);
+  --color-sobre-profunda: #ffffff;
+  --marca-superficie: color-mix(in srgb, var(--color-primario) 9%, #ffffff);
+  --marca-superficie-fuerte: color-mix(
+    in srgb,
+    var(--color-primario) 17%,
+    #ffffff
+  );
+  --marca-borde: color-mix(in srgb, var(--color-primario) 28%, #ffffff);
+  --marca-acento: color-mix(in srgb, var(--color-secundario) 52%, #ffffff);
+  --marca-sombra: color-mix(
+    in srgb,
+    var(--color-primario) 26%,
+    transparent
+  );
+  --color-fondo: #f6f1f1;
+  --color-fondo-alt: #d2e0fb;
+  --color-acento: #8dd8ff;
   --color-texto: #1a2a3a;
-  --color-borde: #AFD3E2;
+  --color-borde: #afd3e2;
+  --radio-control: 6px;
+  --radio-panel: 8px;
+  --sombra-foco: 0 0 0 3px var(--marca-sombra);
 }
 
 * {
@@ -19,7 +51,38 @@
 body {
   background-color: var(--color-fondo);
   color: var(--color-texto);
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 3px;
+  box-shadow: var(--sombra-foco);
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 /* Scrollbar suave para estudiar de noche */
@@ -36,7 +99,11 @@ body {
 
 /* ─── Botones de llamada a la acción (planes, pagos, ventas) ──── */
 .btn-cta {
-  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease, background-color 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease,
+    background-color 0.18s ease;
   will-change: transform;
 }
 .btn-cta:hover:not(:disabled) {
@@ -51,9 +118,27 @@ body {
 
 /* ─── Tarjetas de plan seleccionables ───────────────────────────── */
 .plan-card {
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
   cursor: pointer;
 }
 .plan-card:hover {
   transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

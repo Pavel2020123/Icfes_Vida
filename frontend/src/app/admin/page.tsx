@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   obtenerToken,
@@ -21,6 +21,8 @@ import InteractivoTab from "./components/InteractivoTab";
 import CalendarioTab from "./components/CalendarioTab";
 import VentasTab from "./components/VentasTab";
 import CuponesTab from "./components/CuponesTab";
+import SoporteTab from "./components/SoporteTab";
+import AnunciosTab from "./components/AnunciosTab";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -86,10 +88,10 @@ export default function AdminPage() {
     setCargando(false);
   };
 
-  const mostrarMensaje = (msg: string) => {
+  const mostrarMensaje = useCallback((msg: string) => {
     setMensaje(msg);
     setTimeout(() => setMensaje(""), 3000);
-  };
+  }, []);
 
   if (cargando) {
     return (
@@ -205,6 +207,8 @@ export default function AdminPage() {
               { key: "calendario", label: "📅 Calendario ICFES" },
               { key: "ventas", label: "Ventas e instituciones" },
               { key: "cupones", label: "Cupones y promociones" },
+              { key: "anuncios", label: "Anuncios" },
+              { key: "soporte", label: "Soporte" },
             ].map((p) => (
               <button
                 key={p.key}
@@ -291,6 +295,14 @@ export default function AdminPage() {
 
           {pestana === "cupones" && (
             <CuponesTab mostrarMensaje={mostrarMensaje} />
+          )}
+
+          {pestana === "anuncios" && (
+            <AnunciosTab mostrarMensaje={mostrarMensaje} />
+          )}
+
+          {pestana === "soporte" && (
+            <SoporteTab mostrarMensaje={mostrarMensaje} />
           )}
         </div>
       </div>

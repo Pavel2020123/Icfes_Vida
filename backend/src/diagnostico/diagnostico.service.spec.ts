@@ -95,12 +95,12 @@ describe('DiagnosticoService', () => {
     if (resultado.estado !== 'EN_PROGRESO')
       throw new Error('Estado inesperado');
     expect(resultado.preguntas).toHaveLength(15);
-    expect(diagnosticoInicial.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        usuarioId: 'usuario-1',
-        totalPreguntas: 15,
-      }),
-    });
+    const [llamadaCrear] = diagnosticoInicial.create.mock
+      .calls[0] as unknown as [
+      { data: { usuarioId: string; totalPreguntas: number } },
+    ];
+    expect(llamadaCrear.data.usuarioId).toBe('usuario-1');
+    expect(llamadaCrear.data.totalPreguntas).toBe(15);
     expect(JSON.stringify(resultado)).not.toContain('esCorrecta');
     expect(JSON.stringify(resultado)).not.toContain('explicacion');
   });
@@ -210,15 +210,23 @@ describe('DiagnosticoService', () => {
         }),
       ],
     });
-    expect(historialRespuesta.createMany).toHaveBeenCalledWith({
-      data: expect.arrayContaining([
-        expect.objectContaining({
-          sesionId: 'diagnostico-1',
-          origen: 'DIAGNOSTICO',
-          tiempoRespuestaSegundos: 20,
-        }),
-      ]),
-    });
+    const [llamadaHistorial] = historialRespuesta.createMany.mock
+      .calls[0] as unknown as [
+      {
+        data: Array<{
+          sesionId: string;
+          origen: string;
+          tiempoRespuestaSegundos?: number;
+        }>;
+      },
+    ];
+    expect(llamadaHistorial.data).toContainEqual(
+      expect.objectContaining({
+        sesionId: 'diagnostico-1',
+        origen: 'DIAGNOSTICO',
+        tiempoRespuestaSegundos: 20,
+      }),
+    );
   });
 
   it('impide que un profesor inicie un diagnóstico de estudiante', async () => {

@@ -226,7 +226,9 @@ export default function BotonPagoEpayco({
         // Crea la cuenta y entra directo, SIN esperar a confirmar el
         // correo — esa espera es para la prueba gratis (punto 7), no
         // para alguien que ya va a pagar con su plata.
-        await registrarUsuario(nombre, correo, contrasena);
+        const codigoReferido = localStorage.getItem('saberplus_ref') ?? undefined;
+        await registrarUsuario(nombre, correo, contrasena, codigoReferido);
+        localStorage.removeItem('saberplus_ref');
 
         const { accessToken } = await loginUsuario(
           correo,
@@ -294,7 +296,7 @@ export default function BotonPagoEpayco({
     width: '100%',
     padding: '10px 12px',
     borderRadius: 8,
-    border: '1.5px solid #AFD3E2',
+    border: '1.5px solid var(--marca-borde, #afd3e2)',
     fontSize: 14,
     color: '#1a2a3a',
     backgroundColor: '#F6F1F1',
@@ -357,7 +359,7 @@ export default function BotonPagoEpayco({
         <div
           style={{
             padding: 12,
-            border: '1px solid #AFD3E2',
+            border: '1px solid var(--marca-borde, #afd3e2)',
             borderRadius: 8,
             backgroundColor: '#F7FAFC',
           }}
@@ -371,10 +373,10 @@ export default function BotonPagoEpayco({
               onClick={() => elegirCodigo(true)}
               style={{
                 padding: '9px 10px',
-                border: '1px solid #146C94',
+                border: '1px solid var(--color-primario, #146c94)',
                 borderRadius: 8,
                 backgroundColor: '#ffffff',
-                color: '#146C94',
+                color: 'var(--color-primario, #146c94)',
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
@@ -388,8 +390,8 @@ export default function BotonPagoEpayco({
                 padding: '9px 10px',
                 border: 'none',
                 borderRadius: 8,
-                backgroundColor: '#146C94',
-                color: '#ffffff',
+                backgroundColor: 'var(--color-primario, #146c94)',
+                color: 'var(--color-sobre-primario, #ffffff)',
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
@@ -418,8 +420,8 @@ export default function BotonPagoEpayco({
           disabled={cargando || deshabilitado}
           className="btn-cta"
           style={{
-            backgroundColor: 'var(--color-primario, #146C94)',
-            color: '#ffffff',
+            backgroundColor: 'var(--color-primario, #146c94)',
+            color: 'var(--color-sobre-primario, #ffffff)',
             border: 'none',
             borderRadius: 8,
             padding: '12px 24px',
@@ -453,7 +455,7 @@ export default function BotonPagoEpayco({
           <Link
             href="/login"
             style={{
-              color: 'var(--color-primario, #146C94)',
+              color: 'var(--color-primario, #146c94)',
               fontWeight: 600,
             }}
           >

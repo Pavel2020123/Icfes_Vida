@@ -51,17 +51,17 @@ export default function ResultadosPage() {
   if (!resultado) return null;
 
   const puntaje = parseFloat(resultado.resumen.puntaje);
-  const colorPuntaje = puntaje >= 70 ? '#19A7CE' : puntaje >= 50 ? '#E4C087' : '#BC7C7C';
+  const colorPuntaje = puntaje >= 70 ? 'var(--color-secundario, #19a7ce)' : puntaje >= 50 ? '#E4C087' : '#BC7C7C';
   const mensaje = puntaje >= 80 ? '¡Excelente resultado!' : puntaje >= 60 ? 'Buen trabajo, sigue así.' : 'Hay espacio para mejorar. ¡Sigue practicando!';
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', fontFamily: 'system-ui, sans-serif' }}>
 
       {/* NAVBAR */}
-      <nav style={{ backgroundColor: '#146C94', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+      <nav style={{ backgroundColor: 'var(--color-primario, #146c94)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', height: 64 }}>
-          <span style={{ fontSize: 20, fontWeight: 800, color: '#ffffff' }}>
-            Saber<span style={{ color: '#8DD8FF' }}>Plus</span>
+          <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-sobre-primario, #ffffff)' }}>
+            Saber<span style={{ color: 'var(--marca-acento, #8dd8ff)' }}>Plus</span>
           </span>
         </div>
       </nav>
@@ -69,7 +69,7 @@ export default function ResultadosPage() {
       <main style={{ maxWidth: 640, margin: '0 auto', padding: '56px 24px' }}>
 
         {/* Puntaje principal */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '48px 40px', border: '1.5px solid #AFD3E2', boxShadow: '0 4px 20px rgba(20,108,148,0.08)', textAlign: 'center', marginBottom: 24 }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: '48px 40px', border: '1.5px solid var(--marca-borde, #afd3e2)', boxShadow: '0 4px 20px rgba(20,108,148,0.08)', textAlign: 'center', marginBottom: 24 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: '#8a9aaa', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>
             {resultado.tipo === 'personalizado'
               ? 'Preguntas aleatorias'
@@ -85,9 +85,9 @@ export default function ResultadosPage() {
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
             {[
-              { label: 'Correctas', valor: resultado.resumen.respuestasCorrectas, color: '#19A7CE' },
+              { label: 'Correctas', valor: resultado.resumen.respuestasCorrectas, color: 'var(--color-secundario, #19a7ce)' },
               { label: 'Incorrectas', valor: resultado.resumen.respuestasIncorrectas, color: '#BC7C7C' },
-              { label: 'XP ganado', valor: `+${resultado.resumen.xpGanado}`, color: '#8DD8FF' },
+              { label: 'XP ganado', valor: `+${resultado.resumen.xpGanado}`, color: 'var(--marca-acento, #8dd8ff)' },
             ].map(stat => (
               <div key={stat.label} style={{ backgroundColor: '#F6F1F1', borderRadius: 12, padding: '20px 12px' }}>
                 <p style={{ fontSize: 28, fontWeight: 900, color: stat.color, marginBottom: 4 }}>{stat.valor}</p>
@@ -109,7 +109,7 @@ export default function ResultadosPage() {
                       {AREA_NOMBRES[d.area] ?? d.area}
                     </span>
                     <span style={{ fontSize: 13, color: '#4a5a6a' }}>
-                      {d.correctas}/{d.total} · <strong style={{ color: '#146C94' }}>{d.puntaje}%</strong>
+                      {d.correctas}/{d.total} · <strong style={{ color: 'var(--color-primario, #146c94)' }}>{d.puntaje}%</strong>
                     </span>
                   </div>
                 ))}
@@ -118,8 +118,8 @@ export default function ResultadosPage() {
           )}
 
           {/* XP Banner */}
-          <div style={{ backgroundColor: '#D2E0FB', borderRadius: 12, padding: '16px 24px', marginBottom: 32 }}>
-            <p style={{ color: '#146C94', fontWeight: 700, fontSize: 15 }}>
+          <div style={{ backgroundColor: 'var(--marca-superficie-fuerte, #d2e0fb)', borderRadius: 12, padding: '16px 24px', marginBottom: 32 }}>
+            <p style={{ color: 'var(--color-primario, #146c94)', fontWeight: 700, fontSize: 15 }}>
               Ganaste {resultado.resumen.xpGanado} XP en esta sesión
             </p>
           </div>
@@ -132,13 +132,13 @@ export default function ResultadosPage() {
                   ? '/preguntas-aleatorias'
                   : `/simulacro?area=${resultado.area}`
               }
-              style={{ backgroundColor: '#146C94', color: '#ffffff', padding: '13px 28px', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}
+              style={{ backgroundColor: 'var(--color-primario, #146c94)', color: 'var(--color-sobre-primario, #ffffff)', padding: '13px 28px', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}
             >
               Repetir simulacro
             </Link>
             <Link
               href="/dashboard"
-              style={{ backgroundColor: '#ffffff', color: '#146C94', padding: '13px 28px', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 15, border: '1.5px solid #146C94' }}
+              style={{ backgroundColor: '#ffffff', color: 'var(--color-primario, #146c94)', padding: '13px 28px', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 15, border: '1.5px solid var(--color-primario, #146c94)' }}
             >
               Ir al dashboard
             </Link>

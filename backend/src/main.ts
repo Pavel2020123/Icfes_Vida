@@ -16,6 +16,7 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const esProduccion = process.env.NODE_ENV === 'production';
 
   // CORS habilitado para que Next.js pueda conectarse. Usar FRONTEND_URL en
   // producción para evitar orígenes abiertos.
@@ -35,10 +36,9 @@ async function bootstrap() {
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       frameguard: { action: 'deny' },
       permittedCrossDomainPolicies: { permittedPolicies: 'none' },
-      hsts:
-        process.env.NODE_ENV === 'production'
-          ? { maxAge: 15552000, includeSubDomains: true, preload: true }
-          : false,
+      hsts: esProduccion
+        ? { maxAge: 15552000, includeSubDomains: true, preload: true }
+        : false,
     }),
   );
 
@@ -53,24 +53,60 @@ async function bootstrap() {
     }),
   );
 
-  // Rate limiting (defensa en profundidad)
+  // La interfaz autenticada consulta varios recursos en paralelo. El límite
+  // global protege la API sin bloquear la navegación normal del usuario.
+  const limiteGlobalConfigurado = Number.parseInt(
+    process.env.RATE_LIMIT_MAX ?? (esProduccion ? '1000' : '5000'),
+    10,
+  );
   const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    max:
+      Number.isFinite(limiteGlobalConfigurado) && limiteGlobalConfigurado > 0
+        ? limiteGlobalConfigurado
+        : 1000,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (request) => request.path.startsWith('/uploads/'),
+    message: {
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message:
+        'Has realizado demasiadas solicitudes. Espera un momento e inténtalo nuevamente.',
+    },
   });
   app.use(globalLimiter);
 
   // Endpoints sensibles con límites más estrictos
   const authLoginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10, // 10 login attempts per 15 minutes
+    max: esProduccion ? 10 : 100,
     standardHeaders: true,
     legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    message: {
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message:
+        'Demasiados intentos de inicio de sesión. Espera unos minutos antes de volver a intentarlo.',
+    },
   });
   app.use('/auth/login', authLoginLimiter);
-  app.use('/auth/registro', rateLimit({ windowMs: 15 * 60 * 1000, max: 20 }));
+  app.use(
+    '/auth/registro',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: esProduccion ? 20 : 100,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: {
+        statusCode: 429,
+        error: 'Too Many Requests',
+        message:
+          'Demasiados intentos de registro. Espera unos minutos antes de volver a intentarlo.',
+      },
+    }),
+  );
 
   // Hardening: establecer límites explícitos de body para evitar DoS por payloads grandes
   app.use(bodyParser.json({ limit: '1mb' }));

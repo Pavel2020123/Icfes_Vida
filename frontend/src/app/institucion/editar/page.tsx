@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 import {
   actualizarInstitucion,
   eliminarInstitucion,
@@ -11,21 +12,28 @@ import {
   obtenerMiInstitucion,
   obtenerUrlLogo,
   subirLogoInstitucion,
-} from '../../../lib/api';
-import ProtectedRoute from '../../../components/ProtectedRoute';
-import { useBranding } from '../../../context/ThemeContext';
+} from "../../../lib/api";
+import ProtectedRoute from "../../../components/ProtectedRoute";
+import { useBranding } from "../../../context/ThemeContext";
+import { colorTextoLegible } from "../../../lib/branding-colors";
 
-const TIPOS_PERMITIDOS = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
+const TIPOS_PERMITIDOS = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+];
 const TAMANO_MAXIMO_BYTES = 3 * 1024 * 1024; // 3MB, igual que el backend
 export default function EditarInstitucionPage() {
   const router = useRouter();
   const { refrescarBranding } = useBranding();
-  const [nombre, setNombre] = useState('');
-  const [mensaje, setMensaje] = useState('');
-  const [logoUrl, setLogoUrl] = useState(''); // ruta que devuelve el backend (o vacío si no hay logo)
-  const [colorPrimario, setColorPrimario] = useState('#146C94');
-  const [colorSecundario, setColorSecundario] = useState('#19A7CE');
-  const [error, setError] = useState('');
+  const [nombre, setNombre] = useState("");
+  const [mensaje, setMensaje] = useState("");
+  const [logoUrl, setLogoUrl] = useState(""); // ruta que devuelve el backend (o vacío si no hay logo)
+  const [colorPrimario, setColorPrimario] = useState("#146C94");
+  const [colorSecundario, setColorSecundario] = useState("#19A7CE");
+  const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
   const [cargandoDatos, setCargandoDatos] = useState(true);
 
@@ -33,26 +41,30 @@ export default function EditarInstitucionPage() {
   const inputArchivoRef = useRef<HTMLInputElement>(null);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
   const [eliminandoLogo, setEliminandoLogo] = useState(false);
-  const [errorLogo, setErrorLogo] = useState('');
+  const [errorLogo, setErrorLogo] = useState("");
 
   // Zona de peligro: eliminar institución
   const [mostrarEliminar, setMostrarEliminar] = useState(false);
-  const [textoConfirmacion, setTextoConfirmacion] = useState('');
+  const [textoConfirmacion, setTextoConfirmacion] = useState("");
   const [eliminando, setEliminando] = useState(false);
-  const [errorEliminar, setErrorEliminar] = useState('');
+  const [errorEliminar, setErrorEliminar] = useState("");
 
   // PASO 4: Cargar los datos de la institución al iniciar
   useEffect(() => {
     obtenerMiInstitucion()
       .then((institucion) => {
-        setNombre(institucion.nombre || '');
-        setMensaje(institucion.mensajeBienvenida || '');
-        setLogoUrl(institucion.logoUrl || '');
-        setColorPrimario(institucion.colorPrimario || '#146C94');
-        setColorSecundario(institucion.colorSecundario || '#19A7CE');
+        setNombre(institucion.nombre || "");
+        setMensaje(institucion.mensajeBienvenida || "");
+        setLogoUrl(institucion.logoUrl || "");
+        setColorPrimario(institucion.colorPrimario || "#146C94");
+        setColorSecundario(institucion.colorSecundario || "#19A7CE");
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'No se pudo cargar la institución');
+        setError(
+          err instanceof Error
+            ? err.message
+            : "No se pudo cargar la institución",
+        );
       })
       .finally(() => {
         setCargandoDatos(false);
@@ -61,66 +73,84 @@ export default function EditarInstitucionPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setCargando(true);
 
     try {
       // PASO 5: Usar actualizarInstitucion. El logo ya no viaja acá: se
       // sube/elimina aparte con su propio endpoint (ver handlers de logo).
-      await actualizarInstitucion(nombre.trim(), mensaje.trim(), undefined, colorPrimario, colorSecundario);
+      await actualizarInstitucion(
+        nombre.trim(),
+        mensaje.trim(),
+        undefined,
+        colorPrimario,
+        colorSecundario,
+      );
       await refrescarBranding();
-      router.push('/institucion');
+      router.push("/institucion");
     } catch (err: unknown) {
       // PASO 6: Cambiar mensaje de error
-      setError(err instanceof Error ? err.message : 'No se pudo actualizar la institución');
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo actualizar la institución",
+      );
     } finally {
       setCargando(false);
     }
   };
 
   const handleSeleccionarArchivo = () => {
-    setErrorLogo('');
+    setErrorLogo("");
     inputArchivoRef.current?.click();
   };
 
-  const handleArchivoElegido = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleArchivoElegido = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const archivo = e.target.files?.[0];
-    e.target.value = ''; // permite volver a elegir el mismo archivo después
+    e.target.value = ""; // permite volver a elegir el mismo archivo después
 
     if (!archivo) return;
 
     if (!TIPOS_PERMITIDOS.includes(archivo.type)) {
-      setErrorLogo('Solo se permiten imágenes en formato PNG, JPG, WEBP o GIF.');
+      setErrorLogo(
+        "Solo se permiten imágenes en formato PNG, JPG, WEBP o GIF.",
+      );
       return;
     }
     if (archivo.size > TAMANO_MAXIMO_BYTES) {
-      setErrorLogo('La imagen no puede pesar más de 3MB.');
+      setErrorLogo("La imagen no puede pesar más de 3MB.");
       return;
     }
 
-    setErrorLogo('');
+    setErrorLogo("");
     setSubiendoLogo(true);
     try {
       const institucionActualizada = await subirLogoInstitucion(archivo);
-      setLogoUrl(institucionActualizada.logoUrl || '');
+      setLogoUrl(institucionActualizada.logoUrl || "");
       // Actualiza el navbar/sidebar de inmediato y avisa a otras pestañas.
       await refrescarBranding();
     } catch (err: unknown) {
-      setErrorLogo(err instanceof Error ? err.message : 'No se pudo subir el logo');
+      setErrorLogo(
+        err instanceof Error ? err.message : "No se pudo subir el logo",
+      );
     } finally {
       setSubiendoLogo(false);
     }
   };
 
   const handleEliminarLogo = async () => {
-    setErrorLogo('');
+    setErrorLogo("");
     setEliminandoLogo(true);
     try {
       await eliminarLogoInstitucion();
-      setLogoUrl('');
+      setLogoUrl("");
       await refrescarBranding();
     } catch (err: unknown) {
-      setErrorLogo(err instanceof Error ? err.message : 'No se pudo eliminar el logo');
+      setErrorLogo(
+        err instanceof Error ? err.message : "No se pudo eliminar el logo",
+      );
     } finally {
       setEliminandoLogo(false);
     }
@@ -128,15 +158,19 @@ export default function EditarInstitucionPage() {
 
   const handleEliminarInstitucion = async () => {
     if (textoConfirmacion.trim() !== nombre.trim()) return;
-    setErrorEliminar('');
+    setErrorEliminar("");
     setEliminando(true);
     try {
       const respuesta = await eliminarInstitucion();
       guardarToken(respuesta.accessToken);
       await refrescarBranding();
-      router.push('/dashboard');
+      router.push("/dashboard");
     } catch (err: unknown) {
-      setErrorEliminar(err instanceof Error ? err.message : 'No se pudo eliminar la institución');
+      setErrorEliminar(
+        err instanceof Error
+          ? err.message
+          : "No se pudo eliminar la institución",
+      );
       setEliminando(false);
     }
   };
@@ -144,13 +178,13 @@ export default function EditarInstitucionPage() {
   // PASO 8: Pantalla de carga mientras se obtienen los datos
   if (cargandoDatos) {
     return (
-      <ProtectedRoute rolesPermitidos={['PROFESOR']}>
+      <ProtectedRoute rolesPermitidos={["PROFESOR"]}>
         <div
           style={{
-            minHeight: '100vh',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
+            minHeight: "100vh",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
           }}
         >
           <h2>Cargando institución...</h2>
@@ -160,113 +194,218 @@ export default function EditarInstitucionPage() {
   }
 
   return (
-    <ProtectedRoute rolesPermitidos={['PROFESOR']}>
-      <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', padding: 24 }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', backgroundColor: '#ffffff', borderRadius: 24, padding: 32, boxShadow: '0 12px 40px rgba(20,108,148,0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+    <ProtectedRoute rolesPermitidos={["PROFESOR"]}>
+      <div
+        style={{ minHeight: "100vh", backgroundColor: "#F6F1F1", padding: 24 }}
+      >
+        <div
+          style={{
+            maxWidth: 960,
+            margin: "0 auto",
+            backgroundColor: "#ffffff",
+            borderRadius: 24,
+            padding: 32,
+            boxShadow: "0 12px 40px rgba(20,108,148,0.08)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 16,
+              marginBottom: 24,
+            }}
+          >
             <div>
               {/* Cambié el título a "Editar institución" por coherencia */}
-              <h1 style={{ fontSize: 30, fontWeight: 900, color: '#1a2a3a', marginBottom: 8 }}>Editar institución</h1>
-              <p style={{ color: '#4a5a6a', fontSize: 16 }}>Modifica el nombre de tu institución, su imagen y colores para que los estudiantes sientan que este espacio es suyo.</p>
+              <h1
+                style={{
+                  fontSize: 30,
+                  fontWeight: 900,
+                  color: "#1a2a3a",
+                  marginBottom: 8,
+                }}
+              >
+                Editar institución
+              </h1>
+              <p style={{ color: "#4a5a6a", fontSize: 16 }}>
+                Modifica el nombre de tu institución, su imagen y colores para
+                que los estudiantes sientan que este espacio es suyo.
+              </p>
             </div>
-            <Link href="/institucion" style={{ textDecoration: 'none' }}>
-              <button style={{ backgroundColor: '#F0F7FC', color: '#146C94', borderRadius: 14, padding: '12px 18px', border: 'none', fontWeight: 700, cursor: 'pointer' }}>
-                Volver a institución
-              </button>
+            <Link
+              href="/institucion"
+              style={{
+                display: "inline-flex",
+                backgroundColor: "var(--marca-superficie, #f0f7fc)",
+                color: "var(--color-primario, #146C94)",
+                borderRadius: 8,
+                padding: "12px 18px",
+                fontWeight: 700,
+                textDecoration: "none",
+              }}
+            >
+              Volver a institución
             </Link>
           </div>
 
           {error && (
-            <div style={{ marginBottom: 20, backgroundColor: '#FDE8E4', borderRadius: 14, padding: 16, color: '#7A2A2A' }}>{error}</div>
+            <div
+              style={{
+                marginBottom: 20,
+                backgroundColor: "#FDE8E4",
+                borderRadius: 14,
+                padding: 16,
+                color: "#7A2A2A",
+              }}
+            >
+              {error}
+            </div>
           )}
 
           <form
             onSubmit={handleSubmit}
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1.2fr 0.8fr',
+              display: "grid",
+              gridTemplateColumns: "1.2fr 0.8fr",
               gap: 30,
-              alignItems: 'start',
+              alignItems: "start",
             }}
           >
             {/* COLUMNA IZQUIERDA: Formulario */}
-            <div style={{ display: 'grid', gap: 20 }}>
+            <div style={{ display: "grid", gap: 20 }}>
               <div>
-                <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Nombre de la institución</label>
+                <label
+                  style={{ display: "block", fontWeight: 700, marginBottom: 8 }}
+                >
+                  Nombre de la institución
+                </label>
                 <input
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   required
                   placeholder="Colegio Santa María"
-                  style={{ width: '100%', padding: '14px 16px', borderRadius: 14, border: '1.5px solid #AFD3E2', fontSize: 15 }}
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    borderRadius: 14,
+                    border: "1.5px solid var(--marca-borde, #afd3e2)",
+                    fontSize: 15,
+                  }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Mensaje de bienvenida</label>
+                <label
+                  style={{ display: "block", fontWeight: 700, marginBottom: 8 }}
+                >
+                  Mensaje de bienvenida
+                </label>
                 <textarea
                   value={mensaje}
                   onChange={(e) => setMensaje(e.target.value)}
                   placeholder="Bienvenidos al espacio oficial de preparación ICFES"
                   rows={4}
-                  style={{ width: '100%', padding: '14px 16px', borderRadius: 14, border: '1.5px solid #AFD3E2', fontSize: 15, resize: 'vertical' }}
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    borderRadius: 14,
+                    border: "1.5px solid var(--marca-borde, #afd3e2)",
+                    fontSize: 15,
+                    resize: "vertical",
+                  }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Logo</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <label
+                  style={{ display: "block", fontWeight: 700, marginBottom: 8 }}
+                >
+                  Logo
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    flexWrap: "wrap",
+                  }}
+                >
                   <div
                     style={{
                       width: 72,
                       height: 72,
                       borderRadius: 16,
-                      border: '1.5px solid #AFD3E2',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: '#F6F1F1',
+                      border: "1.5px solid var(--marca-borde, #afd3e2)",
+                      overflow: "hidden",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "#F6F1F1",
                       flexShrink: 0,
                     }}
                   >
                     {logoUrl ? (
-                      <img
-                        src={obtenerUrlLogo(logoUrl) ?? undefined}
+                      <Image
+                        src={obtenerUrlLogo(logoUrl) ?? ""}
+                        width={72}
+                        height={72}
+                        unoptimized
                         alt="Logo actual"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
                       />
                     ) : (
-                      <span style={{ fontSize: 24, fontWeight: 900, color: colorPrimario }}>
-                        {nombre ? nombre.charAt(0).toUpperCase() : 'I'}
+                      <span
+                        style={{
+                          fontSize: 24,
+                          fontWeight: 900,
+                          color: colorPrimario,
+                        }}
+                      >
+                        {nombre ? nombre.charAt(0).toUpperCase() : "I"}
                       </span>
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                  >
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                       <input
                         ref={inputArchivoRef}
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/gif"
                         onChange={handleArchivoElegido}
-                        style={{ display: 'none' }}
+                        style={{ display: "none" }}
                       />
                       <button
                         type="button"
                         onClick={handleSeleccionarArchivo}
                         disabled={subiendoLogo || eliminandoLogo}
                         style={{
-                          backgroundColor: '#F0F7FC',
-                          color: '#146C94',
-                          border: '1.5px solid #AFD3E2',
+                          backgroundColor: "var(--marca-superficie, #f0f7fc)",
+                          color: colorPrimario,
+                          border: "1.5px solid var(--marca-borde, #afd3e2)",
                           borderRadius: 12,
-                          padding: '10px 16px',
+                          padding: "10px 16px",
                           fontWeight: 700,
-                          cursor: subiendoLogo || eliminandoLogo ? 'not-allowed' : 'pointer',
+                          cursor:
+                            subiendoLogo || eliminandoLogo
+                              ? "not-allowed"
+                              : "pointer",
                         }}
                       >
-                        {subiendoLogo ? 'Subiendo...' : logoUrl ? 'Cambiar logo' : 'Subir logo'}
+                        {subiendoLogo
+                          ? "Subiendo..."
+                          : logoUrl
+                            ? "Cambiar logo"
+                            : "Subir logo"}
                       </button>
                       {logoUrl && (
                         <button
@@ -274,46 +413,88 @@ export default function EditarInstitucionPage() {
                           onClick={handleEliminarLogo}
                           disabled={subiendoLogo || eliminandoLogo}
                           style={{
-                            backgroundColor: '#FDE8E4',
-                            color: '#7A2A2A',
-                            border: '1.5px solid #F1BCBC',
+                            backgroundColor: "#FDE8E4",
+                            color: "#7A2A2A",
+                            border: "1.5px solid #F1BCBC",
                             borderRadius: 12,
-                            padding: '10px 16px',
+                            padding: "10px 16px",
                             fontWeight: 700,
-                            cursor: subiendoLogo || eliminandoLogo ? 'not-allowed' : 'pointer',
+                            cursor:
+                              subiendoLogo || eliminandoLogo
+                                ? "not-allowed"
+                                : "pointer",
                           }}
                         >
-                          {eliminandoLogo ? 'Eliminando...' : 'Eliminar logo'}
+                          {eliminandoLogo ? "Eliminando..." : "Eliminar logo"}
                         </button>
                       )}
                     </div>
-                    <p style={{ fontSize: 12, color: '#7a8a9a', margin: 0 }}>
-                      PNG, JPG, WEBP o GIF · máximo 3MB. Se sube desde tu computador, no hace falta un enlace.
+                    <p style={{ fontSize: 12, color: "#7a8a9a", margin: 0 }}>
+                      PNG, JPG, WEBP o GIF · máximo 3MB. Se sube desde tu
+                      computador, no hace falta un enlace.
                     </p>
                     {errorLogo && (
-                      <p style={{ fontSize: 13, color: '#C24B4B', margin: 0 }}>{errorLogo}</p>
+                      <p style={{ fontSize: 13, color: "#C24B4B", margin: 0 }}>
+                        {errorLogo}
+                      </p>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 20,
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Color primario</label>
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: 700,
+                      marginBottom: 8,
+                    }}
+                  >
+                    Color primario
+                  </label>
                   <input
                     type="color"
                     value={colorPrimario}
                     onChange={(e) => setColorPrimario(e.target.value)}
-                    style={{ width: '100%', height: 56, borderRadius: 14, border: '1.5px solid #AFD3E2', padding: 6, cursor: 'pointer' }}
+                    style={{
+                      width: "100%",
+                      height: 56,
+                      borderRadius: 14,
+                      border: "1.5px solid var(--marca-borde, #afd3e2)",
+                      padding: 6,
+                      cursor: "pointer",
+                    }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Color secundario</label>
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: 700,
+                      marginBottom: 8,
+                    }}
+                  >
+                    Color secundario
+                  </label>
                   <input
                     type="color"
                     value={colorSecundario}
                     onChange={(e) => setColorSecundario(e.target.value)}
-                    style={{ width: '100%', height: 56, borderRadius: 14, border: '1.5px solid #AFD3E2', padding: 6, cursor: 'pointer' }}
+                    style={{
+                      width: "100%",
+                      height: 56,
+                      borderRadius: 14,
+                      border: "1.5px solid var(--marca-borde, #afd3e2)",
+                      padding: 6,
+                      cursor: "pointer",
+                    }}
                   />
                 </div>
               </div>
@@ -322,17 +503,17 @@ export default function EditarInstitucionPage() {
             {/* COLUMNA DERECHA: Vista previa en tiempo real */}
             <div
               style={{
-                position: 'sticky',
+                position: "sticky",
                 top: 24,
               }}
             >
               <div
                 style={{
-                  background: '#ffffff',
+                  background: "#ffffff",
                   borderRadius: 20,
-                  overflow: 'hidden',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-                  border: '1px solid #E5E7EB',
+                  overflow: "hidden",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                  border: "1px solid #E5E7EB",
                 }}
               >
                 <div
@@ -346,20 +527,23 @@ export default function EditarInstitucionPage() {
                   style={{
                     padding: 25,
                     marginTop: -50,
-                    textAlign: 'center',
+                    textAlign: "center",
                   }}
                 >
                   {logoUrl ? (
-                    <img
-                      src={obtenerUrlLogo(logoUrl) ?? undefined}
+                    <Image
+                      src={obtenerUrlLogo(logoUrl) ?? ""}
+                      width={90}
+                      height={90}
+                      unoptimized
                       alt="Logo"
                       style={{
                         width: 90,
                         height: 90,
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                        background: '#fff',
-                        border: '4px solid white',
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        background: "#fff",
+                        border: "4px solid white",
                       }}
                     />
                   ) : (
@@ -367,18 +551,18 @@ export default function EditarInstitucionPage() {
                       style={{
                         width: 90,
                         height: 90,
-                        borderRadius: '50%',
-                        background: '#F3F4F6',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        borderRadius: "50%",
+                        background: "#F3F4F6",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         fontSize: 34,
                         fontWeight: 900,
                         color: colorPrimario,
-                        border: '4px solid white',
+                        border: "4px solid white",
                       }}
                     >
-                      {nombre ? nombre.charAt(0).toUpperCase() : 'I'}
+                      {nombre ? nombre.charAt(0).toUpperCase() : "I"}
                     </div>
                   )}
 
@@ -390,18 +574,18 @@ export default function EditarInstitucionPage() {
                       fontWeight: 800,
                     }}
                   >
-                    {nombre || 'Nombre de la institución'}
+                    {nombre || "Nombre de la institución"}
                   </h2>
 
                   <p
                     style={{
-                      color: '#666',
+                      color: "#666",
                       fontSize: 14,
                       minHeight: 50,
                     }}
                   >
                     {mensaje ||
-                      'Aquí aparecerá el mensaje de bienvenida para los estudiantes.'}
+                      "Aquí aparecerá el mensaje de bienvenida para los estudiantes."}
                   </p>
 
                   <button
@@ -409,9 +593,9 @@ export default function EditarInstitucionPage() {
                     style={{
                       marginTop: 20,
                       background: colorPrimario,
-                      color: '#fff',
-                      border: 'none',
-                      padding: '12px 22px',
+                      color: colorTextoLegible(colorPrimario),
+                      border: "none",
+                      padding: "12px 22px",
                       borderRadius: 12,
                       fontWeight: 700,
                     }}
@@ -422,8 +606,8 @@ export default function EditarInstitucionPage() {
                   <div
                     style={{
                       marginTop: 20,
-                      display: 'flex',
-                      justifyContent: 'center',
+                      display: "flex",
+                      justifyContent: "center",
                       gap: 10,
                     }}
                   >
@@ -431,7 +615,7 @@ export default function EditarInstitucionPage() {
                       style={{
                         width: 28,
                         height: 28,
-                        borderRadius: '50%',
+                        borderRadius: "50%",
                         background: colorPrimario,
                       }}
                     />
@@ -440,7 +624,7 @@ export default function EditarInstitucionPage() {
                       style={{
                         width: 28,
                         height: 28,
-                        borderRadius: '50%',
+                        borderRadius: "50%",
                         background: colorSecundario,
                       }}
                     />
@@ -450,7 +634,7 @@ export default function EditarInstitucionPage() {
                     style={{
                       marginTop: 20,
                       fontSize: 12,
-                      color: '#888',
+                      color: "#888",
                     }}
                   >
                     Así verán tu institución los estudiantes.
@@ -464,76 +648,141 @@ export default function EditarInstitucionPage() {
               type="submit"
               disabled={cargando}
               style={{
-                backgroundColor: '#146C94',
-                color: '#ffffff',
+                backgroundColor: colorPrimario,
+                color: colorTextoLegible(colorPrimario),
                 borderRadius: 14,
-                padding: '16px 20px',
+                padding: "16px 20px",
                 fontSize: 16,
                 fontWeight: 700,
-                border: 'none',
-                cursor: cargando ? 'not-allowed' : 'pointer',
+                border: "none",
+                cursor: cargando ? "not-allowed" : "pointer",
                 marginTop: 10,
               }}
             >
-              {cargando ? 'Guardando...' : 'Guardar cambios'}
+              {cargando ? "Guardando..." : "Guardar cambios"}
             </button>
           </form>
 
           {/* Zona de peligro: eliminar institución */}
-          <div style={{ marginTop: 40, borderTop: '1px solid #F1D9D9', paddingTop: 24 }}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#7A2A2A', marginBottom: 8 }}>Zona de peligro</h3>
-            <p style={{ color: '#4a5a6a', fontSize: 14, marginBottom: 16 }}>
-              Eliminar la institución es una acción permanente. Se borrarán todos los grupos y se desvincularán todos los estudiantes y profesores.
+          <div
+            style={{
+              marginTop: 40,
+              borderTop: "1px solid #F1D9D9",
+              paddingTop: 24,
+            }}
+          >
+            <h3
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: "#7A2A2A",
+                marginBottom: 8,
+              }}
+            >
+              Zona de peligro
+            </h3>
+            <p style={{ color: "#4a5a6a", fontSize: 14, marginBottom: 16 }}>
+              Eliminar la institución es una acción permanente. Se borrarán
+              todos los grupos y se desvincularán todos los estudiantes y
+              profesores.
             </p>
 
             {!mostrarEliminar ? (
               <button
                 type="button"
                 onClick={() => setMostrarEliminar(true)}
-                style={{ backgroundColor: '#FDE8E4', color: '#7A2A2A', border: '1.5px solid #F1BCBC', borderRadius: 14, padding: '12px 20px', fontWeight: 700, cursor: 'pointer' }}
+                style={{
+                  backgroundColor: "#FDE8E4",
+                  color: "#7A2A2A",
+                  border: "1.5px solid #F1BCBC",
+                  borderRadius: 14,
+                  padding: "12px 20px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
               >
                 Eliminar institución
               </button>
             ) : (
-              <div style={{ backgroundColor: '#FFF5F5', border: '1.5px solid #F1BCBC', borderRadius: 16, padding: 20 }}>
-                <p style={{ fontSize: 14, color: '#7A2A2A', marginBottom: 12 }}>
-                  Para confirmar, escribe el nombre de la institución (<strong>{nombre}</strong>) y presiona eliminar. Esta acción no se puede deshacer.
+              <div
+                style={{
+                  backgroundColor: "#FFF5F5",
+                  border: "1.5px solid #F1BCBC",
+                  borderRadius: 16,
+                  padding: 20,
+                }}
+              >
+                <p style={{ fontSize: 14, color: "#7A2A2A", marginBottom: 12 }}>
+                  Para confirmar, escribe el nombre de la institución (
+                  <strong>{nombre}</strong>) y presiona eliminar. Esta acción no
+                  se puede deshacer.
                 </p>
                 <input
                   value={textoConfirmacion}
                   onChange={(e) => setTextoConfirmacion(e.target.value)}
                   placeholder={nombre}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid #F1BCBC', fontSize: 15, marginBottom: 12 }}
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    borderRadius: 12,
+                    border: "1.5px solid #F1BCBC",
+                    fontSize: 15,
+                    marginBottom: 12,
+                  }}
                 />
                 {errorEliminar && (
-                  <p style={{ color: '#7A2A2A', fontSize: 13, marginBottom: 12 }}>{errorEliminar}</p>
+                  <p
+                    style={{ color: "#7A2A2A", fontSize: 13, marginBottom: 12 }}
+                  >
+                    {errorEliminar}
+                  </p>
                 )}
-                <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ display: "flex", gap: 12 }}>
                   <button
                     type="button"
                     onClick={handleEliminarInstitucion}
-                    disabled={textoConfirmacion.trim() !== nombre.trim() || eliminando}
+                    disabled={
+                      textoConfirmacion.trim() !== nombre.trim() || eliminando
+                    }
                     style={{
-                      backgroundColor: '#C24B4B',
-                      color: '#ffffff',
-                      border: 'none',
+                      backgroundColor: "#C24B4B",
+                      color: "#ffffff",
+                      border: "none",
                       borderRadius: 12,
-                      padding: '12px 20px',
+                      padding: "12px 20px",
                       fontWeight: 700,
-                      cursor: textoConfirmacion.trim() === nombre.trim() && !eliminando ? 'pointer' : 'not-allowed',
-                      opacity: textoConfirmacion.trim() === nombre.trim() && !eliminando ? 1 : 0.6,
+                      cursor:
+                        textoConfirmacion.trim() === nombre.trim() &&
+                        !eliminando
+                          ? "pointer"
+                          : "not-allowed",
+                      opacity:
+                        textoConfirmacion.trim() === nombre.trim() &&
+                        !eliminando
+                          ? 1
+                          : 0.6,
                     }}
                   >
-                    {eliminando ? 'Eliminando...' : 'Sí, eliminar definitivamente'}
+                    {eliminando
+                      ? "Eliminando..."
+                      : "Sí, eliminar definitivamente"}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setMostrarEliminar(false);
-                      setTextoConfirmacion('');
-                      setErrorEliminar('');
+                      setTextoConfirmacion("");
+                      setErrorEliminar("");
                     }}
-                    style={{ backgroundColor: '#F0F7FC', color: '#146C94', border: 'none', borderRadius: 12, padding: '12px 20px', fontWeight: 700, cursor: 'pointer' }}
+                    style={{
+                      backgroundColor: "var(--marca-superficie, #f0f7fc)",
+                      color: "var(--color-primario, #146C94)",
+                      border: "none",
+                      borderRadius: 12,
+                      padding: "12px 20px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
                   >
                     Cancelar
                   </button>

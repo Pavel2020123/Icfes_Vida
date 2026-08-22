@@ -18,14 +18,14 @@ const NOMBRES_TIPO: Record<TipoBloque, string> = {
 
 export default function TarjetaBloqueContenido({ bloque, indice, alActualizar, alEliminar }: TarjetaBloqueContenidoProps) {
   const inputStyle = {
-    width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #AFD3E2', fontSize: 14,
+    width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--marca-borde, #afd3e2)', fontSize: 14,
     color: '#1a2a3a', backgroundColor: '#F6F1F1', boxSizing: 'border-box' as const,
   };
 
   return (
-    <article style={{ border: '1.5px solid #AFD3E2', borderRadius: 12, padding: 18, backgroundColor: '#ffffff' }}>
+    <article style={{ border: '1.5px solid var(--marca-borde, #afd3e2)', borderRadius: 12, padding: 18, backgroundColor: '#ffffff' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <p style={{ color: '#146C94', fontWeight: 800, fontSize: 14 }}>Bloque {indice + 1}</p>
+        <p style={{ color: 'var(--color-primario, #146c94)', fontWeight: 800, fontSize: 14 }}>Bloque {indice + 1}</p>
         <button type="button" onClick={alEliminar} style={{ backgroundColor: '#FCD8CD', color: '#BC7C7C', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Eliminar</button>
       </div>
 

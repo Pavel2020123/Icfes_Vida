@@ -42,11 +42,43 @@ async function apiFetch<T = any>(
   mensajeErrorPorDefecto = "Ocurrió un error inesperado",
 ): Promise<T> {
   const res = await fetch(`${API_URL}${ruta}`, opciones);
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || mensajeErrorPorDefecto);
+  const contenido = await res.text();
+  let data: unknown = null;
+
+  if (contenido) {
+    try {
+      data = JSON.parse(contenido);
+    } catch {
+      data = contenido;
+    }
   }
-  return data;
+
+  if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error(
+        obtenerMensajeRespuesta(data) ||
+          "Has realizado demasiadas solicitudes. Espera un momento e inténtalo nuevamente.",
+      );
+    }
+    throw new Error(obtenerMensajeRespuesta(data) || mensajeErrorPorDefecto);
+  }
+
+  return data as T;
+}
+
+function obtenerMensajeRespuesta(data: unknown): string | null {
+  if (typeof data === "string") return data.trim() || null;
+  if (!data || typeof data !== "object" || !("message" in data)) return null;
+
+  const mensaje = (data as { message?: unknown }).message;
+  if (typeof mensaje === "string") return mensaje;
+  if (Array.isArray(mensaje)) {
+    const partes = mensaje.filter(
+      (parte): parte is string => typeof parte === "string",
+    );
+    return partes.length > 0 ? partes.join(". ") : null;
+  }
+  return null;
 }
 
 export async function loginUsuario(correo: string, contrasena: string) {
@@ -65,13 +97,19 @@ export async function registrarUsuario(
   nombre: string,
   correo: string,
   contrasena: string,
+  codigoReferido?: string,
 ) {
   return apiFetch(
     "/auth/registro",
     {
       method: "POST",
       headers: crearEncabezados(),
-      body: JSON.stringify({ nombre, correo, contrasena }),
+      body: JSON.stringify({
+        nombre,
+        correo,
+        contrasena,
+        codigoReferido: codigoReferido?.trim() || undefined,
+      }),
     },
     "Error al registrarse",
   );
@@ -405,6 +443,7 @@ export async function eliminarInstitucion() {
 
 export function guardarToken(token: string) {
   localStorage.setItem("saberplus_token", token);
+  window.dispatchEvent(new Event("saberplus-sesion-cambiada"));
 }
 
 export function obtenerToken(): string | null {
@@ -413,6 +452,7 @@ export function obtenerToken(): string | null {
 
 export function cerrarSesion() {
   localStorage.removeItem("saberplus_token");
+  window.dispatchEvent(new Event("saberplus-sesion-cambiada"));
 }
 
 export async function obtenerHistorialSimulacros() {
@@ -480,10 +520,7 @@ export type AreaDiagnostico =
   | "SOCIALES_CIUDADANAS"
   | "INGLES";
 
-export type NivelDiagnostico =
-  | "POR_REFORZAR"
-  | "EN_PROCESO"
-  | "FORTALEZA";
+export type NivelDiagnostico = "POR_REFORZAR" | "EN_PROCESO" | "FORTALEZA";
 
 export interface PreguntaDiagnostico {
   id: string;
@@ -576,6 +613,195 @@ export async function obtenerProgresoSimulacros() {
     "/simulacros/progreso",
     { headers: crearEncabezados() },
     "Error obteniendo el progreso",
+  );
+}
+
+export interface EstadoTutorial {
+  disponible: boolean;
+  pendiente: boolean;
+  rol: "ESTUDIANTE" | "PROFESOR" | "ADMIN";
+  versionActual: number;
+  versionVista: number;
+}
+
+export function obtenerEstadoTutorial() {
+  return apiFetch<EstadoTutorial>(
+    "/tutorial/estado",
+    { headers: crearEncabezados(), cache: "no-store" },
+    "No se pudo consultar el tutorial",
+  );
+}
+
+export function completarTutorial() {
+  return apiFetch<{ completado: boolean; versionVista: number }>(
+    "/tutorial/completar",
+    { method: "PATCH", headers: crearEncabezados() },
+    "No se pudo guardar el avance del tutorial",
+  );
+}
+
+export type TipoAnuncio = "INFORMACION" | "IMPORTANTE" | "EVENTO";
+export type AudienciaAnuncio = "TODOS" | "ESTUDIANTES" | "PROFESORES";
+
+export interface Anuncio {
+  id: string;
+  titulo: string;
+  contenido: string;
+  tipo: TipoAnuncio;
+  audiencia: AudienciaAnuncio;
+  fechaInicio: string;
+  fechaFin: string | null;
+  activo: boolean;
+  destacado: boolean;
+  fechaCreacion: string;
+  fechaEdicion: string;
+  leido: boolean;
+  fechaLectura: string | null;
+}
+
+export interface AnuncioAdmin extends Omit<Anuncio, "leido" | "fechaLectura"> {
+  _count: { lecturas: number };
+}
+
+export interface DatosAnuncio {
+  titulo: string;
+  contenido: string;
+  tipo: TipoAnuncio;
+  audiencia: AudienciaAnuncio;
+  fechaInicio: string;
+  fechaFin: string | null;
+  activo: boolean;
+  destacado: boolean;
+}
+
+export function obtenerAnuncios() {
+  return apiFetch<{ anuncios: Anuncio[]; pendientes: number }>(
+    "/anuncios",
+    { headers: crearEncabezados(), cache: "no-store" },
+    "No se pudo cargar el tablón de anuncios",
+  );
+}
+
+export function marcarAnuncioLeido(anuncioId: string) {
+  return apiFetch<{ leido: boolean; fechaLectura: string }>(
+    `/anuncios/${anuncioId}/leer`,
+    { method: "PATCH", headers: crearEncabezados() },
+    "No se pudo marcar el anuncio como leído",
+  );
+}
+
+export function marcarTodosAnunciosLeidos() {
+  return apiFetch<{ marcados: number }>(
+    "/anuncios/leer-todos",
+    { method: "PATCH", headers: crearEncabezados() },
+    "No se pudieron marcar los anuncios como leídos",
+  );
+}
+
+export function obtenerAnunciosAdmin() {
+  return apiFetch<AnuncioAdmin[]>(
+    "/anuncios/admin/listado",
+    { headers: crearEncabezados(), cache: "no-store" },
+    "No se pudieron cargar los anuncios",
+  );
+}
+
+export function crearAnuncioAdmin(datos: DatosAnuncio) {
+  return apiFetch<AnuncioAdmin>(
+    "/anuncios/admin",
+    {
+      method: "POST",
+      headers: crearEncabezados(),
+      body: JSON.stringify(datos),
+    },
+    "No se pudo crear el anuncio",
+  );
+}
+
+export function actualizarAnuncioAdmin(
+  id: string,
+  datos: Partial<DatosAnuncio>,
+) {
+  return apiFetch<AnuncioAdmin>(
+    `/anuncios/admin/${id}`,
+    {
+      method: "PATCH",
+      headers: crearEncabezados(),
+      body: JSON.stringify(datos),
+    },
+    "No se pudo actualizar el anuncio",
+  );
+}
+
+export function eliminarAnuncioAdmin(id: string) {
+  return apiFetch<{ eliminado: boolean }>(
+    `/anuncios/admin/${id}`,
+    { method: "DELETE", headers: crearEncabezados() },
+    "No se pudo eliminar el anuncio",
+  );
+}
+
+export type TipoActividadPlan = "ESTUDIO" | "SIMULACRO" | "DESCANSO" | "EXAMEN";
+
+export interface DiaPlanEstudio {
+  id: string;
+  fecha: string;
+  tipo: TipoActividadPlan;
+  area: AreaDiagnostico | null;
+  titulo: string;
+  detalle: string;
+  minutos: number;
+  subtemaId: string | null;
+  completada: boolean;
+  accion: { href: string; etiqueta: string } | null;
+}
+
+export type PlanEstudioSemanal =
+  | { estado: "DIAGNOSTICO_PENDIENTE" }
+  | {
+      estado:
+        | "FECHA_PENDIENTE"
+        | "CONVOCATORIA_FINALIZADA"
+        | "SIN_CONTENIDO"
+        | "TODO_COMPLETADO";
+      convocatoria?: {
+        calendario: "A" | "B";
+        fechaExamen: string;
+        diasRestantes: number;
+        semanasRestantes: number;
+      };
+    }
+  | {
+      estado: "LISTO";
+      semana: { inicio: string; fin: string; fechaCreacion: string };
+      convocatoria: {
+        calendario: "A" | "B";
+        fechaExamen: string;
+        diasRestantes: number;
+        semanasRestantes: number;
+      };
+      diagnostico: {
+        porcentaje: number;
+        areaPrioritaria: AreaDiagnostico | null;
+        resultadosPorArea: Array<{
+          area: AreaDiagnostico;
+          porcentaje: number;
+        }>;
+      };
+      resumen: {
+        sesionesObjetivo: number;
+        sesionesCompletadas: number;
+        minutosObjetivoSemanal: number;
+        porcentaje: number;
+      };
+      dias: DiaPlanEstudio[];
+    };
+
+export async function obtenerPlanEstudioSemanal() {
+  return apiFetch<PlanEstudioSemanal>(
+    "/plan-estudio/semanal",
+    { headers: crearEncabezados() },
+    "No se pudo preparar el plan de estudio semanal",
   );
 }
 
@@ -1287,6 +1513,7 @@ export interface DatosCheckoutEpayco {
   porcentajeDescuento: number | null;
   codigoCupon: string | null;
   tituloPromocion: string | null;
+  creditoReferidosUsado: number;
 }
 
 export async function crearOrdenPagoIndividual(codigoCupon?: string) {
@@ -1309,12 +1536,94 @@ export interface EstadoOrdenPago {
     "PENDIENTE" | "APROBADA" | "RECHAZADA" | "PENDIENTE_BANCO" | "FALLIDA";
   monto: number;
   montoOriginal: number | null;
+  creditoReferidosUsado: number;
   cuponId: string | null;
   grado: "DECIMO" | "ONCE" | null;
   tipoPlan: TipoPlanPago;
   calendarioIcfes: "A" | "B" | null;
   fechaVencimientoAcceso: string | null;
   fechaActualizacion: string;
+}
+
+export interface ReferidoResumenItem {
+  id: string;
+  nombre: string;
+  estado: "REGISTRADO" | "RECOMPENSADO";
+  recompensaCop: number;
+  fechaRegistro: string;
+  fechaRecompensa: string | null;
+}
+
+export interface ResumenReferidos {
+  codigo: string;
+  enlace: string;
+  saldoReferidosCop: number;
+  recompensaPorReferidoCop: number;
+  totalReferidos: number;
+  referidosRecompensados: number;
+  referidosPendientes: number;
+  referidos: ReferidoResumenItem[];
+}
+
+export function validarCodigoReferido(codigo: string) {
+  return apiFetch<{
+    valido: boolean;
+    codigo?: string;
+    nombreReferidor?: string;
+    recompensaCop?: number;
+  }>(
+    `/referidos/validar/${encodeURIComponent(codigo.trim())}`,
+    undefined,
+    "No se pudo validar el codigo de referido",
+  );
+}
+
+export function obtenerResumenReferidos() {
+  return apiFetch<ResumenReferidos>(
+    "/referidos/me",
+    { headers: crearEncabezados() },
+    "No se pudo cargar tu programa de referidos",
+  );
+}
+
+export interface ConfiguracionSoporte {
+  activo: boolean;
+  numeroWhatsapp: string | null;
+  mensajeWhatsapp: string;
+  whatsappUrl?: string | null;
+  fechaActualizacion?: string;
+}
+
+export function obtenerConfiguracionSoporte() {
+  return apiFetch<ConfiguracionSoporte>(
+    "/soporte",
+    { cache: "no-store" },
+    "No se pudo cargar el soporte",
+  );
+}
+
+export function obtenerConfiguracionSoporteAdmin() {
+  return apiFetch<ConfiguracionSoporte>(
+    "/soporte/admin",
+    { headers: crearEncabezados(), cache: "no-store" },
+    "No se pudo cargar la configuracion de soporte",
+  );
+}
+
+export function actualizarConfiguracionSoporteAdmin(datos: {
+  numeroWhatsapp: string;
+  mensajeWhatsapp: string;
+  activo: boolean;
+}) {
+  return apiFetch<ConfiguracionSoporte>(
+    "/soporte/admin",
+    {
+      method: "PATCH",
+      headers: crearEncabezados(),
+      body: JSON.stringify(datos),
+    },
+    "No se pudo guardar la configuracion de soporte",
+  );
 }
 
 export async function obtenerEstadoOrdenPago(factura: string) {

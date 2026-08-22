@@ -164,13 +164,13 @@ export default function SimulacroPage() {
           style={{
             width: 48,
             height: 48,
-            border: "4px solid #D2E0FB",
-            borderTop: "4px solid #146C94",
+            border: "4px solid var(--marca-superficie-fuerte, #d2e0fb)",
+            borderTop: "4px solid var(--color-primario, #146c94)",
             borderRadius: "50%",
             animation: "spin 1s linear infinite",
           }}
         />
-        <p style={{ color: "#146C94", fontSize: 16, fontWeight: 600 }}>
+        <p style={{ color: "var(--color-primario, #146c94)", fontSize: 16, fontWeight: 600 }}>
           Preparando tu simulacro...
         </p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -205,8 +205,8 @@ export default function SimulacroPage() {
         <button
           onClick={() => router.push("/dashboard")}
           style={{
-            backgroundColor: "#146C94",
-            color: "#fff",
+            backgroundColor: "var(--color-primario, #146c94)",
+            color: "var(--color-sobre-primario, #ffffff)",
             padding: "12px 28px",
             borderRadius: 10,
             border: "none",
@@ -226,8 +226,6 @@ export default function SimulacroPage() {
   const respondidas = Object.keys(respuestas).length;
   const progreso = (actual / totalPreguntas) * 100;
   const esUltima = actual === totalPreguntas - 1;
-  const yaRespondioActual = !!respuestas[preguntaActual?.id];
-
   return (
     <div
       style={{
@@ -239,7 +237,7 @@ export default function SimulacroPage() {
       {/* NAVBAR */}
       <nav
         style={{
-          backgroundColor: "#146C94",
+          backgroundColor: "var(--color-primario, #146c94)",
           boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
           position: "sticky",
           top: 0,
@@ -257,14 +255,14 @@ export default function SimulacroPage() {
             height: 64,
           }}
         >
-          <span style={{ fontSize: 20, fontWeight: 800, color: "#ffffff" }}>
-            Saber<span style={{ color: "#8DD8FF" }}>Plus</span>
+          <span style={{ fontSize: 20, fontWeight: 800, color: "var(--color-sobre-primario, #ffffff)" }}>
+            Saber<span style={{ color: "var(--marca-acento, #8dd8ff)" }}>Plus</span>
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <span style={{ color: "#D2E0FB", fontSize: 14, fontWeight: 600 }}>
+            <span style={{ color: "var(--marca-superficie-fuerte, #d2e0fb)", fontSize: 14, fontWeight: 600 }}>
               {AREA_NOMBRES[area] ?? area}
             </span>
-            <span style={{ color: "#8DD8FF", fontSize: 14, fontWeight: 700 }}>
+            <span style={{ color: "var(--marca-acento, #8dd8ff)", fontSize: 14, fontWeight: 700 }}>
               {respondidas}/{totalPreguntas} respondidas
             </span>
           </div>
@@ -274,7 +272,7 @@ export default function SimulacroPage() {
           <div
             style={{
               height: "100%",
-              backgroundColor: "#8DD8FF",
+              backgroundColor: "var(--marca-acento, #8dd8ff)",
               width: `${progreso}%`,
               transition: "width 0.4s ease",
             }}
@@ -314,7 +312,7 @@ export default function SimulacroPage() {
             backgroundColor: "#ffffff",
             borderRadius: 8,
             padding: "36px 32px",
-            border: "1.5px solid #AFD3E2",
+            border: "1.5px solid var(--marca-borde, #afd3e2)",
             boxShadow: "0 4px 20px rgba(20,108,148,0.08)",
             marginBottom: 24,
           }}
@@ -343,7 +341,7 @@ export default function SimulacroPage() {
               style={{
                 maxWidth: "100%",
                 marginBottom: 28,
-                border: "1px solid #AFD3E2",
+                border: "1px solid var(--marca-borde, #afd3e2)",
               }}
               onError={(e) => (e.currentTarget.style.display = "none")}
             />
@@ -372,9 +370,9 @@ export default function SimulacroPage() {
                     padding: "16px 20px",
                     borderRadius: 12,
                     border: seleccionada
-                      ? "2px solid #146C94"
-                      : "1.5px solid #AFD3E2",
-                    backgroundColor: seleccionada ? "#D2E0FB" : "#F6F1F1",
+                      ? "2px solid var(--color-primario, #146c94)"
+                      : "1.5px solid var(--marca-borde, #afd3e2)",
+                    backgroundColor: seleccionada ? "var(--marca-superficie-fuerte, #d2e0fb)" : "#F6F1F1",
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "all 0.15s ease",
@@ -386,9 +384,9 @@ export default function SimulacroPage() {
                       width: 30,
                       height: 30,
                       borderRadius: "50%",
-                      backgroundColor: seleccionada ? "#146C94" : "#ffffff",
-                      color: seleccionada ? "#ffffff" : "#146C94",
-                      border: `2px solid ${seleccionada ? "#146C94" : "#AFD3E2"}`,
+                      backgroundColor: seleccionada ? "var(--color-primario, #146c94)" : "#ffffff",
+                      color: seleccionada ? "var(--color-sobre-primario, #ffffff)" : "var(--color-primario, #146c94)",
+                      border: `2px solid ${seleccionada ? "var(--color-primario, #146c94)" : "var(--marca-borde, #afd3e2)"}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -429,8 +427,8 @@ export default function SimulacroPage() {
             disabled={actual === 0}
             style={{
               backgroundColor: "#ffffff",
-              color: actual === 0 ? "#AFD3E2" : "#146C94",
-              border: `1.5px solid ${actual === 0 ? "#D2E0FB" : "#146C94"}`,
+              color: actual === 0 ? "var(--marca-borde, #afd3e2)" : "var(--color-primario, #146c94)",
+              border: `1.5px solid ${actual === 0 ? "var(--marca-superficie-fuerte, #d2e0fb)" : "var(--color-primario, #146c94)"}`,
               padding: "12px 28px",
               borderRadius: 10,
               fontSize: 15,
@@ -462,12 +460,16 @@ export default function SimulacroPage() {
                   border: "none",
                   backgroundColor:
                     i === actual
-                      ? "#146C94"
+                      ? "var(--color-primario, #146c94)"
                       : respuestas[p.id]
-                        ? "#19A7CE"
-                        : "#D2E0FB",
+                        ? "var(--color-secundario, #19a7ce)"
+                        : "var(--marca-superficie-fuerte, #d2e0fb)",
                   color:
-                    i === actual || respuestas[p.id] ? "#ffffff" : "#8a9aaa",
+                    i === actual
+                      ? "var(--color-sobre-primario, #ffffff)"
+                      : respuestas[p.id]
+                        ? "var(--color-sobre-secundario, #172733)"
+                        : "#8a9aaa",
                   fontSize: 11,
                   fontWeight: 700,
                   cursor: "pointer",
@@ -483,8 +485,8 @@ export default function SimulacroPage() {
               onClick={enviarSimulacro}
               disabled={enviando || respondidas === 0}
               style={{
-                backgroundColor: enviando ? "#AFD3E2" : "#146C94",
-                color: "#ffffff",
+                backgroundColor: enviando ? "var(--marca-borde, #afd3e2)" : "var(--color-primario, #146c94)",
+                color: enviando ? "#425563" : "var(--color-sobre-primario, #ffffff)",
                 border: "none",
                 padding: "12px 28px",
                 borderRadius: 10,
@@ -502,8 +504,8 @@ export default function SimulacroPage() {
                 setActual((prev) => Math.min(totalPreguntas - 1, prev + 1))
               }
               style={{
-                backgroundColor: "#146C94",
-                color: "#ffffff",
+                backgroundColor: "var(--color-primario, #146c94)",
+                color: "var(--color-sobre-primario, #ffffff)",
                 border: "none",
                 padding: "12px 28px",
                 borderRadius: 10,

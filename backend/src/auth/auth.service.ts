@@ -21,6 +21,7 @@ import {
   calcularExpiracionTokenRecuperacion,
 } from './recuperacion.util';
 import { MailService } from '../mail/mail.service';
+import { ReferidosService } from '../referidos/referidos.service';
 
 @Injectable()
 export class AuthService {
@@ -28,6 +29,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mailService: MailService,
+    private referidosService: ReferidosService,
   ) {}
 
   // ─── REGISTRO ───────────────────────────────────────────────
@@ -35,9 +37,11 @@ export class AuthService {
     nombre: string,
     correo: string,
     contrasena: string,
+    codigoReferido?: string,
   ) {
+    const correoNormalizado = correo.trim().toLowerCase();
     const usuarioExiste = await this.prisma.usuario.findUnique({
-      where: { correo },
+      where: { correo: correoNormalizado },
     });
     if (usuarioExiste)
       throw new BadRequestException('El correo ya está registrado');
@@ -52,22 +56,35 @@ export class AuthService {
     // registrándose con correos falsos. Punto 7.
     const tokenVerificacion = generarTokenVerificacion();
     const tokenVerificacionExpira = calcularExpiracionToken();
+    const referido = await this.referidosService.prepararRegistro(
+      codigoReferido,
+      correoNormalizado,
+    );
 
     const nuevoUsuario = await this.prisma.usuario.create({
       data: {
-        nombre,
-        correo,
+        nombre: nombre.trim(),
+        correo: correoNormalizado,
         contrasenaHash: contrasenaEncriptada,
         rol: 'ESTUDIANTE',
         correoVerificado: false,
         tokenVerificacion,
         tokenVerificacionExpira,
+        codigoReferido: referido.codigoNuevo,
+        referidoRecibido: referido.referidorId
+          ? {
+              create: {
+                referidorId: referido.referidorId,
+                codigoUsado: referido.codigoUsado,
+              },
+            }
+          : undefined,
       },
     });
 
     await this.mailService.enviarVerificacionCorreo(
-      correo,
-      nombre,
+      correoNormalizado,
+      nombre.trim(),
       tokenVerificacion,
     );
 

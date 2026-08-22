@@ -11,6 +11,7 @@ import { CalendarioTipo } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CalendarioIcfesService } from '../calendario-icfes/calendario-icfes.service';
 import { CuponesService } from '../cupones/cupones.service';
+import { ReferidosService } from '../referidos/referidos.service';
 import {
   PRECIO_ACCESO_COMPLETO_COP,
   estadoDesdeRespuestaWompi,
@@ -45,6 +46,7 @@ export class PagosService {
     private prisma: PrismaService,
     private calendarioIcfesService: CalendarioIcfesService,
     private cuponesService: CuponesService,
+    private referidosService: ReferidosService,
   ) {}
 
   // ─── CREAR ORDEN ──────────────────────────────────────────────
@@ -128,7 +130,14 @@ export class PagosService {
             montoOriginal,
             tx,
           );
-      const monto = descuento?.montoConDescuento ?? montoOriginal;
+      const montoDespuesDePromocion =
+        descuento?.montoConDescuento ?? montoOriginal;
+      const creditoReferidosUsado = await this.referidosService.reservarSaldo(
+        tx,
+        usuario.id,
+        montoDespuesDePromocion,
+      );
+      const monto = montoDespuesDePromocion - creditoReferidosUsado;
 
       await tx.pagoOrden.create({
         data: {
@@ -139,14 +148,16 @@ export class PagosService {
           calendarioIcfes: convocatoria.calendario,
           fechaVencimientoAcceso,
           monto,
-          montoOriginal: descuento ? montoOriginal : null,
+          montoOriginal:
+            descuento || creditoReferidosUsado > 0 ? montoOriginal : null,
+          creditoReferidosUsado,
           cuponId: descuento?.cuponId ?? null,
           moneda: 'COP',
           estado: 'PENDIENTE',
         },
       });
 
-      return { descuento, monto };
+      return { descuento, monto, creditoReferidosUsado };
     });
 
     return {
@@ -159,6 +170,7 @@ export class PagosService {
         resultadoOrden.descuento?.porcentajeDescuento ?? null,
       codigoCupon: resultadoOrden.descuento?.codigo ?? null,
       tituloPromocion: resultadoOrden.descuento?.titulo ?? null,
+      creditoReferidosUsado: resultadoOrden.creditoReferidosUsado,
       currency: 'COP',
       country: 'co',
       name: 'SaberPlus — Acceso completo',
@@ -260,6 +272,9 @@ export class PagosService {
     const debeLiberarCupon =
       orden.cuponId !== null &&
       (nuevoEstado === 'RECHAZADA' || nuevoEstado === 'FALLIDA');
+    const debeDevolverCredito =
+      orden.creditoReferidosUsado > 0 &&
+      (nuevoEstado === 'RECHAZADA' || nuevoEstado === 'FALLIDA');
 
     const procesada = await this.prisma.$transaction(async (tx) => {
       const actualizada = await tx.pagoOrden.updateMany({
@@ -279,6 +294,22 @@ export class PagosService {
           where: { id: orden.cuponId, usosActuales: { gt: 0 } },
           data: { usosActuales: { decrement: 1 } },
         });
+      }
+
+      if (debeDevolverCredito) {
+        await this.referidosService.devolverSaldo(
+          tx,
+          orden.usuarioId,
+          orden.creditoReferidosUsado,
+        );
+      }
+
+      if (nuevoEstado === 'APROBADA') {
+        await this.referidosService.recompensarPrimerPago(
+          tx,
+          orden.usuarioId,
+          orden.id,
+        );
       }
 
       return true;
@@ -355,6 +386,7 @@ export class PagosService {
         estado: true,
         monto: true,
         montoOriginal: true,
+        creditoReferidosUsado: true,
         cuponId: true,
         grado: true,
         tipoPlan: true,
@@ -373,6 +405,7 @@ export class PagosService {
       estado: orden.estado,
       monto: orden.monto,
       montoOriginal: orden.montoOriginal,
+      creditoReferidosUsado: orden.creditoReferidosUsado,
       cuponId: orden.cuponId,
       grado: orden.grado,
       tipoPlan: orden.tipoPlan,

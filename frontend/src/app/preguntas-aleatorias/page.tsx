@@ -60,13 +60,13 @@ export default function PreguntasAleatoriasPage() {
     <div style={{ minHeight: '100vh', backgroundColor: '#F6F1F1', fontFamily: 'system-ui, sans-serif' }}>
 
       {/* NAVBAR */}
-      <nav style={{ backgroundColor: '#146C94', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+      <nav style={{ backgroundColor: 'var(--color-primario, #146c94)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
         <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <Link href="/dashboard" style={{ textDecoration: 'none', color: '#D2E0FB', fontSize: 14, fontWeight: 600 }}>
+          <Link href="/dashboard" style={{ textDecoration: 'none', color: 'var(--marca-superficie-fuerte, #d2e0fb)', fontSize: 14, fontWeight: 600 }}>
             ← Inicio
           </Link>
-          <span style={{ fontSize: 18, fontWeight: 800, color: '#ffffff' }}>
-            Saber<span style={{ color: '#8DD8FF' }}>Plus</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-sobre-primario, #ffffff)' }}>
+            Saber<span style={{ color: 'var(--marca-acento, #8dd8ff)' }}>Plus</span>
           </span>
         </div>
       </nav>
@@ -81,14 +81,14 @@ export default function PreguntasAleatoriasPage() {
         </p>
 
         {/* SELECCIÓN DE ÁREAS */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px', border: '1.5px solid #AFD3E2', marginBottom: 24 }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px', border: '1.5px solid var(--marca-borde, #afd3e2)', marginBottom: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: '#8a9aaa', textTransform: 'uppercase', letterSpacing: 1 }}>
               Áreas
             </p>
             <button
               onClick={seleccionarTodas}
-              style={{ background: 'none', border: 'none', color: '#146C94', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: 'var(--color-primario, #146c94)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
             >
               {areasSeleccionadas.length === AREAS.length ? 'Quitar todas' : 'Seleccionar todas'}
             </button>
@@ -107,8 +107,8 @@ export default function PreguntasAleatoriasPage() {
                     gap: 12,
                     padding: '16px 18px',
                     borderRadius: 12,
-                    border: marcada ? '2px solid #146C94' : '1.5px solid #D2E0FB',
-                    backgroundColor: marcada ? '#D2E0FB' : '#F6F1F1',
+                    border: marcada ? '2px solid var(--color-primario, #146c94)' : '1.5px solid var(--marca-superficie-fuerte, #d2e0fb)',
+                    backgroundColor: marcada ? 'var(--marca-superficie-fuerte, #d2e0fb)' : '#F6F1F1',
                     cursor: 'pointer',
                     textAlign: 'left',
                     transition: 'all 0.15s ease',
@@ -119,9 +119,9 @@ export default function PreguntasAleatoriasPage() {
                       width: 22,
                       height: 22,
                       borderRadius: 6,
-                      border: `2px solid ${marcada ? '#146C94' : '#AFD3E2'}`,
-                      backgroundColor: marcada ? '#146C94' : '#ffffff',
-                      color: '#ffffff',
+                      border: `2px solid ${marcada ? 'var(--color-primario, #146c94)' : 'var(--marca-borde, #afd3e2)'}`,
+                      backgroundColor: marcada ? 'var(--color-primario, #146c94)' : '#ffffff',
+                      color: marcada ? 'var(--color-sobre-primario, #ffffff)' : 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -141,7 +141,7 @@ export default function PreguntasAleatoriasPage() {
         </div>
 
         {/* CANTIDAD DE PREGUNTAS */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px', border: '1.5px solid #AFD3E2', marginBottom: 24 }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px', border: '1.5px solid var(--marca-borde, #afd3e2)', marginBottom: 24 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#8a9aaa', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>
             Cantidad de preguntas
           </p>
@@ -153,9 +153,9 @@ export default function PreguntasAleatoriasPage() {
                 style={{
                   padding: '10px 20px',
                   borderRadius: 10,
-                  border: `1.5px solid ${cantidad === c ? '#146C94' : '#D2E0FB'}`,
-                  backgroundColor: cantidad === c ? '#146C94' : '#F6F1F1',
-                  color: cantidad === c ? '#ffffff' : '#1a2a3a',
+                  border: `1.5px solid ${cantidad === c ? 'var(--color-primario, #146c94)' : 'var(--marca-superficie-fuerte, #d2e0fb)'}`,
+                  backgroundColor: cantidad === c ? 'var(--color-primario, #146c94)' : '#F6F1F1',
+                  color: cantidad === c ? 'var(--color-sobre-primario, #ffffff)' : '#1a2a3a',
                   fontWeight: 700,
                   fontSize: 14,
                   cursor: 'pointer',
@@ -179,8 +179,8 @@ export default function PreguntasAleatoriasPage() {
             padding: '16px',
             borderRadius: 12,
             border: 'none',
-            backgroundColor: areasSeleccionadas.length === 0 ? '#AFD3E2' : '#146C94',
-            color: '#ffffff',
+            backgroundColor: areasSeleccionadas.length === 0 ? 'var(--marca-borde, #afd3e2)' : 'var(--color-primario, #146c94)',
+            color: areasSeleccionadas.length === 0 ? '#ffffff' : 'var(--color-sobre-primario, #ffffff)',
             fontSize: 16,
             fontWeight: 800,
             cursor: areasSeleccionadas.length === 0 ? 'not-allowed' : 'pointer',

@@ -181,7 +181,7 @@ export default function RevisionPreguntas({
                 <p
                   style={{
                     margin: "0 0 5px",
-                    color: "#146C94",
+                    color: "var(--color-primario, #146c94)",
                     fontSize: 12,
                     fontWeight: 800,
                   }}

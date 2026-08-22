@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
 import { MailModule } from '../mail/mail.module';
+import { ReferidosModule } from '../referidos/referidos.module';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
@@ -15,6 +16,7 @@ if (!jwtSecret) {
   imports: [
     PrismaModule,
     MailModule,
+    ReferidosModule,
     JwtModule.register({
       global: true, // disponible en TODO el app sin reimportarlo
       secret: jwtSecret,

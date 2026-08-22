@@ -768,7 +768,7 @@ export class SimulacroService {
       where: {
         usuarioId_subtemaId: { usuarioId, subtemaId },
       },
-      update: { porcentaje, completado },
+      update: { porcentaje, completado, fechaVisto: new Date() },
       create: { usuarioId, subtemaId, porcentaje, completado },
     });
 

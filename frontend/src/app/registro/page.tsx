@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { registrarUsuario } from '../../lib/api';
+import { registrarUsuario, validarCodigoReferido } from '../../lib/api';
 
 function validarContrasena(contrasena: string): string | null {
   if (contrasena.length < 8) return 'Debe tener al menos 8 caracteres';
@@ -23,12 +23,57 @@ export default function RegistroPage() {
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [confirmar, setConfirmar] = useState('');
+  const [codigoReferido, setCodigoReferido] = useState('');
+  const [nombreReferidor, setNombreReferidor] = useState('');
+  const [codigoValido, setCodigoValido] = useState<boolean | null>(null);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
   const tieneMinimo = contrasena.length >= 8;
   const tieneMayuscula = /[A-Z]/.test(contrasena);
   const tieneNumero = /[0-9]/.test(contrasena);
+
+  useEffect(() => {
+    const codigoUrl = new URLSearchParams(window.location.search).get('ref');
+    const codigoGuardado = localStorage.getItem('saberplus_ref');
+    const codigo = (codigoUrl || codigoGuardado || '').trim().toUpperCase();
+    if (!codigo) return;
+
+    localStorage.setItem('saberplus_ref', codigo);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCodigoReferido(codigo);
+    validarCodigoReferido(codigo)
+      .then((resultado) => {
+        setCodigoValido(resultado.valido);
+        setNombreReferidor(resultado.nombreReferidor ?? '');
+        if (!resultado.valido) localStorage.removeItem('saberplus_ref');
+      })
+      .catch(() => {
+        setCodigoValido(false);
+        localStorage.removeItem('saberplus_ref');
+      });
+  }, []);
+
+  const comprobarCodigo = async () => {
+    const codigo = codigoReferido.trim().toUpperCase();
+    if (!codigo) {
+      setCodigoValido(null);
+      setNombreReferidor('');
+      localStorage.removeItem('saberplus_ref');
+      return;
+    }
+
+    try {
+      const resultado = await validarCodigoReferido(codigo);
+      setCodigoValido(resultado.valido);
+      setNombreReferidor(resultado.nombreReferidor ?? '');
+      if (resultado.valido) localStorage.setItem('saberplus_ref', codigo);
+      else localStorage.removeItem('saberplus_ref');
+    } catch {
+      setCodigoValido(false);
+      setNombreReferidor('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +92,26 @@ export default function RegistroPage() {
 
     setCargando(true);
     try {
-      await registrarUsuario(nombre, correo, contrasena);
+      let codigoParaEnviar: string | undefined;
+      if (codigoReferido.trim()) {
+        const resultadoCodigo = await validarCodigoReferido(codigoReferido);
+        if (!resultadoCodigo.valido) {
+          setCodigoValido(false);
+          setError('Revisa el código de referido antes de continuar.');
+          return;
+        }
+        codigoParaEnviar = codigoReferido.trim().toUpperCase();
+        setCodigoValido(true);
+        setNombreReferidor(resultadoCodigo.nombreReferidor ?? '');
+      }
+
+      await registrarUsuario(
+        nombre,
+        correo,
+        contrasena,
+        codigoParaEnviar,
+      );
+      localStorage.removeItem('saberplus_ref');
       router.push(`/registro/confirmar?correo=${encodeURIComponent(correo)}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al registrarse');
@@ -113,11 +177,41 @@ export default function RegistroPage() {
             </div>
           )}
 
+          {codigoValido && (
+            <div style={{ backgroundColor: '#E8F5EF', borderLeft: '4px solid #16805E', borderRadius: 6, padding: '12px 14px', marginBottom: 22, fontSize: 14, color: '#245647' }}>
+              Invitación de <strong>{nombreReferidor}</strong> aplicada.
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
             <div>
               <label style={labelStyle}>Nombre completo</label>
               <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Tu nombre" required style={inputStyle} />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Código de referido (opcional)</label>
+              <input
+                type="text"
+                value={codigoReferido}
+                onChange={e => {
+                  setCodigoReferido(e.target.value.toUpperCase());
+                  setCodigoValido(null);
+                  setNombreReferidor('');
+                }}
+                onBlur={() => void comprobarCodigo()}
+                placeholder="Ej. A1B2C3D4E5"
+                maxLength={12}
+                style={{
+                  ...inputStyle,
+                  textTransform: 'uppercase',
+                  borderColor: codigoValido === false ? '#BC7C7C' : codigoValido ? '#16805E' : '#AFD3E2',
+                }}
+              />
+              {codigoValido === false && (
+                <p style={{ fontSize: 12, color: '#BC7C7C', marginTop: 6 }}>Este código no es válido.</p>
+              )}
             </div>
 
             <div>

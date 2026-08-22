@@ -45,8 +45,8 @@ export default function UnirseClasePage() {
         <div style={{ width: '100%', maxWidth: 440 }}>
 
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <span style={{ fontSize: 26, fontWeight: 900, color: '#146C94' }}>
-              Saber<span style={{ color: '#19A7CE' }}>Plus</span>
+            <span style={{ fontSize: 26, fontWeight: 900, color: 'var(--color-primario, #146c94)' }}>
+              Saber<span style={{ color: 'var(--color-secundario, #19a7ce)' }}>Plus</span>
             </span>
           </div>
 
@@ -55,13 +55,13 @@ export default function UnirseClasePage() {
             borderRadius: 20,
             padding: '40px 36px',
             boxShadow: '0 4px 24px rgba(20,108,148,0.10)',
-            border: '1px solid #AFD3E2',
+            border: '1px solid var(--marca-borde, #afd3e2)',
           }}>
             {exito ? (
               <div style={{ textAlign: 'center' }}>
                 <div style={{
                   width: 64, height: 64, borderRadius: '50%',
-                  backgroundColor: '#D2E0FB', color: '#146C94',
+                  backgroundColor: 'var(--marca-superficie-fuerte, #d2e0fb)', color: 'var(--color-primario, #146c94)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 30, margin: '0 auto 20px',
                 }}>
@@ -71,15 +71,15 @@ export default function UnirseClasePage() {
                   ¡Te uniste con éxito!
                 </h1>
                 <p style={{ color: '#4a5a6a', fontSize: 15, marginBottom: 28 }}>
-                  Ahora eres parte de <strong style={{ color: '#146C94' }}>{exito.clase}</strong>
+                  Ahora eres parte de <strong style={{ color: 'var(--color-primario, #146c94)' }}>{exito.clase}</strong>
                   {exito.institucion && (
-                    <> en <strong style={{ color: '#146C94' }}>{exito.institucion}</strong></>
+                    <> en <strong style={{ color: 'var(--color-primario, #146c94)' }}>{exito.institucion}</strong></>
                   )}.
                 </p>
                 <button
                   onClick={() => router.push('/dashboard')}
                   style={{
-                    width: '100%', backgroundColor: '#146C94', color: '#ffffff',
+                    width: '100%', backgroundColor: 'var(--color-primario, #146c94)', color: 'var(--color-sobre-primario, #ffffff)',
                     padding: '14px', borderRadius: 10, border: 'none',
                     fontSize: 16, fontWeight: 700, cursor: 'pointer',
                   }}
@@ -120,7 +120,7 @@ export default function UnirseClasePage() {
                       autoFocus
                       style={{
                         width: '100%', padding: '14px 16px', borderRadius: 10,
-                        border: '1.5px solid #AFD3E2', fontSize: 16, fontWeight: 700,
+                        border: '1.5px solid var(--marca-borde, #afd3e2)', fontSize: 16, fontWeight: 700,
                         letterSpacing: 1, color: '#1a2a3a', backgroundColor: '#F6F1F1',
                         outline: 'none', boxSizing: 'border-box', textAlign: 'center',
                       }}
@@ -131,8 +131,8 @@ export default function UnirseClasePage() {
                     type="submit"
                     disabled={cargando}
                     style={{
-                      backgroundColor: cargando ? '#AFD3E2' : '#146C94',
-                      color: '#ffffff', padding: '14px', borderRadius: 10, border: 'none',
+                      backgroundColor: cargando ? 'var(--marca-borde, #afd3e2)' : 'var(--color-primario, #146c94)',
+                      color: cargando ? '#425563' : 'var(--color-sobre-primario, #ffffff)', padding: '14px', borderRadius: 10, border: 'none',
                       fontSize: 16, fontWeight: 700, cursor: cargando ? 'not-allowed' : 'pointer',
                     }}
                   >
@@ -144,7 +144,7 @@ export default function UnirseClasePage() {
           </div>
 
           <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13 }}>
-            <Link href="/dashboard" style={{ color: '#146C94', fontWeight: 600, textDecoration: 'none' }}>
+            <Link href="/dashboard" style={{ color: 'var(--color-primario, #146c94)', fontWeight: 600, textDecoration: 'none' }}>
               ← Volver al dashboard
             </Link>
           </p>

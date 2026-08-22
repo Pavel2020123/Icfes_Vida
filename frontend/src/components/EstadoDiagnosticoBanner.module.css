@@ -6,7 +6,7 @@
   margin-bottom: 28px;
   padding: 20px 22px;
   border: 1px solid #b9d3dc;
-  border-left: 5px solid #159ac1;
+  border-left: 5px solid var(--color-secundario, #19a7ce);
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 5px 18px rgba(20, 108, 148, 0.07);
@@ -19,7 +19,7 @@
   place-items: center;
   border-radius: 50%;
   background: #e6f4f8;
-  color: #106681;
+  color: var(--color-primario, #146c94);
   font-size: 13px;
   font-weight: 850;
 }
@@ -65,7 +65,7 @@
 }
 
 .score strong {
-  color: #106681;
+  color: var(--color-primario, #146c94);
   font-size: 23px;
 }
 
@@ -81,8 +81,8 @@
   justify-content: center;
   padding: 0 17px;
   border-radius: 6px;
-  background: #106681;
-  color: #ffffff;
+  background: var(--color-primario, #146c94);
+  color: var(--color-sobre-primario, #ffffff);
   font-size: 13px;
   font-weight: 750;
   text-decoration: none;

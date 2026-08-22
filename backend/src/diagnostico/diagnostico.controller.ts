@@ -55,12 +55,12 @@ export class DiagnosticoController {
 
   @Get()
   obtenerEstado(@Request() req: AuthenticatedRequest) {
-    return this.diagnosticoService.obtenerEstado(req.usuario!.sub);
+    return this.diagnosticoService.obtenerEstado(req.usuario.sub);
   }
 
   @Post('iniciar')
   iniciar(@Request() req: AuthenticatedRequest) {
-    return this.diagnosticoService.iniciar(req.usuario!.sub);
+    return this.diagnosticoService.iniciar(req.usuario.sub);
   }
 
   @Post('finalizar')
@@ -68,6 +68,6 @@ export class DiagnosticoController {
     @Request() req: AuthenticatedRequest,
     @Body() body: FinalizarDiagnosticoDto,
   ) {
-    return this.diagnosticoService.finalizar(req.usuario!.sub, body.respuestas);
+    return this.diagnosticoService.finalizar(req.usuario.sub, body.respuestas);
   }
 }

@@ -131,16 +131,10 @@ describe('AlertasRiesgoService', () => {
       'estudiante-critico',
       'estudiante-pendiente',
     ]);
-    expect(resultado.alertas[0]).toEqual(
-      expect.objectContaining({
-        nivel: 'CRITICA',
-        areaPrioritaria: AreaIcfes.MATEMATICAS,
-        actividad: expect.objectContaining({
-          porcentajeAciertosReciente: 20,
-          respuestasUltimos30Dias: 5,
-        }),
-      }),
-    );
+    expect(resultado.alertas[0].nivel).toBe('CRITICA');
+    expect(resultado.alertas[0].areaPrioritaria).toBe(AreaIcfes.MATEMATICAS);
+    expect(resultado.alertas[0].actividad.porcentajeAciertosReciente).toBe(20);
+    expect(resultado.alertas[0].actividad.respuestasUltimos30Dias).toBe(5);
     expect(resultado.alertas[0].razones.map((razon) => razon.codigo)).toEqual(
       expect.arrayContaining([
         'INACTIVIDAD',

@@ -3,6 +3,7 @@ import { CalendarioIcfesService } from '../calendario-icfes/calendario-icfes.ser
 import { CuponesService } from '../cupones/cupones.service';
 import { PagosService } from './pagos.service';
 import { PRECIO_ACCESO_COMPLETO_COP } from './wompi.util';
+import { ReferidosService } from '../referidos/referidos.service';
 
 describe('PagosService', () => {
   let llamadaCrearOrden: { data: Record<string, unknown> } | undefined;
@@ -30,7 +31,17 @@ describe('PagosService', () => {
     aplicar: jest.fn(),
     aplicarAutomatica: jest.fn(),
   } as unknown as CuponesService;
-  const service = new PagosService(prisma, calendarioService, cuponesService);
+  const referidosService = {
+    reservarSaldo: jest.fn().mockResolvedValue(0),
+    devolverSaldo: jest.fn(),
+    recompensarPrimerPago: jest.fn(),
+  } as unknown as ReferidosService;
+  const service = new PagosService(
+    prisma,
+    calendarioService,
+    cuponesService,
+    referidosService,
+  );
   const publicKeyAnterior = process.env.WOMPI_PUBLIC_KEY;
   const frontendUrlAnterior = process.env.FRONTEND_URL;
 
@@ -76,6 +87,7 @@ describe('PagosService', () => {
         tipoPlan: 'MENSUAL',
         calendarioIcfes: 'A',
         fechaVencimientoAcceso,
+        creditoReferidosUsado: 0,
       }),
     );
     expect(llamadaCrearOrden?.data).toEqual(
@@ -86,6 +98,7 @@ describe('PagosService', () => {
         tipoPlan: 'MENSUAL',
         calendarioIcfes: 'A',
         fechaVencimientoAcceso,
+        creditoReferidosUsado: 0,
       }),
     );
   });

@@ -31,7 +31,7 @@ export default function ContextoCasoPregunta({
       style={{
         marginBottom: 22,
         padding: "16px 18px",
-        borderLeft: "4px solid #19A7CE",
+        borderLeft: "4px solid var(--color-secundario, #19a7ce)",
         backgroundColor: "#F2F8FB",
       }}
     >
@@ -45,7 +45,7 @@ export default function ContextoCasoPregunta({
         }}
       >
         <h2
-          style={{ margin: 0, color: "#146C94", fontSize: 15, fontWeight: 800 }}
+          style={{ margin: 0, color: "var(--color-primario, #146c94)", fontSize: 15, fontWeight: 800 }}
         >
           {caso.titulo || "Contexto para las siguientes preguntas"}
         </h2>

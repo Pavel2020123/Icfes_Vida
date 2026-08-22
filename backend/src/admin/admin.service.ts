@@ -256,8 +256,7 @@ export class AdminService {
       where: { id: subtemaId },
       data: {
         tipoInteractivo,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        datosInteractivo: datosInteractivo as any,
+        datosInteractivo,
       },
     });
   }

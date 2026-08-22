@@ -43,8 +43,8 @@ export default function AvisoVerificarCorreo({ correo }: { correo?: string | nul
           onClick={reenviar}
           disabled={enviando}
           style={{
-            backgroundColor: '#146C94',
-            color: '#fff',
+            backgroundColor: 'var(--color-primario, #146c94)',
+            color: 'var(--color-sobre-primario, #ffffff)',
             border: 'none',
             borderRadius: 8,
             padding: '8px 16px',

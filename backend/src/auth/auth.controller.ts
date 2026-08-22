@@ -15,6 +15,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 
@@ -29,6 +30,11 @@ class RegistroDto {
   @IsString()
   @MinLength(6)
   contrasena!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(12)
+  codigoReferido?: string;
 }
 
 class LoginDto {
@@ -92,6 +98,7 @@ export class AuthController {
       body.nombre,
       body.correo,
       body.contrasena,
+      body.codigoReferido,
     );
   }
 

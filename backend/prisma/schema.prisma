@@ -72,46 +72,54 @@ model Institucion {
 }
 
 model Usuario {
-  id                      String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre                  String               @db.VarChar(255)
-  correo                  String               @unique @db.VarChar(255)
-  contrasenaHash          String
+  id                        String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre                    String               @db.VarChar(255)
+  correo                    String               @unique @db.VarChar(255)
+  contrasenaHash            String
   // Cuando el admin crea la cuenta manualmente con una contraseña
   // temporal (punto 12: institución vía panel de admin), esta bandera
   // queda en true para forzar que la cambie en su primer login. Se
   // apaga sola cuando el usuario la cambia por una propia.
-  debeCambiarContrasena   Boolean?             @default(false)
-  rol                     RolUsuario?          @default(ESTUDIANTE)
-  xpTotal                 Int?                 @default(0)
-  fechaCreacion           DateTime?            @default(now()) @db.Timestamp(6)
-  fechaVencimientoPlan    DateTime?            @db.Timestamp(6)
+  debeCambiarContrasena     Boolean?             @default(false)
+  rol                       RolUsuario?          @default(ESTUDIANTE)
+  xpTotal                   Int?                 @default(0)
+  fechaCreacion             DateTime?            @default(now()) @db.Timestamp(6)
+  fechaVencimientoPlan      DateTime?            @db.Timestamp(6)
   // Calendario ICFES del estudiante individual (A o B). Solo aplica
   // cuando no pertenece a institución; si pertenece, hereda el de su
   // colegio. Punto 6.
-  calendarioIcfes         CalendarioTipo?      @default(A)
+  calendarioIcfes           CalendarioTipo?      @default(A)
   // Verificación de correo (punto 7): evita que alguien reinicie la
   // prueba gratis de 3 días registrándose con correos falsos.
-  correoVerificado        Boolean?             @default(false)
-  tokenVerificacion       String?              @unique @db.VarChar(255)
-  tokenVerificacionExpira DateTime?            @db.Timestamp(6)
+  correoVerificado          Boolean?             @default(false)
+  tokenVerificacion         String?              @unique @db.VarChar(255)
+  tokenVerificacionExpira   DateTime?            @db.Timestamp(6)
   // Recuperación de contraseña (punto 8): token de un solo uso y vida
   // corta para que quien olvidó su contraseña elija una nueva sin
   // necesitar acceso previo a la cuenta.
-  tokenRecuperacion       String?              @unique @db.VarChar(255)
-  tokenRecuperacionExpira DateTime?            @db.Timestamp(6)
-  institucionId           String?              @db.Uuid
-  fotoPerfil              String?
-  descripcion             String?
+  tokenRecuperacion         String?              @unique @db.VarChar(255)
+  tokenRecuperacionExpira   DateTime?            @db.Timestamp(6)
+  institucionId             String?              @db.Uuid
+  fotoPerfil                String?
+  descripcion               String?
+  tutorialEstudianteVersion Int                  @default(0)
+  tutorialProfesorVersion   Int                  @default(0)
   // El grado personaliza contenido y estadísticas, pero no cambia el
   // producto ni el precio del acceso individual.
-  grado                   Grado?
-  ClaseEstudiante         ClaseEstudiante[]
-  Institucion             Institucion?         @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
-  resultados              ResultadoSimulacro[]
-  historialRespuestas     HistorialRespuesta[]
-  diagnosticoInicial      DiagnosticoInicial?
-  progresotemas           ProgresoTema[]
-  PagoOrden               PagoOrden[]
+  grado                     Grado?
+  ClaseEstudiante           ClaseEstudiante[]
+  Institucion               Institucion?         @relation(fields: [institucionId], references: [id], onUpdate: NoAction, map: "fk_institucion")
+  resultados                ResultadoSimulacro[]
+  historialRespuestas       HistorialRespuesta[]
+  diagnosticoInicial        DiagnosticoInicial?
+  progresotemas             ProgresoTema[]
+  PagoOrden                 PagoOrden[]
+  codigoReferido            String?              @unique @db.VarChar(12)
+  saldoReferidosCop         Int                  @default(0)
+  referidosEnviados         Referido[]           @relation("Referidor")
+  referidoRecibido          Referido?            @relation("Referido")
+  planesEstudio             PlanEstudioSemanal[]
+  anunciosLeidos            AnuncioLectura[]
 }
 
 enum RolUsuario {
@@ -144,6 +152,55 @@ model LeadVentas {
   @@index([atendido, fechaCreacion])
 }
 
+model ConfiguracionSoporte {
+  id                 String   @id @default("principal") @db.VarChar(30)
+  numeroWhatsapp     String?  @db.VarChar(15)
+  mensajeWhatsapp    String   @default("Hola, necesito ayuda con SaberPlus.") @db.VarChar(300)
+  activo             Boolean  @default(false)
+  fechaActualizacion DateTime @default(now()) @updatedAt @db.Timestamp(6)
+}
+
+enum TipoAnuncio {
+  INFORMACION
+  IMPORTANTE
+  EVENTO
+}
+
+enum AudienciaAnuncio {
+  TODOS
+  ESTUDIANTES
+  PROFESORES
+}
+
+model Anuncio {
+  id            String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  titulo        String           @db.VarChar(120)
+  contenido     String           @db.Text
+  tipo          TipoAnuncio      @default(INFORMACION)
+  audiencia     AudienciaAnuncio @default(TODOS)
+  fechaInicio   DateTime         @default(now()) @db.Timestamp(6)
+  fechaFin      DateTime?        @db.Timestamp(6)
+  activo        Boolean          @default(true)
+  destacado     Boolean          @default(false)
+  fechaCreacion DateTime         @default(now()) @db.Timestamp(6)
+  fechaEdicion  DateTime         @default(now()) @updatedAt @db.Timestamp(6)
+  lecturas      AnuncioLectura[]
+
+  @@index([activo, fechaInicio, fechaFin])
+  @@index([audiencia, destacado])
+}
+
+model AnuncioLectura {
+  anuncioId    String   @db.Uuid
+  usuarioId    String   @db.Uuid
+  fechaLectura DateTime @default(now()) @db.Timestamp(6)
+  anuncio      Anuncio  @relation(fields: [anuncioId], references: [id], onDelete: Cascade)
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([anuncioId, usuarioId])
+  @@index([usuarioId, fechaLectura])
+}
+
 // --- MÓDULO: PASARELA DE PAGO (Wompi) ---
 
 enum EstadoPago {
@@ -152,6 +209,11 @@ enum EstadoPago {
   RECHAZADA
   PENDIENTE_BANCO
   FALLIDA
+}
+
+enum EstadoReferido {
+  REGISTRADO
+  RECOMPENSADO
 }
 
 // Una orden por cada intento de pago del muro de pago del estudiante
@@ -177,6 +239,7 @@ model PagoOrden {
   fechaVencimientoAcceso DateTime?       @db.Timestamp(6)
   monto                  Int
   montoOriginal          Int?
+  creditoReferidosUsado  Int             @default(0)
   moneda                 String          @default("COP") @db.VarChar(10)
   estado                 EstadoPago      @default(PENDIENTE)
   cuponId                String?         @db.Uuid
@@ -186,9 +249,27 @@ model PagoOrden {
   motivoRespuesta        String?         @db.Text
   fechaCreacion          DateTime        @default(now()) @db.Timestamp(6)
   fechaActualizacion     DateTime        @default(now()) @updatedAt @db.Timestamp(6)
+  referidoRecompensado   Referido?
 
   @@index([usuarioId])
   @@index([cuponId])
+}
+
+model Referido {
+  id              String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  referidorId     String         @db.Uuid
+  referidoId      String         @unique @db.Uuid
+  codigoUsado     String         @db.VarChar(12)
+  estado          EstadoReferido @default(REGISTRADO)
+  recompensaCop   Int            @default(0)
+  ordenPagoId     String?        @unique @db.Uuid
+  fechaRegistro   DateTime       @default(now()) @db.Timestamp(6)
+  fechaRecompensa DateTime?      @db.Timestamp(6)
+  referidor       Usuario        @relation("Referidor", fields: [referidorId], references: [id], onDelete: Cascade)
+  referido        Usuario        @relation("Referido", fields: [referidoId], references: [id], onDelete: Cascade)
+  ordenPago       PagoOrden?     @relation(fields: [ordenPagoId], references: [id], onDelete: SetNull)
+
+  @@index([referidorId, estado])
 }
 
 model Cupon {
@@ -218,6 +299,13 @@ enum AreaIcfes {
   INGLES
 }
 
+enum TipoActividadPlan {
+  ESTUDIO
+  SIMULACRO
+  DESCANSO
+  EXAMEN
+}
+
 enum Dificultad {
   BASICO
   MEDIO
@@ -236,17 +324,18 @@ model Tema {
 }
 
 model Subtema {
-  id               String           @id @default(uuid())
+  id               String                 @id @default(uuid())
   nombre           String
   temaId           String
-  contenido        String?          @db.Text
+  contenido        String?                @db.Text
   videoUrl         String?
   imagenUrl        String?
   tipoInteractivo  TipoInteractivo?
   datosInteractivo Json?
-  tema             Tema             @relation(fields: [temaId], references: [id], onDelete: Cascade)
+  tema             Tema                   @relation(fields: [temaId], references: [id], onDelete: Cascade)
   preguntas        Pregunta[]
   progresotemas    ProgresoTema[]
+  actividadesPlan  PlanEstudioActividad[]
 }
 
 model Pregunta {
@@ -316,8 +405,47 @@ model DiagnosticoInicial {
   nivel               NivelDiagnostico?
   usuario             Usuario                    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   resultadosPorArea   DiagnosticoResultadoArea[]
+  planesEstudio       PlanEstudioSemanal[]
 
   @@index([completadoEn])
+}
+
+model PlanEstudioSemanal {
+  id                     String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  usuarioId              String                 @db.Uuid
+  diagnosticoId          String                 @db.Uuid
+  calendarioIcfes        CalendarioTipo
+  fechaExamen            DateTime               @db.Date
+  inicioSemana           DateTime               @db.Date
+  finSemana              DateTime               @db.Date
+  diasRestantesAlGenerar Int
+  sesionesObjetivo       Int
+  minutosObjetivoSemanal Int
+  fechaCreacion          DateTime               @default(now()) @db.Timestamp(6)
+  usuario                Usuario                @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  diagnostico            DiagnosticoInicial     @relation(fields: [diagnosticoId], references: [id], onDelete: Cascade)
+  actividades            PlanEstudioActividad[]
+
+  @@unique([usuarioId, inicioSemana])
+  @@index([diagnosticoId])
+}
+
+model PlanEstudioActividad {
+  id        String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  planId    String             @db.Uuid
+  subtemaId String?
+  fecha     DateTime           @db.Date
+  tipo      TipoActividadPlan
+  area      AreaIcfes?
+  titulo    String             @db.VarChar(180)
+  detalle   String             @db.VarChar(300)
+  minutos   Int                @default(0)
+  orden     Int
+  plan      PlanEstudioSemanal @relation(fields: [planId], references: [id], onDelete: Cascade)
+  subtema   Subtema?           @relation(fields: [subtemaId], references: [id], onDelete: SetNull)
+
+  @@unique([planId, fecha])
+  @@index([subtemaId])
 }
 
 model DiagnosticoResultadoArea {

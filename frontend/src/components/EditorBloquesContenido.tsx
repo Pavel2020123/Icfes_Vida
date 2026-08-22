@@ -24,11 +24,11 @@ export default function EditorBloquesContenido({ contenidoInicial, alCambiarCont
           <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1a2a3a', marginBottom: 4 }}>Lección por bloques</h3>
           <p style={{ fontSize: 13, color: '#8a9aaa' }}>El contenido se convertirá automáticamente al formato de lectura de la plataforma.</p>
         </div>
-        <button type="button" onClick={() => actualizarBloques([...bloques, crearBloque()])} style={{ backgroundColor: '#146C94', color: '#ffffff', border: 'none', borderRadius: 8, padding: '10px 16px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>+ Agregar bloque</button>
+        <button type="button" onClick={() => actualizarBloques([...bloques, crearBloque()])} style={{ backgroundColor: 'var(--color-primario, #146c94)', color: 'var(--color-sobre-primario, #ffffff)', border: 'none', borderRadius: 8, padding: '10px 16px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>+ Agregar bloque</button>
       </div>
 
       {bloques.length === 0 ? (
-        <p style={{ color: '#8a9aaa', fontSize: 14, textAlign: 'center', padding: 20, border: '1.5px dashed #AFD3E2', borderRadius: 12 }}>Agrega un bloque para comenzar la lección.</p>
+        <p style={{ color: '#8a9aaa', fontSize: 14, textAlign: 'center', padding: 20, border: '1.5px dashed var(--marca-borde, #afd3e2)', borderRadius: 12 }}>Agrega un bloque para comenzar la lección.</p>
       ) : (
         bloques.map((bloque, indice) => (
           <TarjetaBloqueContenido

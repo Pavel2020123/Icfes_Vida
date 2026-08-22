@@ -72,10 +72,10 @@ export default function LectorContenido({ contenido }: LectorContenidoProps) {
   return (
     <section
       aria-label="Contenido de la lección"
-      style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px 32px', border: '1.5px solid #AFD3E2', marginBottom: 28 }}
+      style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: '28px 32px', border: '1.5px solid var(--marca-borde, #afd3e2)', marginBottom: 28 }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-        <span style={{ color: '#146C94', fontSize: 13, fontWeight: 800, textTransform: 'capitalize' }}>
+        <span style={{ color: 'var(--color-primario, #146c94)', fontSize: 13, fontWeight: 800, textTransform: 'capitalize' }}>
           {bloqueActual.tipo}
         </span>
         <span style={{ color: '#4a5a6a', fontSize: 13, fontWeight: 600 }}>
@@ -89,9 +89,9 @@ export default function LectorContenido({ contenido }: LectorContenidoProps) {
         aria-valuemin={0}
         aria-valuenow={progreso}
         role="progressbar"
-        style={{ height: 7, backgroundColor: '#D2E0FB', borderRadius: 4, marginBottom: 28, overflow: 'hidden' }}
+        style={{ height: 7, backgroundColor: 'var(--marca-superficie-fuerte, #d2e0fb)', borderRadius: 4, marginBottom: 28, overflow: 'hidden' }}
       >
-        <div style={{ width: `${progreso}%`, height: '100%', backgroundColor: '#19A7CE', borderRadius: 4, transition: 'width 0.2s ease' }} />
+        <div style={{ width: `${progreso}%`, height: '100%', backgroundColor: 'var(--color-secundario, #19a7ce)', borderRadius: 4, transition: 'width 0.2s ease' }} />
       </div>
 
       <div style={{ color: '#1a2a3a', fontSize: 16, lineHeight: 1.8 }}>
@@ -105,11 +105,11 @@ export default function LectorContenido({ contenido }: LectorContenidoProps) {
             ul: ({ children }) => <ul style={{ margin: '0 0 16px 24px' }}>{children}</ul>,
             ol: ({ children }) => <ol style={{ margin: '0 0 16px 24px' }}>{children}</ol>,
             li: ({ children }) => <li style={{ marginBottom: 6 }}>{children}</li>,
-            a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" style={{ color: '#146C94', fontWeight: 700 }}>{children}</a>,
-            blockquote: ({ children }) => <blockquote style={{ borderLeft: '4px solid #19A7CE', paddingLeft: 16, color: '#4a5a6a', margin: '0 0 16px' }}>{children}</blockquote>,
+            a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primario, #146c94)', fontWeight: 700 }}>{children}</a>,
+            blockquote: ({ children }) => <blockquote style={{ borderLeft: '4px solid var(--color-secundario, #19a7ce)', paddingLeft: 16, color: '#4a5a6a', margin: '0 0 16px' }}>{children}</blockquote>,
             table: ({ children }) => <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>{children}</table>,
-            th: ({ children }) => <th style={{ border: '1px solid #AFD3E2', backgroundColor: '#D2E0FB', padding: 10, textAlign: 'left' }}>{children}</th>,
-            td: ({ children }) => <td style={{ border: '1px solid #AFD3E2', padding: 10 }}>{children}</td>,
+            th: ({ children }) => <th style={{ border: '1px solid var(--marca-borde, #afd3e2)', backgroundColor: 'var(--marca-superficie-fuerte, #d2e0fb)', padding: 10, textAlign: 'left' }}>{children}</th>,
+            td: ({ children }) => <td style={{ border: '1px solid var(--marca-borde, #afd3e2)', padding: 10 }}>{children}</td>,
           }}
         >
           {bloqueActual.contenido}
@@ -121,7 +121,7 @@ export default function LectorContenido({ contenido }: LectorContenidoProps) {
           type="button"
           disabled={indiceActual === 0}
           onClick={() => cambiarBloque(Math.max(0, indiceActual - 1))}
-          style={{ backgroundColor: '#ffffff', color: '#146C94', border: '1.5px solid #AFD3E2', padding: '10px 20px', borderRadius: 10, fontWeight: 700, cursor: indiceActual === 0 ? 'not-allowed' : 'pointer', opacity: indiceActual === 0 ? 0.5 : 1 }}
+          style={{ backgroundColor: '#ffffff', color: 'var(--color-primario, #146c94)', border: '1.5px solid var(--marca-borde, #afd3e2)', padding: '10px 20px', borderRadius: 10, fontWeight: 700, cursor: indiceActual === 0 ? 'not-allowed' : 'pointer', opacity: indiceActual === 0 ? 0.5 : 1 }}
         >
           Anterior
         </button>
@@ -129,7 +129,7 @@ export default function LectorContenido({ contenido }: LectorContenidoProps) {
           type="button"
           disabled={indiceActual === bloques.length - 1}
           onClick={() => cambiarBloque(Math.min(bloques.length - 1, indiceActual + 1))}
-          style={{ backgroundColor: '#146C94', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 700, cursor: indiceActual === bloques.length - 1 ? 'not-allowed' : 'pointer', opacity: indiceActual === bloques.length - 1 ? 0.5 : 1 }}
+          style={{ backgroundColor: 'var(--color-primario, #146c94)', color: 'var(--color-sobre-primario, #ffffff)', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 700, cursor: indiceActual === bloques.length - 1 ? 'not-allowed' : 'pointer', opacity: indiceActual === bloques.length - 1 ? 0.5 : 1 }}
         >
           Siguiente
         </button>

@@ -23,8 +23,8 @@ export default function MuroDePago() {
         textAlign: 'center',
         boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
       }}>
-        <div style={{ fontSize: 38, marginBottom: 8, color: '#146C94' }}>◷</div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#146C94', margin: '0 0 12px' }}>
+        <div style={{ fontSize: 38, marginBottom: 8, color: 'var(--color-primario, #146c94)' }}>◷</div>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-primario, #146c94)', margin: '0 0 12px' }}>
           Tu prueba gratis de 3 días terminó
         </h1>
         <p style={{ fontSize: 15, color: '#555', lineHeight: 1.5, margin: '0 0 24px' }}>
@@ -43,7 +43,7 @@ export default function MuroDePago() {
           href="/planes"
           style={{
             fontSize: 13,
-            color: 'var(--color-primario, #146C94)',
+            color: 'var(--color-primario, #146c94)',
             fontWeight: 600,
             textDecoration: 'underline',
           }}
